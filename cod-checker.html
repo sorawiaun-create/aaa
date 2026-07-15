@@ -1,0 +1,993 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>COD Checker — ตรวจสอบเงินปลายทางไม่ให้รั่วไหล</title>
+
+<!-- Tailwind + React + Babel (CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+  // ใช้ classic runtime (React.createElement) — เลี่ยง import ของ automatic runtime ที่ทำงานในไฟล์เดี่ยวไม่ได้
+  Babel.registerPreset('react-classic', { presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]] });
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  html, body { font-family: 'Sarabun', system-ui, sans-serif; background:#f1f5f9; }
+  ::-webkit-scrollbar { height:8px; width:8px; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:99px; }
+  .num { font-variant-numeric: tabular-nums; }
+</style>
+
+<div id="root" class="p-4 md:p-8 text-slate-500 text-center">กำลังโหลดระบบ…</div>
+
+<script type="text/babel" data-presets="react-classic">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* =========================================================================
+   COD Checker — ตรวจสอบเงินเก็บปลายทาง (Cash on Delivery) ไม่ให้รั่วไหล
+   -------------------------------------------------------------------------
+   หลักการ: จับคู่ด้วย "เลขพัสดุ (Tracking No.)"
+     ฝั่งซ้าย  = เงินที่ "ต้องได้"  (พัสดุ COD ที่ส่งออกไป + สถานะ)
+     ฝั่งขวา   = เงินที่ "เข้าจริง" (ยอดโอน COD ที่ขนส่งจ่ายกลับมา)
+   แล้ว reconcile ทีละพัสดุ เพื่อจับทุกจุดที่เงินรั่ว:
+     • ส่งสำเร็จแล้วแต่เงินยังไม่เข้า (รอเงิน / เกินกำหนด)
+     • เงินเข้าไม่ครบ (ขาด) / เงินเข้าเกิน
+     • พัสดุตีกลับแต่มีเงินเข้า (ผิดปกติ)
+     • เงินเข้ามาแต่ไม่มีออเดอร์ (หาที่มาไม่ได้)
+     • เลขพัสดุซ้ำ
+   ========================================================================= */
+
+// ---------- utils ----------
+const fmtBaht = (n) => new Intl.NumberFormat('th-TH', { style:'currency', currency:'THB', minimumFractionDigits:2 }).format(Number(n)||0);
+const fmtNum  = (n) => new Intl.NumberFormat('th-TH').format(Number(n)||0);
+const clsx = (...a) => a.filter(Boolean).join(' ');
+
+const parseNum = (v) => {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return v;
+  const s = String(v).replace(/[฿,\s]/g, '').replace(/บาท/g,'');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+};
+
+// รับได้หลายรูปแบบ: dd/mm/yyyy, yyyy-mm-dd, ISO, dd-mm-yyyy
+const parseDate = (v) => {
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (m) { let y=+m[3]; if (y>2400) y-=543; return new Date(y, +m[2]-1, +m[1]); } // รองรับ พ.ศ.
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+};
+const daysSince = (v) => {
+  const d = parseDate(v); if (!d) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+};
+
+// ---------- CSV parser (รองรับ quote / คอมมาในเซลล์ / ขึ้นบรรทัดใหม่) ----------
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', i = 0, q = false;
+  text = text.replace(/^﻿/, ''); // ตัด BOM
+  while (i < text.length) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { field+='"'; i+=2; continue; } q=false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if (c === '"') { q=true; i++; continue; }
+    if (c === ',') { row.push(field); field=''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { row.push(field); rows.push(row); row=[]; field=''; i++; continue; }
+    field += c; i++;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''))
+    .map(r => Object.fromEntries(headers.map((h, idx) => [h, r[idx] ?? ''])));
+}
+
+// แปลง text (auto: JSON หรือ CSV) เป็น array ของ object
+function parseAny(text) {
+  const t = text.trim();
+  if (!t) return [];
+  if (t[0] === '[' || t[0] === '{') {
+    const j = JSON.parse(t);
+    if (Array.isArray(j)) return j;
+    // เผื่อ API ห่อ array ไว้ในฟิลด์
+    for (const k of ['data','result','results','items','list','records','rows']) {
+      if (Array.isArray(j[k])) return j[k];
+    }
+    return [j];
+  }
+  return parseCSV(t);
+}
+
+// ดึง array จาก JSON ตาม path เช่น "data.items"
+function getByPath(obj, path) {
+  if (!path) return obj;
+  return path.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+}
+
+// ---------- auto-mapping: เดาว่าคอลัมน์ไหนคืออะไร ----------
+const SYNONYMS = {
+  tracking:  ['tracking','trackingno','trackingnumber','track','awb','barcode','conno','con_no','pno','parcel','เลขพัสดุ','เลขติดตาม','เลขแทรค','พัสดุ','เลขtracking','หมายเลขพัสดุ'],
+  carrier:   ['carrier','express','provider','courier','shipping','logistic','logistics','ขนส่ง','บริษัทขนส่ง'],
+  codAmount: ['cod','codamount','codvalue','amount','value','total','price','ยอดcod','เงินปลายทาง','เก็บเงินปลายทาง','ยอดเก็บเงิน','ยอดเงิน','มูลค่า','ราคา','ยอด'],
+  received:  ['received','paidamount','remit','settle','settleamount','transferamount','เงินเข้า','ยอดโอน','ยอดที่โอน','โอนแล้ว','จ่ายแล้ว','ยอดรับ'],
+  status:    ['status','state','deliverystatus','สถานะ','สถานะพัสดุ','สถานะการจัดส่ง','ผลการจัดส่ง'],
+  shipDate:  ['shipdate','senddate','created','createdate','createdat','วันที่ส่ง','วันส่ง','วันที่สร้าง'],
+  deliveredDate: ['delivereddate','deliverydate','completedate','successdate','วันที่ส่งสำเร็จ','วันส่งสำเร็จ','วันที่จัดส่งสำเร็จ','วันสำเร็จ'],
+  paidDate:  ['paiddate','transferdate','settledate','remitdate','วันที่โอน','วันโอน','วันจ่าย','วันที่จ่าย','วันตัดเงิน'],
+  orderId:   ['orderid','order','orderno','order_no','ordernumber','ออเดอร์','เลขออเดอร์','เลขที่ออเดอร์','เลขคำสั่งซื้อ'],
+};
+const norm = (s) => String(s).toLowerCase().replace(/[\s_\-.]/g, '');
+function autoMap(headers) {
+  const map = {};
+  const H = headers.map(h => ({ raw:h, n:norm(h) }));
+  for (const [field, syns] of Object.entries(SYNONYMS)) {
+    // exact ก่อน แล้วค่อย contains
+    let hit = H.find(h => syns.some(s => h.n === norm(s)));
+    if (!hit) hit = H.find(h => syns.some(s => h.n.includes(norm(s)) || norm(s).includes(h.n)));
+    if (hit) map[field] = hit.raw;
+  }
+  return map;
+}
+
+// ---------- normalize สถานะ ----------
+function normStatus(v) {
+  const s = norm(v);
+  if (!s) return 'unknown';
+  if (/(สำเร็จ|delivered|success|complete|signed|รับแล้ว|ปิดงาน)/.test(s)) return 'delivered';
+  if (/(ตีกลับ|คืน|return|reject|ปฏิเสธ|rts|failed|ล้มเหลว|ยกเลิก|cancel)/.test(s)) return 'returned';
+  if (/(กำลัง|ระหว่างทาง|transit|shipping|outfordelivery|นำจ่าย|ถึงศูนย์|pickup|รับพัสดุ)/.test(s)) return 'in_transit';
+  if (/(รอ|pending|created|เตรียม|new|รอส่ง)/.test(s)) return 'pending';
+  return 'unknown';
+}
+const STATUS_TH = { delivered:'ส่งสำเร็จ', returned:'ตีกลับ', in_transit:'กำลังจัดส่ง', pending:'รอส่ง', unknown:'ไม่ระบุ' };
+
+// ---------- normalize 1 แถว ตาม mapping ----------
+function normRow(row, map) {
+  const g = (f) => (map[f] ? row[map[f]] : undefined);
+  return {
+    tracking: String(g('tracking') ?? '').trim(),
+    carrier:  String(g('carrier') ?? '').trim() || '—',
+    codAmount: parseNum(g('codAmount')),
+    received:  parseNum(g('received')),
+    status: normStatus(g('status')),
+    statusRaw: String(g('status') ?? '').trim(),
+    shipDate: g('shipDate') ?? '',
+    deliveredDate: g('deliveredDate') ?? '',
+    paidDate: g('paidDate') ?? '',
+    orderId: String(g('orderId') ?? '').trim(),
+  };
+}
+
+// ---------- reconcile: รวม 2 ฝั่งด้วยเลขพัสดุ แล้วจัดหมวด ----------
+const CATS = {
+  paid_ok:  { label:'เงินเข้าครบ',        color:'emerald', leak:false },
+  waiting:  { label:'รอเงิน',             color:'amber',   leak:true  },
+  short:    { label:'เงินเข้าไม่ครบ',      color:'red',     leak:true  },
+  over:     { label:'เงินเข้าเกิน',        color:'fuchsia', leak:true  },
+  returned: { label:'ตีกลับ',             color:'slate',   leak:false },
+  returned_paid: { label:'ตีกลับแต่มีเงินเข้า', color:'rose', leak:true },
+  orphan:   { label:'เงินเข้าไม่มีออเดอร์', color:'orange',  leak:true  },
+  duplicate:{ label:'เลขพัสดุซ้ำ',         color:'violet',  leak:true  },
+  in_transit:{ label:'กำลังจัดส่ง',        color:'sky',     leak:false },
+  pending:  { label:'รอส่ง',              color:'slate',   leak:false },
+  non_cod:  { label:'ไม่ใช่ COD',          color:'slate',   leak:false },
+};
+
+function reconcile(shipments, payments, overdueDays, tolerance) {
+  const parcels = new Map(); // tracking -> parcel
+  const dupCount = new Map();
+
+  const ensure = (tracking) => {
+    if (!parcels.has(tracking)) {
+      parcels.set(tracking, {
+        tracking, carrier:'—', expected:0, received:0, status:'unknown',
+        statusRaw:'', shipDate:'', deliveredDate:'', paidDate:'', orderId:'',
+        hasShipment:false, hasPayment:false,
+      });
+    }
+    return parcels.get(tracking);
+  };
+
+  for (const r of shipments) {
+    if (!r.tracking) continue;
+    dupCount.set(r.tracking, (dupCount.get(r.tracking)||0) + 1);
+    const p = ensure(r.tracking);
+    p.hasShipment = true;
+    p.carrier = r.carrier !== '—' ? r.carrier : p.carrier;
+    p.expected += r.codAmount;
+    p.status = r.status !== 'unknown' ? r.status : p.status;
+    p.statusRaw = r.statusRaw || p.statusRaw;
+    p.shipDate = r.shipDate || p.shipDate;
+    p.deliveredDate = r.deliveredDate || p.deliveredDate;
+    p.orderId = r.orderId || p.orderId;
+    // เผื่อ feed เดียวรวมยอดเข้าไว้แล้ว
+    if (r.received) { p.received += r.received; p.hasPayment = true; }
+  }
+
+  for (const r of payments) {
+    if (!r.tracking) continue;
+    const p = ensure(r.tracking);
+    p.hasPayment = true;
+    const amt = r.received || r.codAmount; // feed เงินเข้าอาจอยู่ในช่อง amount
+    p.received += amt;
+    if (r.carrier !== '—' && p.carrier === '—') p.carrier = r.carrier;
+    p.paidDate = r.paidDate || p.paidDate;
+    if (r.status !== 'unknown' && p.status === 'unknown') p.status = r.status;
+  }
+
+  const list = [];
+  for (const p of parcels.values()) {
+    p.isDup = (dupCount.get(p.tracking)||0) > 1;
+    p.gap = round2(p.expected - p.received);      // >0 = ยังขาด, <0 = เกิน
+    p.waitingDays = daysSince(p.deliveredDate) ?? daysSince(p.shipDate);
+
+    let cat;
+    if (!p.hasShipment && p.hasPayment) cat = 'orphan';
+    else if (p.status === 'returned') cat = p.received > tolerance ? 'returned_paid' : 'returned';
+    else if (p.expected <= 0 && p.received <= 0) cat = 'non_cod';
+    else if (p.status === 'in_transit') cat = 'in_transit';
+    else if (p.status === 'pending') cat = 'pending';
+    else if (p.received <= tolerance) {
+      // ยังไม่ได้เงิน — ถ้าสำเร็จแล้ว = รอเงิน (เป็นเป้าหมายหลักของการรั่ว)
+      cat = (p.status === 'delivered' || p.deliveredDate) ? 'waiting' : 'pending';
+    }
+    else if (Math.abs(p.gap) <= tolerance) cat = 'paid_ok';
+    else if (p.gap > tolerance) cat = 'short';
+    else cat = 'over';
+
+    p.cat = cat;
+    p.overdue = cat === 'waiting' && p.waitingDays != null && p.waitingDays >= overdueDays;
+    // จำนวนเงินที่ "ยังไม่เข้า/เสี่ยงหาย" ต่อพัสดุ
+    p.outstanding = (cat === 'waiting') ? p.expected
+                  : (cat === 'short') ? p.gap
+                  : 0;
+    list.push(p);
+  }
+  return list;
+}
+const round2 = (n) => Math.round((Number(n)||0) * 100) / 100;
+
+// =========================================================================
+//  UI
+// =========================================================================
+const LS_KEY = 'cod_checker_v1';
+
+function App() {
+  const [tab, setTab] = useState('data');
+  const [shipRaw, setShipRaw] = useState([]);      // array of object (ต้นฉบับ)
+  const [payRaw, setPayRaw]   = useState([]);
+  const [shipMap, setShipMap] = useState({});
+  const [payMap, setPayMap]   = useState({});
+  const [overdueDays, setOverdueDays] = useState(7);
+  const [tolerance, setTolerance] = useState(1);   // ยอมรับส่วนต่างเล็กน้อย (เศษบาท)
+  const [carrierFilter, setCarrierFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('waiting');
+
+  // โหลด/บันทึก
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if (s) {
+        setShipRaw(s.shipRaw||[]); setPayRaw(s.payRaw||[]);
+        setShipMap(s.shipMap||{}); setPayMap(s.payMap||{});
+        setOverdueDays(s.overdueDays ?? 7); setTolerance(s.tolerance ?? 1);
+        if ((s.shipRaw||[]).length) setTab('dashboard');
+      }
+    } catch(e){}
+  }, []);
+  const save = () => {
+    localStorage.setItem(LS_KEY, JSON.stringify({ shipRaw, payRaw, shipMap, payMap, overdueDays, tolerance }));
+    alert('บันทึกข้อมูลลงเครื่องเรียบร้อย (localStorage)');
+  };
+  const clearAll = () => {
+    if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
+    setShipRaw([]); setPayRaw([]); setShipMap({}); setPayMap({});
+    localStorage.removeItem(LS_KEY); setTab('data');
+  };
+
+  const shipNorm = useMemo(() => shipRaw.map(r => normRow(r, shipMap)), [shipRaw, shipMap]);
+  const payNorm  = useMemo(() => payRaw.map(r => normRow(r, payMap)),   [payRaw, payMap]);
+  const parcels  = useMemo(() => reconcile(shipNorm, payNorm, overdueDays, tolerance),
+                           [shipNorm, payNorm, overdueDays, tolerance]);
+
+  const carriers = useMemo(() => {
+    const set = new Set(parcels.map(p => p.carrier).filter(c => c && c !== '—'));
+    return ['all', ...Array.from(set).sort()];
+  }, [parcels]);
+
+  const view = useMemo(() =>
+    carrierFilter === 'all' ? parcels : parcels.filter(p => p.carrier === carrierFilter),
+    [parcels, carrierFilter]);
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-5">
+      <Header tab={tab} setTab={setTab} onSave={save} hasData={parcels.length>0} />
+
+      {tab === 'data' && (
+        <DataTab
+          shipRaw={shipRaw} setShipRaw={setShipRaw} shipMap={shipMap} setShipMap={setShipMap}
+          payRaw={payRaw} setPayRaw={setPayRaw} payMap={payMap} setPayMap={setPayMap}
+          overdueDays={overdueDays} setOverdueDays={setOverdueDays}
+          tolerance={tolerance} setTolerance={setTolerance}
+          onClear={clearAll} goDash={() => setTab('dashboard')}
+        />
+      )}
+
+      {tab !== 'data' && parcels.length === 0 && (
+        <EmptyState onGo={() => setTab('data')} />
+      )}
+
+      {tab === 'dashboard' && parcels.length > 0 && (
+        <Dashboard parcels={parcels} view={view} carriers={carriers}
+          carrierFilter={carrierFilter} setCarrierFilter={setCarrierFilter}
+          sortBy={sortBy} setSortBy={setSortBy} overdueDays={overdueDays}
+          onOpenLeaks={() => setTab('reconcile')} />
+      )}
+
+      {tab === 'reconcile' && parcels.length > 0 && (
+        <Reconcile parcels={parcels} carriers={carriers}
+          carrierFilter={carrierFilter} setCarrierFilter={setCarrierFilter} />
+      )}
+
+      <p className="text-center text-xs text-slate-400 pt-2 pb-6">
+        ประมวลผลในเครื่องคุณทั้งหมด — ข้อมูลไม่ถูกส่งออกไปไหน · จับคู่ด้วยเลขพัสดุ (Tracking No.)
+      </p>
+    </div>
+  );
+}
+
+// ---------- Header ----------
+function Header({ tab, setTab, onSave, hasData }) {
+  const Tab = ({ id, label }) => (
+    <button onClick={() => setTab(id)}
+      className={clsx('px-4 py-2 rounded-lg text-sm font-semibold transition',
+        tab === id ? 'bg-white text-emerald-600 shadow' : 'text-slate-500 hover:text-slate-700')}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex items-center gap-3">
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white w-11 h-11 rounded-xl grid place-items-center text-xl">💰</div>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800">ตรวจสอบเงิน COD <span className="text-xs font-normal text-slate-400">v1.0</span></h1>
+          <p className="text-slate-500 text-sm">เทียบเงินที่ต้องได้ กับเงินที่เข้าจริง ทีละพัสดุ — ไม่ให้รั่วไหล</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {hasData && <button onClick={onSave} className="px-3 py-2 text-sm rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">💾 บันทึก</button>}
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          <Tab id="data" label="ข้อมูล" />
+          <Tab id="dashboard" label="ภาพรวม" />
+          <Tab id="reconcile" label="ตรวจรั่วไหล" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ onGo }) {
+  return (
+    <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-16 text-center">
+      <div className="text-5xl mb-3">📥</div>
+      <p className="text-slate-600 font-medium mb-1">ยังไม่มีข้อมูล</p>
+      <p className="text-slate-400 text-sm mb-5">นำเข้าข้อมูลพัสดุ COD และยอดเงินเข้าก่อน แล้วระบบจะตรวจให้อัตโนมัติ</p>
+      <button onClick={onGo} className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">ไปหน้านำเข้าข้อมูล</button>
+    </div>
+  );
+}
+
+// =========================================================================
+//  DATA TAB — นำเข้าข้อมูล 2 ฝั่ง + map คอลัมน์ + API + ตัวอย่าง
+// =========================================================================
+function DataTab(props) {
+  const { shipRaw, setShipRaw, shipMap, setShipMap, payRaw, setPayRaw, payMap, setPayMap,
+          overdueDays, setOverdueDays, tolerance, setTolerance, onClear, goDash } = props;
+
+  const loadSample = () => {
+    const today = new Date();
+    const d = (off) => { const x = new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+    const ship = [
+      { tracking:'TH010001', carrier:'J&T', cod:'590.00', status:'ส่งสำเร็จ', delivered:d(12), order:'A-1001' },
+      { tracking:'TH010002', carrier:'J&T', cod:'1290.00', status:'ส่งสำเร็จ', delivered:d(10), order:'A-1002' },
+      { tracking:'TH010003', carrier:'J&T', cod:'450.00', status:'ส่งสำเร็จ', delivered:d(2),  order:'A-1003' },
+      { tracking:'TH010004', carrier:'Kerry', cod:'880.00', status:'ส่งสำเร็จ', delivered:d(20), order:'A-1004' },
+      { tracking:'TH010005', carrier:'Kerry', cod:'2350.00', status:'ตีกลับ', delivered:'', order:'A-1005' },
+      { tracking:'TH010006', carrier:'ไปรษณีย์ไทย', cod:'320.00', status:'กำลังจัดส่ง', delivered:'', order:'A-1006' },
+      { tracking:'TH010007', carrier:'J&T', cod:'760.00', status:'ส่งสำเร็จ', delivered:d(8), order:'A-1007' },
+      { tracking:'TH010008', carrier:'Kerry', cod:'1500.00', status:'ส่งสำเร็จ', delivered:d(3), order:'A-1008' },
+    ];
+    const pay = [
+      { tracking:'TH010001', received:'590.00', paid:d(9) },   // ครบ
+      { tracking:'TH010002', received:'1000.00', paid:d(7) },  // ขาด 290
+      { tracking:'TH010004', received:'880.00', paid:d(16) },  // ครบ
+      { tracking:'TH010005', received:'2350.00', paid:d(15) }, // ตีกลับแต่มีเงินเข้า!
+      { tracking:'TH010007', received:'760.00', paid:d(6) },   // ครบ
+      { tracking:'TH019999', received:'999.00', paid:d(4) },   // เงินเข้าไม่มีออเดอร์
+      // TH010003 (450) ส่งสำเร็จ 2 วัน ยังไม่ถึงกำหนด → รอเงิน
+      // TH010008 (1500) ส่งสำเร็จ 3 วัน ยังไม่เข้า → รอเงิน
+    ];
+    const sm = autoMap(Object.keys(ship[0]));
+    const pm = autoMap(Object.keys(pay[0]));
+    setShipRaw(ship); setShipMap(sm);
+    setPayRaw(pay); setPayMap(pm);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center gap-3">
+        <span className="text-sm text-slate-600 font-medium mr-2">เริ่มเร็ว:</span>
+        <button onClick={loadSample} className="px-4 py-2 text-sm rounded-lg bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 border border-emerald-200">▶ โหลดข้อมูลตัวอย่าง</button>
+        <button onClick={onClear} className="px-4 py-2 text-sm rounded-lg bg-red-50 text-red-600 font-semibold hover:bg-red-100 border border-red-200">🗑 ล้างข้อมูล</button>
+        <div className="flex items-center gap-2 ml-auto">
+          <label className="text-sm text-slate-600">ครบกำหนดถือว่า "รอเงินเกินกำหนด" เมื่อเกิน</label>
+          <input type="number" min="0" value={overdueDays} onChange={e=>setOverdueDays(+e.target.value)}
+            className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-sm num text-center" />
+          <span className="text-sm text-slate-600">วัน</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">ยอมรับส่วนต่าง ±</label>
+          <input type="number" min="0" step="0.5" value={tolerance} onChange={e=>setTolerance(+e.target.value)}
+            className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-sm num text-center" />
+          <span className="text-sm text-slate-600">บาท</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <FeedCard
+          title="1) พัสดุ COD ที่ส่ง (เงินที่ต้องได้)"
+          hint="รายการพัสดุที่ส่งออก พร้อมยอด COD และสถานะ — คือฝั่ง 'ควรได้เงิน'"
+          accent="emerald"
+          raw={shipRaw} setRaw={setShipRaw} map={shipMap} setMap={setShipMap}
+          fields={['tracking','carrier','codAmount','status','deliveredDate','shipDate','orderId','received']}
+        />
+        <FeedCard
+          title="2) ยอดเงิน COD ที่เข้าจริง (โอนกลับจากขนส่ง)"
+          hint="รายงานยอดโอน COD จากขนส่ง — คือฝั่ง 'ได้เงินจริง' (ถ้าฝั่งซ้ายมียอดเข้าอยู่แล้ว ข้ามได้)"
+          accent="sky"
+          raw={payRaw} setRaw={setPayRaw} map={payMap} setMap={setPayMap}
+          fields={['tracking','received','paidDate','carrier','status']}
+        />
+      </div>
+
+      {(shipRaw.length>0) && (
+        <div className="text-center">
+          <button onClick={goDash} className="px-6 py-3 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-900">
+            ดูผลตรวจสอบ →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FIELD_LABEL = {
+  tracking:'เลขพัสดุ *', carrier:'ขนส่ง', codAmount:'ยอด COD', received:'เงินเข้า/ยอดโอน',
+  status:'สถานะ', shipDate:'วันที่ส่ง', deliveredDate:'วันที่ส่งสำเร็จ', paidDate:'วันที่โอน', orderId:'เลขออเดอร์',
+};
+
+function FeedCard({ title, hint, accent, raw, setRaw, map, setMap, fields }) {
+  const [text, setText] = useState('');
+  const [err, setErr] = useState('');
+  const [showApi, setShowApi] = useState(false);
+  const fileRef = useRef();
+  const headers = raw.length ? Object.keys(raw[0]) : [];
+
+  const ingest = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) { setErr('ไม่พบข้อมูลในไฟล์/ข้อความ'); return; }
+    // แปลง object ซ้อนให้เป็น string กันพัง (map จะเลือกเฉพาะช่องที่ใช้)
+    const flat = arr.map(o => {
+      const r = {};
+      for (const k of Object.keys(o)) {
+        const v = o[k];
+        r[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
+      }
+      return r;
+    });
+    setRaw(flat);
+    setMap(autoMap(Object.keys(flat[0])));
+    setErr('');
+  };
+
+  const onFile = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try { ingest(parseAny(await f.text())); }
+    catch (ex) { setErr('อ่านไฟล์ไม่ได้: ' + ex.message); }
+    e.target.value = '';
+  };
+  const onPaste = () => {
+    try { ingest(parseAny(text)); }
+    catch (ex) { setErr('รูปแบบข้อมูลไม่ถูกต้อง: ' + ex.message); }
+  };
+
+  const border = { emerald:'border-emerald-200', sky:'border-sky-200' }[accent];
+  const badge  = { emerald:'bg-emerald-50 text-emerald-700', sky:'bg-sky-50 text-sky-700' }[accent];
+
+  return (
+    <div className={clsx('bg-white rounded-2xl shadow-sm border-2 p-5 space-y-4', border)}>
+      <div>
+        <h3 className="font-bold text-slate-800">{title}</h3>
+        <p className="text-sm text-slate-500 mt-0.5">{hint}</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button onClick={()=>fileRef.current.click()} className={clsx('px-3 py-2 text-sm rounded-lg font-semibold', badge)}>📎 อัปโหลด CSV/JSON</button>
+        <input ref={fileRef} type="file" accept=".csv,.json,.txt" className="hidden" onChange={onFile} />
+        <button onClick={()=>setShowApi(s=>!s)} className="px-3 py-2 text-sm rounded-lg font-semibold bg-slate-100 text-slate-700">🔌 ดึงจาก API</button>
+        {raw.length>0 && <span className="px-3 py-2 text-sm rounded-lg bg-slate-50 text-slate-500 font-medium ml-auto">โหลดแล้ว {fmtNum(raw.length)} แถว</span>}
+      </div>
+
+      {showApi && <ApiPanel accent={accent} onData={ingest} />}
+
+      <div>
+        <textarea value={text} onChange={e=>setText(e.target.value)} rows={3}
+          placeholder='วาง CSV หรือ JSON ที่นี่… เช่น [{"tracking":"TH001","cod":590,"status":"ส่งสำเร็จ"}]'
+          className="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg font-mono resize-y" />
+        <button onClick={onPaste} className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-white font-medium">แปลงข้อความ</button>
+      </div>
+
+      {err && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</p>}
+
+      {headers.length > 0 && (
+        <div className="border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold text-slate-500 mb-2 uppercase">จับคู่คอลัมน์ (แก้ได้ถ้าเดาผิด)</p>
+          <div className="grid grid-cols-2 gap-2">
+            {fields.map(f => (
+              <label key={f} className="flex items-center gap-2 text-sm">
+                <span className="w-28 shrink-0 text-slate-600">{FIELD_LABEL[f]}</span>
+                <select value={map[f] || ''} onChange={e=>setMap({...map, [f]: e.target.value})}
+                  className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded-lg text-sm">
+                  <option value="">— ไม่ใช้ —</option>
+                  {headers.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+          <Preview raw={raw} map={map} fields={fields} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Preview({ raw, map, fields }) {
+  const rows = raw.slice(0, 3).map(r => normRow(r, map));
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead><tr className="text-slate-400 text-left">
+          {fields.map(f => <th key={f} className="px-2 py-1 whitespace-nowrap">{FIELD_LABEL[f]}</th>)}
+        </tr></thead>
+        <tbody>
+          {rows.map((r,i) => (
+            <tr key={i} className="border-t border-slate-100 text-slate-600">
+              {fields.map(f => {
+                let v = r[f];
+                if (f==='codAmount'||f==='received') v = v ? fmtNum(v) : '';
+                if (f==='status') v = r.statusRaw ? `${r.statusRaw} → ${STATUS_TH[r.status]}` : '';
+                return <td key={f} className="px-2 py-1 whitespace-nowrap num">{v || '—'}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------- API panel (best-effort; อาจติด CORS) ----------
+function ApiPanel({ accent, onData }) {
+  const [url, setUrl] = useState('');
+  const [method, setMethod] = useState('GET');
+  const [headers, setHeaders] = useState('{\n  "Authorization": "Bearer <TOKEN>"\n}');
+  const [body, setBody] = useState('');
+  const [path, setPath] = useState('data');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const run = async () => {
+    setLoading(true); setMsg('');
+    try {
+      const opt = { method, headers: {} };
+      try { opt.headers = JSON.parse(headers || '{}'); } catch { throw new Error('Headers ต้องเป็น JSON ที่ถูกต้อง'); }
+      if (method !== 'GET' && body.trim()) { opt.body = body; opt.headers['Content-Type'] = opt.headers['Content-Type'] || 'application/json'; }
+      const res = await fetch(url, opt);
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+      const json = await res.json();
+      const arr = getByPath(json, path);
+      if (!Array.isArray(arr)) throw new Error('path "'+path+'" ไม่ใช่ array — ลองปรับ path (เช่น data.items)');
+      onData(arr);
+      setMsg('ดึงสำเร็จ ' + arr.length + ' แถว');
+    } catch (e) {
+      setMsg('ผิดพลาด: ' + e.message + '  · ถ้าเป็น CORS/Failed to fetch เบราว์เซอร์บล็อกการเรียกตรง — ให้ export เป็น CSV แล้วอัปโหลด หรือใช้ backend/proxy ช่วยดึง');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-sm">
+      <div className="flex gap-2">
+        <select value={method} onChange={e=>setMethod(e.target.value)} className="px-2 py-1.5 border border-slate-300 rounded-lg bg-white">
+          <option>GET</option><option>POST</option>
+        </select>
+        <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://api.ขนส่ง.com/cod/settlements"
+          className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg font-mono" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <textarea value={headers} onChange={e=>setHeaders(e.target.value)} rows={3}
+          className="px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-xs" placeholder="Headers (JSON)" />
+        <textarea value={body} onChange={e=>setBody(e.target.value)} rows={3}
+          className="px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-xs" placeholder='Body (ถ้าเป็น POST)' />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-slate-500">array อยู่ที่ path:</span>
+        <input value={path} onChange={e=>setPath(e.target.value)} placeholder="data.items"
+          className="px-2 py-1 border border-slate-300 rounded-lg font-mono w-40" />
+        <button onClick={run} disabled={loading || !url}
+          className="ml-auto px-4 py-1.5 rounded-lg bg-slate-800 text-white font-medium disabled:opacity-40">
+          {loading ? 'กำลังดึง…' : 'ดึงข้อมูล'}
+        </button>
+      </div>
+      {msg && <p className={clsx('text-xs rounded-lg px-2 py-1.5', msg.startsWith('ดึงสำเร็จ') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>{msg}</p>}
+    </div>
+  );
+}
+
+// =========================================================================
+//  DASHBOARD — KPI + ตารางรายขนส่ง (แบบในรูป) + อายุหนี้เงินรอ
+// =========================================================================
+function Dashboard({ parcels, view, carriers, carrierFilter, setCarrierFilter, sortBy, setSortBy, overdueDays, onOpenLeaks }) {
+  const k = useMemo(() => summarize(view), [view]);
+
+  // สรุปรายขนส่ง
+  const byCarrier = useMemo(() => {
+    const m = new Map();
+    for (const p of parcels) {
+      if (!m.has(p.carrier)) m.set(p.carrier, { carrier:p.carrier, total:0, delivered:0, paidCnt:0, paidAmt:0, waitCnt:0, waitAmt:0, returnCnt:0 });
+      const c = m.get(p.carrier);
+      if (p.cat === 'non_cod') continue;
+      c.total++;
+      if (p.status === 'delivered' || p.cat==='paid_ok' || p.cat==='short' || p.cat==='waiting' || p.cat==='over') c.delivered++;
+      if (p.cat === 'paid_ok' || p.cat === 'over') { c.paidCnt++; }
+      c.paidAmt += Math.min(p.received, p.expected || p.received);
+      if (p.cat === 'waiting') { c.waitCnt++; c.waitAmt += p.expected; }
+      if (p.cat === 'short') { c.waitAmt += p.gap; }
+      if (p.cat === 'returned' || p.cat === 'returned_paid') c.returnCnt++;
+    }
+    let arr = Array.from(m.values()).filter(c => c.carrier && c.carrier !== '—');
+    arr.forEach(c => c.returnRate = c.total ? (c.returnCnt / c.total * 100) : 0);
+    const sorters = {
+      waiting: (a,b) => b.waitAmt - a.waitAmt,
+      total:   (a,b) => b.total - a.total,
+      returnRate: (a,b) => b.returnRate - a.returnRate,
+      paid:    (a,b) => b.paidAmt - a.paidAmt,
+    };
+    arr.sort(sorters[sortBy] || sorters.waiting);
+    return arr;
+  }, [parcels, sortBy]);
+
+  // อายุเงินรอ (aging)
+  const aging = useMemo(() => {
+    const buckets = [
+      { label:'0–3 วัน', min:0, max:3, cnt:0, amt:0 },
+      { label:'4–7 วัน', min:4, max:7, cnt:0, amt:0 },
+      { label:'8–15 วัน', min:8, max:15, cnt:0, amt:0 },
+      { label:'16–30 วัน', min:16, max:30, cnt:0, amt:0 },
+      { label:'เกิน 30 วัน', min:31, max:1e9, cnt:0, amt:0 },
+    ];
+    for (const p of view) {
+      if (p.cat !== 'waiting') continue;
+      const d = p.waitingDays ?? 0;
+      const b = buckets.find(b => d >= b.min && d <= b.max);
+      if (b) { b.cnt++; b.amt += p.expected; }
+    }
+    return buckets;
+  }, [view]);
+  const agingMax = Math.max(1, ...aging.map(b => b.amt));
+
+  return (
+    <div className="space-y-5">
+      {/* filter carriers */}
+      <div className="flex flex-wrap gap-2">
+        {carriers.map(c => (
+          <button key={c} onClick={()=>setCarrierFilter(c)}
+            className={clsx('px-3.5 py-1.5 rounded-lg text-sm font-medium border transition',
+              carrierFilter===c ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+            {c === 'all' ? 'ทุกขนส่ง' : c}
+          </button>
+        ))}
+      </div>
+
+      {/* KPI */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi title="ยอด COD ที่ต้องได้" value={fmtBaht(k.expectedDelivered)} sub={`ส่งสำเร็จ ${fmtNum(k.deliveredCnt)} พัสดุ`} tone="slate" icon="📦" />
+        <Kpi title="เงินเข้าแล้ว" value={fmtBaht(k.received)} sub={`${k.collectRate.toFixed(1)}% ของที่ต้องได้`} tone="emerald" icon="✅" />
+        <Kpi title="รอเงิน" value={fmtBaht(k.waitingAmt)} sub={`${fmtNum(k.waitingCnt)} พัสดุ`} tone="amber" icon="⏳" />
+        <Kpi title="เสี่ยงรั่วไหล" value={fmtBaht(k.leakAmt)} sub={`${fmtNum(k.leakCnt)} รายการต้องตรวจ`} tone="red" icon="🚨" onClick={onOpenLeaks} />
+      </div>
+
+      {/* แถบเตือน */}
+      {k.leakCnt > 0 && (
+        <button onClick={onOpenLeaks} className="w-full text-left bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-red-100 transition">
+          <span className="text-2xl">🚨</span>
+          <div className="flex-1">
+            <p className="font-bold text-red-700">พบจุดเสี่ยงเงินรั่วไหล {fmtNum(k.leakCnt)} รายการ รวม {fmtBaht(k.leakAmt)}</p>
+            <p className="text-sm text-red-600">
+              เกินกำหนด {fmtNum(k.overdueCnt)} · เงินขาด {fmtNum(k.shortCnt)} · เงินเกิน {fmtNum(k.overCnt)} · ตีกลับมีเงินเข้า {fmtNum(k.returnedPaidCnt)} · เงินไม่มีออเดอร์ {fmtNum(k.orphanCnt)} · เลขซ้ำ {fmtNum(k.dupCnt)}
+            </p>
+          </div>
+          <span className="text-red-600 font-semibold text-sm shrink-0">ดูรายละเอียด →</span>
+        </button>
+      )}
+
+      {/* ตารางรายขนส่ง */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <h2 className="font-bold text-slate-800">สรุปรายขนส่ง</h2>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-slate-500">เรียงตาม</span>
+            <select value={sortBy} onChange={e=>setSortBy(e.target.value)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+              <option value="waiting">ยอดรอเงิน</option>
+              <option value="total">จำนวนพัสดุ</option>
+              <option value="returnRate">อัตราตีกลับ</option>
+              <option value="paid">เงินเข้าแล้ว</option>
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th className="px-4 py-3 text-left">อันดับ</th>
+                <th className="px-4 py-3 text-left">ขนส่ง</th>
+                <th className="px-4 py-3 text-right">ส่งทั้งหมด</th>
+                <th className="px-4 py-3 text-right">เงินเข้าแล้ว</th>
+                <th className="px-4 py-3 text-right">รอเงิน</th>
+                <th className="px-4 py-3 text-right">ตีกลับ</th>
+                <th className="px-4 py-3 text-right">อัตราตีกลับ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {byCarrier.map((c, i) => {
+                const medal = ['🥇','🥈','🥉'][i] || (i+1);
+                return (
+                  <tr key={c.carrier} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-lg">{medal}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-700">{c.carrier}</td>
+                    <td className="px-4 py-3 text-right num">{fmtNum(c.total)}</td>
+                    <td className="px-4 py-3 text-right num text-emerald-600 font-medium">{fmtBaht(c.paidAmt)}</td>
+                    <td className="px-4 py-3 text-right num">
+                      <span className={clsx('font-semibold', c.waitCnt>0 ? 'text-amber-600' : 'text-slate-400')}>{fmtNum(c.waitCnt)}</span>
+                      {c.waitAmt>0 && <div className="text-xs text-amber-500">{fmtBaht(c.waitAmt)}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-right num text-slate-500">{fmtNum(c.returnCnt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={clsx('inline-block px-2 py-0.5 rounded-full text-xs font-semibold',
+                        c.returnRate > 15 ? 'bg-red-100 text-red-700' : c.returnRate > 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')}>
+                        {c.returnRate.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {byCarrier.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400">ไม่มีข้อมูลขนส่ง</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Aging เงินรอ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 className="font-bold text-slate-800 mb-1">อายุของเงินที่รอเข้า (Aging)</h2>
+        <p className="text-sm text-slate-500 mb-4">ยิ่งรอนาน ยิ่งเสี่ยงหาย — เกินกำหนด {overdueDays} วันควรทวงถามขนส่งทันที</p>
+        <div className="space-y-2.5">
+          {aging.map(b => (
+            <div key={b.label} className="flex items-center gap-3">
+              <span className="w-24 text-sm text-slate-600 shrink-0">{b.label}</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+                <div className={clsx('h-full rounded-full flex items-center justify-end px-2', b.min>7 ? 'bg-red-400' : b.min>3 ? 'bg-amber-400' : 'bg-emerald-400')}
+                  style={{ width: Math.max(3, b.amt/agingMax*100) + '%' }}>
+                  {b.amt>0 && <span className="text-xs text-white font-semibold whitespace-nowrap num">{fmtBaht(b.amt)}</span>}
+                </div>
+              </div>
+              <span className="w-16 text-right text-sm text-slate-500 num shrink-0">{fmtNum(b.cnt)} ชิ้น</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function summarize(list) {
+  const s = {
+    deliveredCnt:0, expectedDelivered:0, received:0,
+    waitingCnt:0, waitingAmt:0, shortCnt:0, shortAmt:0, overCnt:0, overAmt:0,
+    overdueCnt:0, returnedPaidCnt:0, orphanCnt:0, dupCnt:0,
+    leakCnt:0, leakAmt:0, collectRate:0,
+  };
+  const dupSeen = new Set();
+  for (const p of list) {
+    if (p.status === 'delivered' || ['paid_ok','short','waiting','over'].includes(p.cat)) {
+      s.deliveredCnt++; s.expectedDelivered += p.expected;
+    }
+    s.received += (p.cat==='non_cod') ? 0 : p.received;
+    if (p.cat === 'waiting') { s.waitingCnt++; s.waitingAmt += p.expected; if (p.overdue) s.overdueCnt++; }
+    if (p.cat === 'short')   { s.shortCnt++; s.shortAmt += p.gap; }
+    if (p.cat === 'over')    { s.overCnt++; s.overAmt += -p.gap; }
+    if (p.cat === 'returned_paid') s.returnedPaidCnt++;
+    if (p.cat === 'orphan')  s.orphanCnt++;
+    if (p.isDup && !dupSeen.has(p.tracking)) { dupSeen.add(p.tracking); s.dupCnt++; }
+  }
+  // เสี่ยงรั่วไหล = เงินขาด + เงินเกิน + ตีกลับมีเงิน + orphan + เลขซ้ำ + เฉพาะรอเงิน "เกินกำหนด"
+  s.leakCnt = s.shortCnt + s.overCnt + s.returnedPaidCnt + s.orphanCnt + s.dupCnt + s.overdueCnt;
+  s.leakAmt = s.shortAmt + s.overAmt;
+  // นับยอดเงินของรอเงินเกินกำหนดเข้าไปในยอดเสี่ยงด้วย
+  for (const p of list) if (p.cat==='waiting' && p.overdue) s.leakAmt += p.expected;
+  s.collectRate = s.expectedDelivered > 0 ? (s.received / s.expectedDelivered * 100) : 0;
+  return s;
+}
+
+function Kpi({ title, value, sub, tone, icon, onClick }) {
+  const tones = {
+    slate:'text-slate-700', emerald:'text-emerald-600', amber:'text-amber-600', red:'text-red-600',
+  };
+  return (
+    <div onClick={onClick}
+      className={clsx('bg-white p-4 rounded-2xl shadow-sm border border-slate-200', onClick && 'cursor-pointer hover:shadow-md transition')}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500 font-medium">{title}</p>
+        <span className="text-lg">{icon}</span>
+      </div>
+      <p className={clsx('text-2xl font-bold mt-1 num', tones[tone])}>{value}</p>
+      <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
+    </div>
+  );
+}
+
+// =========================================================================
+//  RECONCILE — ตารางจับทุกจุดรั่ว + ฟิลเตอร์ + ค้นหา + export
+// =========================================================================
+const FILTER_TABS = [
+  { id:'leak', label:'⚠️ เฉพาะที่ต้องตรวจ' },
+  { id:'waiting', label:'รอเงิน' },
+  { id:'short', label:'เงินขาด' },
+  { id:'over', label:'เงินเกิน' },
+  { id:'returned_paid', label:'ตีกลับมีเงิน' },
+  { id:'orphan', label:'ไม่มีออเดอร์' },
+  { id:'duplicate', label:'เลขซ้ำ' },
+  { id:'paid_ok', label:'ครบแล้ว' },
+  { id:'all', label:'ทั้งหมด' },
+];
+
+function Reconcile({ parcels, carriers, carrierFilter, setCarrierFilter }) {
+  const [f, setF] = useState('leak');
+  const [q, setQ] = useState('');
+
+  const rows = useMemo(() => {
+    let r = parcels;
+    if (carrierFilter !== 'all') r = r.filter(p => p.carrier === carrierFilter);
+    if (f === 'leak') r = r.filter(p => CATS[p.cat]?.leak || p.isDup);
+    else if (f === 'duplicate') r = r.filter(p => p.isDup);
+    else if (f !== 'all') r = r.filter(p => p.cat === f);
+    if (q.trim()) {
+      const s = q.trim().toLowerCase();
+      r = r.filter(p => p.tracking.toLowerCase().includes(s) || (p.orderId||'').toLowerCase().includes(s));
+    }
+    // เรียง: เงินที่ค้าง/ผิดปกติมากก่อน
+    return [...r].sort((a,b) => (Math.abs(b.outstanding)||Math.abs(b.gap)) - (Math.abs(a.outstanding)||Math.abs(a.gap)));
+  }, [parcels, carrierFilter, f, q]);
+
+  const exportCSV = () => {
+    const head = ['tracking','order','carrier','status','category','expected','received','gap','waiting_days'];
+    const lines = [head.join(',')];
+    for (const p of rows) {
+      lines.push([p.tracking, p.orderId, p.carrier, STATUS_TH[p.status], CATS[p.cat]?.label || p.cat,
+        p.expected, p.received, p.gap, p.waitingDays ?? ''].map(x => `"${String(x??'').replace(/"/g,'""')}"`).join(','));
+    }
+    const blob = new Blob(['﻿' + lines.join('\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'cod-leaks.csv'; a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {FILTER_TABS.map(t => (
+            <button key={t.id} onClick={()=>setF(t.id)}
+              className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition',
+                f===t.id ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="ค้นหาเลขพัสดุ / ออเดอร์…"
+            className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+          <select value={carrierFilter} onChange={e=>setCarrierFilter(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            {carriers.map(c => <option key={c} value={c}>{c==='all'?'ทุกขนส่ง':c}</option>)}
+          </select>
+          <span className="text-sm text-slate-500">พบ {fmtNum(rows.length)} รายการ</span>
+          <button onClick={exportCSV} className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th className="px-4 py-3 text-left">เลขพัสดุ / ออเดอร์</th>
+                <th className="px-4 py-3 text-left">ขนส่ง</th>
+                <th className="px-4 py-3 text-left">สถานะ</th>
+                <th className="px-4 py-3 text-right">ต้องได้</th>
+                <th className="px-4 py-3 text-right">เข้าจริง</th>
+                <th className="px-4 py-3 text-right">ส่วนต่าง</th>
+                <th className="px-4 py-3 text-center">ค้าง(วัน)</th>
+                <th className="px-4 py-3 text-left">ผลตรวจ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((p, i) => {
+                const cat = CATS[p.cat] || {};
+                return (
+                  <tr key={p.tracking+i} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-slate-700">{p.tracking}</div>
+                      {p.orderId && <div className="text-xs text-slate-400">{p.orderId}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{p.carrier}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{STATUS_TH[p.status]}</td>
+                    <td className="px-4 py-3 text-right num text-slate-700">{p.expected? fmtBaht(p.expected):'—'}</td>
+                    <td className="px-4 py-3 text-right num text-slate-700">{p.received? fmtBaht(p.received):'—'}</td>
+                    <td className={clsx('px-4 py-3 text-right num font-semibold', p.gap>0?'text-red-600':p.gap<0?'text-fuchsia-600':'text-slate-300')}>
+                      {p.gap? fmtBaht(p.gap):'0'}
+                    </td>
+                    <td className="px-4 py-3 text-center num">
+                      {p.cat==='waiting'
+                        ? <span className={clsx('font-semibold', p.overdue?'text-red-600':'text-amber-500')}>{p.waitingDays ?? '—'}{p.overdue?'!':''}</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap',
+                        badgeCls(cat.color))}>
+                        {cat.label || p.cat}{p.isDup && p.cat!=='duplicate' ? ' · ซ้ำ' : ''}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">🎉 ไม่พบรายการในเงื่อนไขนี้</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function badgeCls(color) {
+  const m = {
+    emerald:'bg-emerald-100 text-emerald-700', amber:'bg-amber-100 text-amber-700',
+    red:'bg-red-100 text-red-700', fuchsia:'bg-fuchsia-100 text-fuchsia-700',
+    slate:'bg-slate-100 text-slate-600', rose:'bg-rose-100 text-rose-700',
+    orange:'bg-orange-100 text-orange-700', violet:'bg-violet-100 text-violet-700',
+    sky:'bg-sky-100 text-sky-700',
+  };
+  return m[color] || m.slate;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
