@@ -1,0 +1,13 @@
+# VoiceClone AI — Python dependencies
+#
+# Core voice-cloning TTS engine (maintained community fork of Coqui TTS).
+# Provides the XTTS-v2 model used for zero-shot voice cloning.
+coqui-tts>=0.24.1
+
+# Web server + file uploads
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# Audio handling
+soundfile>=0.12.1

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceClone AI — แปลงข้อความเป็นเสียงด้วยเสียงของคุณ</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div class="badge">🎙️ ใช้งานบนเครื่องของคุณ · ข้อมูลไม่ถูกส่งออกไปที่ไหน</div>
+      <h1>VoiceClone AI</h1>
+      <p class="subtitle">
+        อัปโหลดเสียงตัวอย่างสั้น ๆ แล้วพิมพ์ข้อความที่ต้องการ<br />
+        ระบบจะสร้างเสียงพูดออกมาเป็นไฟล์เสียง พร้อมดาวน์โหลดไปใช้งานได้ทันที
+      </p>
+    </header>
+
+    <form id="form" class="card">
+      <!-- Step 1: voice sample -->
+      <section class="step">
+        <div class="step-head"><span class="num">1</span><h2>อัปโหลดเสียงตัวอย่าง</h2></div>
+        <label id="drop" class="dropzone" for="sample">
+          <input type="file" id="sample" name="sample"
+                 accept=".wav,.mp3,.flac,.ogg,.m4a,.webm,audio/*" hidden />
+          <div class="dz-idle">
+            <div class="dz-icon">⬆️</div>
+            <div class="dz-title">ลากไฟล์เสียงมาวาง หรือคลิกเพื่อเลือก</div>
+            <div class="dz-hint">รองรับ WAV, MP3, FLAC, OGG, M4A · แนะนำ 6–20 วินาที เสียงชัด ไม่มีเสียงรบกวน</div>
+          </div>
+          <div class="dz-file" hidden>
+            <div class="dz-icon">🎵</div>
+            <div>
+              <div class="dz-name"></div>
+              <div class="dz-size"></div>
+            </div>
+            <button type="button" class="clear" title="ลบไฟล์">✕</button>
+          </div>
+        </label>
+        <audio id="samplePreview" controls hidden></audio>
+      </section>
+
+      <!-- Step 2: text + language -->
+      <section class="step">
+        <div class="step-head"><span class="num">2</span><h2>พิมพ์ข้อความ</h2></div>
+        <textarea id="text" name="text" rows="5" maxlength="5000"
+                  placeholder="พิมพ์ข้อความที่ต้องการให้พูด..."></textarea>
+        <div class="row">
+          <label class="lang">
+            ภาษา
+            <select id="language" name="language"></select>
+          </label>
+          <span id="count" class="count">0 / 5000</span>
+        </div>
+        <p class="note">หมายเหตุ: โมเดลรองรับหลายภาษา แต่ยังไม่รองรับภาษาไทยโดยตรง — ดูรายละเอียดใน README</p>
+      </section>
+
+      <!-- Step 3: generate -->
+      <section class="step">
+        <div class="step-head"><span class="num">3</span><h2>สร้างเสียง</h2></div>
+        <button id="submit" type="submit" class="generate">
+          <span class="label">✨ สร้างเสียงพูด</span>
+          <span class="spinner" hidden></span>
+        </button>
+        <p id="status" class="statusbar" hidden></p>
+      </section>
+
+      <!-- Result -->
+      <section id="result" class="result" hidden>
+        <div class="step-head"><span class="num">✓</span><h2>เสร็จแล้ว!</h2></div>
+        <audio id="output" controls></audio>
+        <a id="download" class="download" download>⬇️ ดาวน์โหลดไฟล์เสียง (.wav)</a>
+      </section>
+    </form>
+
+    <footer class="foot">
+      เหมาะสำหรับ: ทำคลิปวิดีโอ · เสียงบรรยาย · คอนเทนต์ TikTok / YouTube / Reels · งานโฆษณา / รีวิวสินค้า
+    </footer>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
