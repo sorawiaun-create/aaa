@@ -217,6 +217,67 @@ def _thai_normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+# F5-TTS degrades when asked to generate more than ~10 s of audio in one pass.
+# Thai text rarely has punctuation, so the model treats a whole paragraph as one
+# long sentence and the tail comes out garbled. We split the text into short
+# pieces (at sentence, then word boundaries) and generate each one separately.
+# ~90 Thai characters stays comfortably under the degradation threshold.
+MAX_CHUNK_CHARS = 90
+
+
+def _split_text_for_tts(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+    """Split Thai text into short chunks that each generate cleanly."""
+    text = (text or "").strip()
+    if not text:
+        return []
+
+    # First pass: sentences (pythainlp if available, else punctuation split).
+    try:
+        from pythainlp import sent_tokenize  # noqa: WPS433
+
+        sentences = sent_tokenize(text)
+    except Exception:  # noqa: BLE001 — pythainlp optional
+        sentences = re.split(r"(?<=[.!?。！?\n])\s*", text)
+
+    # Second pass: break any still-too-long sentence at word boundaries.
+    units: list[str] = []
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if len(sentence) <= max_chars:
+            units.append(sentence)
+            continue
+        try:
+            from pythainlp import word_tokenize  # noqa: WPS433
+
+            words = word_tokenize(sentence, keep_whitespace=False)
+        except Exception:  # noqa: BLE001
+            words = sentence.split(" ")
+        current = ""
+        for word in words:
+            if current and len(current) + len(word) > max_chars:
+                units.append(current)
+                current = word
+            else:
+                current += word
+        if current:
+            units.append(current)
+
+    # Final pass: greedily merge small units back up to max_chars.
+    chunks: list[str] = []
+    current = ""
+    for unit in units:
+        if current and len(current) + len(unit) > max_chars:
+            chunks.append(current)
+            current = unit
+        else:
+            current += unit
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 class VoiceCloneEngine:
     """Lazily-loaded singleton wrapper around the Thai F5-TTS model."""
 
@@ -335,19 +396,59 @@ class VoiceCloneEngine:
 
         nfe_step = max(4, min(64, int(nfe_step)))
         speed = max(0.5, min(2.0, float(speed)))
+        ref_text = _thai_normalize(ref_text)
 
         tts = self._ensure_loaded()
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 
-        tts.infer(
-            ref_file=str(speaker_wav),
-            ref_text=_thai_normalize(ref_text),
-            gen_text=gen_text,
-            file_wave=str(out_path),
-            nfe_step=nfe_step,
-            speed=speed,
-            remove_silence=False,
-        )
+        chunks = _split_text_for_tts(gen_text)
+
+        # Short text: one pass straight to the output file (fast path).
+        if len(chunks) <= 1:
+            tts.infer(
+                ref_file=str(speaker_wav),
+                ref_text=ref_text,
+                gen_text=gen_text,
+                file_wave=str(out_path),
+                nfe_step=nfe_step,
+                speed=speed,
+                remove_silence=False,
+            )
+            return str(out_path)
+
+        # Long text: generate each chunk separately (so none exceeds the
+        # ~10 s window where F5-TTS degrades), then stitch the audio together.
+        import numpy as np  # noqa: WPS433
+        import soundfile as sf  # noqa: WPS433
+
+        # Resolve the reference transcript once so we don't re-run ASR per chunk.
+        if not ref_text:
+            try:
+                from f5_tts.infer.utils_infer import (  # noqa: WPS433
+                    preprocess_ref_audio_text,
+                )
+
+                _, ref_text = preprocess_ref_audio_text(str(speaker_wav), "")
+            except Exception:  # noqa: BLE001 — fall back to per-chunk ASR
+                ref_text = ""
+
+        pieces: list = []
+        sr = 24000
+        for chunk in chunks:
+            wav, sr, _ = tts.infer(
+                ref_file=str(speaker_wav),
+                ref_text=ref_text,
+                gen_text=chunk,
+                nfe_step=nfe_step,
+                speed=speed,
+                remove_silence=False,
+            )
+            pieces.append(np.asarray(wav, dtype=np.float32))
+            # Short pause between chunks for a natural join.
+            pieces.append(np.zeros(int(sr * 0.12), dtype=np.float32))
+
+        final = np.concatenate(pieces[:-1]) if pieces else np.zeros(1, np.float32)
+        sf.write(str(out_path), final, sr)
         return str(out_path)
 
 
