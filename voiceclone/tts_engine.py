@@ -10,9 +10,55 @@ cached, so the first generation takes a while; subsequent runs are fast.
 
 from __future__ import annotations
 
+import glob
+import os
 import re
+import shutil
 import threading
 from pathlib import Path
+
+
+def _register_ffmpeg_dlls() -> None:
+    """Make FFmpeg's shared DLLs discoverable to torchcodec on Windows.
+
+    Since Python 3.8, dependent DLLs loaded in-process are no longer searched
+    for on ``PATH`` (only via ``os.add_dll_directory``). So even a correctly
+    installed, on-PATH FFmpeg stays invisible to torchcodec, which fails with
+    "Could not find module libtorchcodec_coreN.dll (or one of its
+    dependencies)". Here we locate FFmpeg's ``bin`` folder (which ships the
+    ``av*.dll`` / ``sw*.dll`` files) and register it explicitly. No-op off
+    Windows.
+    """
+    if os.name != "nt":
+        return
+
+    candidates: list[str] = []
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        candidates.append(os.path.dirname(ffmpeg))
+
+    # Fallback: common winget "shared" build locations, in case ffmpeg.exe is
+    # not on PATH but the DLLs are installed.
+    local = os.environ.get("LOCALAPPDATA", "")
+    if local:
+        candidates += glob.glob(
+            os.path.join(local, "Microsoft", "WinGet", "Packages",
+                         "Gyan.FFmpeg.Shared*", "**", "bin"),
+            recursive=True,
+        )
+
+    seen: set[str] = set()
+    for path in candidates:
+        if path and path not in seen and os.path.isdir(path):
+            seen.add(path)
+            try:
+                os.add_dll_directory(path)
+            except OSError:
+                pass
+
+
+# Run as early as possible — before torch / torchcodec get imported.
+_register_ffmpeg_dlls()
 
 # Hugging Face repo holding the Thai F5-TTS checkpoint + vocab.
 HF_REPO = "VIZINTZOR/F5-TTS-THAI"
@@ -97,6 +143,9 @@ class VoiceCloneEngine:
         with self._lock:
             if self._tts is not None:
                 return self._tts
+
+            # Ensure FFmpeg DLLs are registered before torchcodec loads.
+            _register_ffmpeg_dlls()
 
             import torch  # noqa: WPS433
             from f5_tts.api import F5TTS  # noqa: WPS433
