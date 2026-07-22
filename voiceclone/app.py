@@ -12,6 +12,7 @@ Everything runs locally on your machine.
 
 from __future__ import annotations
 
+import traceback
 import uuid
 from pathlib import Path
 
@@ -79,6 +80,11 @@ async def generate(
             ref_text=(ref_text or "").strip(),
         )
     except Exception as exc:  # noqa: BLE001 — surface a clean error to the UI
+        # Print the full traceback to the server console for debugging, and
+        # return a short, readable message to the browser.
+        print("\n===== VoiceClone generation error =====")
+        traceback.print_exc()
+        print("=======================================\n", flush=True)
         raise HTTPException(status_code=500, detail=f"สร้างเสียงไม่สำเร็จ: {exc}") from exc
     finally:
         # The reference sample is only needed during generation.
