@@ -134,8 +134,13 @@ voiceclone/
 
 ## 🔧 แก้ปัญหาที่พบบ่อย
 
-- **`Could not load libtorchcodec` / `FFmpeg is not properly installed`** — ยังไม่ได้ติดตั้ง FFmpeg
-  ให้ติดตั้งตามหัวข้อ "ความต้องการของระบบ" (`winget install --id "Gyan.FFmpeg.Shared"`) แล้ว**เปิด cmd ใหม่**
+- **`Could not load libtorchcodec ... coreN.dll`** — PyTorch เวอร์ชันใหม่เกินไปจนไม่เข้ากับ torchcodec
+  แก้ด้วยการล็อกเวอร์ชันแล้วถอน torchcodec (ทำในโฟลเดอร์โปรเจกต์ ตอน venv เปิดอยู่):
+  ```
+  pip install torch==2.6.0 torchaudio==2.6.0
+  pip uninstall -y torchcodec
+  ```
+  (`requirements.txt` ล็อกเวอร์ชันนี้ไว้แล้ว การติดตั้งใหม่ตั้งแต่ต้นจะไม่เจอปัญหานี้)
 - **`No such file or directory ... predicated_tile_access...` ตอน pip install** — path ยาวเกินไป
   ให้ย้ายโปรเจกต์ไปไว้ที่ `C:\vc` แล้วติดตั้งใหม่
 - **ครั้งแรกช้ามาก** — เป็นเรื่องปกติ ระบบกำลังดาวน์โหลดโมเดล ครั้งต่อไปจะเร็วขึ้น

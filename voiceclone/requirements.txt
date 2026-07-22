@@ -1,5 +1,13 @@
 # VoiceClone AI — Python dependencies
 #
+# IMPORTANT: pin a PyTorch version that does NOT route audio loading through
+# torchcodec. The newest torch (2.13) pairs with a torchcodec whose Windows
+# DLLs fail to load ("Could not load libtorchcodec ... coreN.dll"). torch/
+# torchaudio 2.6 use the native soundfile/ffmpeg backends instead, and F5-TTS
+# only calls torchaudio.load, so torchcodec is not needed at all.
+torch==2.6.0
+torchaudio==2.6.0
+
 # F5-TTS: flow-matching text-to-speech with zero-shot voice cloning.
 # Used together with the Thai fine-tuned checkpoint (VIZINTZOR/F5-TTS-THAI).
 f5-tts>=1.1.0
