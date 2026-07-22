@@ -331,6 +331,20 @@ function reconcile(shipments, payments, overdueDays, tolerance) {
 }
 const round2 = (n) => Math.round((Number(n)||0) * 100) / 100;
 
+// ---------- จัดกลุ่มรายเดือน (อิงวันที่ส่งสำเร็จ ถ้าไม่มีใช้วันที่ส่ง) ----------
+const TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function monthKey(p) {
+  const d = parseDate(p.deliveredDate) || parseDate(p.shipDate) || parseDate(p.paidDate);
+  if (!d) return 'unknown';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function monthLabel(key) {
+  if (key === 'unknown') return 'ไม่ระบุวันที่';
+  if (key === 'all') return 'ทุกเดือน';
+  const [y, m] = key.split('-');
+  return TH_MONTHS[+m - 1] + ' ' + y;
+}
+
 // =========================================================================
 //  UI
 // =========================================================================
@@ -345,6 +359,7 @@ function App() {
   const [overdueDays, setOverdueDays] = useState(7);
   const [tolerance, setTolerance] = useState(1);   // ยอมรับส่วนต่างเล็กน้อย (เศษบาท)
   const [carrierFilter, setCarrierFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState(null); // null = ยังไม่เลือก → ใช้เดือนล่าสุด
   const [sortBy, setSortBy] = useState('waiting');
 
   // โหลด/บันทึก
@@ -383,9 +398,24 @@ function App() {
     return ['all', ...Array.from(set).sort()];
   }, [parcels]);
 
+  // รายชื่อเดือนที่มีในข้อมูล (ล่าสุดก่อน)
+  const months = useMemo(() => {
+    const set = new Set(parcels.map(monthKey));
+    const arr = [...set].filter(x => x !== 'unknown').sort().reverse();
+    if (set.has('unknown')) arr.push('unknown');
+    return arr;
+  }, [parcels]);
+  // เดือนที่กำลังแสดง: ถ้ายังไม่เลือก → เดือนล่าสุด
+  const activeMonth = (monthFilter && (monthFilter === 'all' || months.includes(monthFilter)))
+    ? monthFilter : (months[0] || 'all');
+
+  const monthParcels = useMemo(() =>
+    activeMonth === 'all' ? parcels : parcels.filter(p => monthKey(p) === activeMonth),
+    [parcels, activeMonth]);
+
   const view = useMemo(() =>
-    carrierFilter === 'all' ? parcels : parcels.filter(p => p.carrier === carrierFilter),
-    [parcels, carrierFilter]);
+    carrierFilter === 'all' ? monthParcels : monthParcels.filter(p => p.carrier === carrierFilter),
+    [monthParcels, carrierFilter]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
@@ -406,15 +436,17 @@ function App() {
       )}
 
       {tab === 'dashboard' && parcels.length > 0 && (
-        <Dashboard parcels={parcels} view={view} carriers={carriers}
+        <Dashboard allParcels={parcels} base={monthParcels} view={view} carriers={carriers}
           carrierFilter={carrierFilter} setCarrierFilter={setCarrierFilter}
+          months={months} activeMonth={activeMonth} setMonth={setMonthFilter}
           sortBy={sortBy} setSortBy={setSortBy} overdueDays={overdueDays}
           hasPayments={payNorm.length > 0} goData={() => setTab('data')}
           onOpenLeaks={() => setTab('reconcile')} />
       )}
 
       {tab === 'reconcile' && parcels.length > 0 && (
-        <Reconcile parcels={parcels} carriers={carriers}
+        <Reconcile parcels={monthParcels} carriers={carriers}
+          months={months} activeMonth={activeMonth} setMonth={setMonthFilter}
           carrierFilter={carrierFilter} setCarrierFilter={setCarrierFilter} />
       )}
 
@@ -790,13 +822,32 @@ function ApiPanel({ accent, onData }) {
 // =========================================================================
 //  DASHBOARD — KPI + ตารางรายขนส่ง (แบบในรูป) + อายุหนี้เงินรอ
 // =========================================================================
-function Dashboard({ parcels, view, carriers, carrierFilter, setCarrierFilter, sortBy, setSortBy, overdueDays, hasPayments, goData, onOpenLeaks }) {
+function Dashboard({ allParcels, base, view, carriers, carrierFilter, setCarrierFilter, months, activeMonth, setMonth, sortBy, setSortBy, overdueDays, hasPayments, goData, onOpenLeaks }) {
   const k = useMemo(() => summarize(view), [view]);
 
-  // สรุปรายขนส่ง
+  // สรุปรายเดือน (จากทั้งไฟล์ ไม่กรองเดือน — ไว้เทียบเดือนต่อเดือน)
+  const byMonth = useMemo(() => {
+    const m = new Map();
+    for (const p of allParcels) {
+      if (p.cat === 'non_cod') continue;
+      const key = monthKey(p);
+      if (!m.has(key)) m.set(key, { key, total:0, delivered:0, codOwed:0, received:0, waitAmt:0, awaitAmt:0, returnCnt:0 });
+      const c = m.get(key); c.total++;
+      const isDelivered = p.status === 'delivered' || ['paid_ok','short','over','waiting','await'].includes(p.cat);
+      if (isDelivered) { c.delivered++; c.codOwed += p.expected; }
+      if (['paid_ok','over','short','returned_paid'].includes(p.cat)) c.received += p.received;
+      if (p.cat === 'waiting') c.waitAmt += p.expected;
+      if (p.cat === 'short') c.waitAmt += p.gap;
+      if (p.cat === 'await') c.awaitAmt += p.expected;
+      if (p.cat === 'returned' || p.cat === 'returned_paid') c.returnCnt++;
+    }
+    return [...m.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
+  }, [allParcels]);
+
+  // สรุปรายขนส่ง (เฉพาะเดือนที่เลือก)
   const byCarrier = useMemo(() => {
     const m = new Map();
-    for (const p of parcels) {
+    for (const p of base) {
       if (!m.has(p.carrier)) m.set(p.carrier, { carrier:p.carrier, total:0, delivered:0, paidAmt:0, waitCnt:0, waitAmt:0, awaitAmt:0, codOwed:0, returnCnt:0 });
       const c = m.get(p.carrier);
       if (p.cat === 'non_cod') continue;
@@ -819,7 +870,7 @@ function Dashboard({ parcels, view, carriers, carrierFilter, setCarrierFilter, s
     };
     arr.sort(sorters[sortBy] || sorters.waiting);
     return arr;
-  }, [parcels, sortBy]);
+  }, [base, sortBy]);
 
   // อายุเงินรอ (aging)
   const aging = useMemo(() => {
@@ -842,15 +893,29 @@ function Dashboard({ parcels, view, carriers, carrierFilter, setCarrierFilter, s
 
   return (
     <div className="space-y-5">
-      {/* filter carriers */}
-      <div className="flex flex-wrap gap-2">
-        {carriers.map(c => (
-          <button key={c} onClick={()=>setCarrierFilter(c)}
-            className={clsx('px-3.5 py-1.5 rounded-lg text-sm font-medium border transition',
-              carrierFilter===c ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
-            {c === 'all' ? 'ทุกขนส่ง' : c}
-          </button>
-        ))}
+      {/* เลือกเดือน + ขนส่ง */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-700">📅 เดือน</span>
+          <select value={activeMonth} onChange={e=>setMonth(e.target.value)}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-medium">
+            <option value="all">ทุกเดือน</option>
+            {months.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
+          </select>
+        </div>
+        <div className="w-px h-6 bg-slate-200 hidden sm:block" />
+        <div className="flex flex-wrap gap-2">
+          {carriers.map(c => (
+            <button key={c} onClick={()=>setCarrierFilter(c)}
+              className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium border transition',
+                carrierFilter===c ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+              {c === 'all' ? 'ทุกขนส่ง' : c}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto text-sm text-slate-400">
+          กำลังดู: <b className="text-slate-600">{monthLabel(activeMonth)}</b>
+        </span>
       </div>
 
       {/* KPI */}
@@ -896,10 +961,60 @@ function Dashboard({ parcels, view, carriers, carrierFilter, setCarrierFilter, s
         </button>
       )}
 
+      {/* ตารางสรุปรายเดือน (คลิกเลือกเดือนได้) */}
+      {byMonth.length > 1 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+            <h2 className="font-bold text-slate-800">สรุปรายเดือน</h2>
+            <span className="text-xs text-slate-400">(คลิกที่แถวเพื่อดูเฉพาะเดือนนั้น)</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-3 text-left">เดือน</th>
+                  <th className="px-4 py-3 text-right">พัสดุ</th>
+                  <th className="px-4 py-3 text-right">ส่งสำเร็จ</th>
+                  <th className="px-4 py-3 text-right">COD ที่ต้องได้</th>
+                  <th className="px-4 py-3 text-right">{hasPayments ? 'เงินเข้าแล้ว' : 'รอกระทบยอด'}</th>
+                  <th className="px-4 py-3 text-right">ตีกลับ</th>
+                  <th className="px-4 py-3 text-right">%ตีกลับ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {byMonth.map(mo => {
+                  const rate = mo.total ? (mo.returnCnt / mo.total * 100) : 0;
+                  const isActive = activeMonth === mo.key;
+                  return (
+                    <tr key={mo.key} onClick={()=>setMonth(mo.key)}
+                      className={clsx('cursor-pointer transition', isActive ? 'bg-emerald-50' : 'hover:bg-slate-50')}>
+                      <td className="px-4 py-3 font-semibold text-slate-700">
+                        {isActive && <span className="text-emerald-500 mr-1">▸</span>}{monthLabel(mo.key)}
+                      </td>
+                      <td className="px-4 py-3 text-right num">{fmtNum(mo.total)}</td>
+                      <td className="px-4 py-3 text-right num text-slate-500">{fmtNum(mo.delivered)}</td>
+                      <td className="px-4 py-3 text-right num font-semibold text-emerald-600">{fmtBaht(mo.codOwed)}</td>
+                      <td className="px-4 py-3 text-right num text-slate-600">{fmtBaht(hasPayments ? mo.received : mo.awaitAmt)}</td>
+                      <td className="px-4 py-3 text-right num text-slate-500">{fmtNum(mo.returnCnt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={clsx('inline-block px-2 py-0.5 rounded-full text-xs font-semibold',
+                          rate > 15 ? 'bg-red-100 text-red-700' : rate > 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')}>
+                          {rate.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ตารางรายขนส่ง */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
-          <h2 className="font-bold text-slate-800">สรุปรายขนส่ง</h2>
+          <h2 className="font-bold text-slate-800">สรุปรายขนส่ง <span className="text-sm font-normal text-slate-400">· {monthLabel(activeMonth)}</span></h2>
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-sm text-slate-500">เรียงตาม</span>
             <select value={sortBy} onChange={e=>setSortBy(e.target.value)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
@@ -1043,7 +1158,7 @@ const FILTER_TABS = [
   { id:'all', label:'ทั้งหมด' },
 ];
 
-function Reconcile({ parcels, carriers, carrierFilter, setCarrierFilter }) {
+function Reconcile({ parcels, carriers, carrierFilter, setCarrierFilter, months, activeMonth, setMonth }) {
   const [f, setF] = useState('leak');
   const [q, setQ] = useState('');
 
@@ -1089,6 +1204,10 @@ function Reconcile({ parcels, carriers, carrierFilter, setCarrierFilter }) {
         <div className="flex flex-wrap gap-2 items-center">
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="ค้นหาเลขพัสดุ / ออเดอร์…"
             className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+          <select value={activeMonth} onChange={e=>setMonth(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            <option value="all">ทุกเดือน</option>
+            {months.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
+          </select>
           <select value={carrierFilter} onChange={e=>setCarrierFilter(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
             {carriers.map(c => <option key={c} value={c}>{c==='all'?'ทุกขนส่ง':c}</option>)}
           </select>
