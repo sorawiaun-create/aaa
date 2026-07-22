@@ -55,8 +55,22 @@
         <textarea id="text" name="text" rows="5" maxlength="5000"
                   placeholder="พิมพ์ข้อความภาษาไทยที่ต้องการให้พูด..."></textarea>
         <div class="row">
+          <label class="tone">
+            🎭 โทนเสียง
+            <select id="tone" name="tone">
+              <option value="normal" selected>ปกติ / ทั่วไป</option>
+              <option value="sales">แม่ค้า / ขายของ (สดใส กระตือรือร้น)</option>
+              <option value="review">รีวิว / ป้ายยา (ตื่นเต้น เร้าใจ)</option>
+              <option value="ads">โฆษณา (กระชับ ดึงดูด)</option>
+              <option value="travel">ท่องเที่ยว / บรรยาย (อบอุ่น สบาย)</option>
+              <option value="formal">ทางการ / ข่าว (สุขุม ชัดเจน)</option>
+              <option value="storytelling">เล่าเรื่อง / นุ่มนวล</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
           <label class="speed">
-            ความเร็ว
+            ⚙️ ความเร็วการสร้าง
             <select id="nfe" name="nfe_step">
               <option value="8">เร็วสุด (คุณภาพพอใช้)</option>
               <option value="16" selected>เร็ว–สมดุล (แนะนำ)</option>
@@ -65,7 +79,7 @@
           </label>
           <span id="count" class="count">0 / 5000</span>
         </div>
-        <p class="note">💡 ประโยคสั้น–กลางจะได้เสียงที่เป็นธรรมชาติที่สุด · ยิ่งเลือก "เร็ว" ยิ่งสร้างไว แต่คุณภาพลดลงเล็กน้อย</p>
+        <p class="note">💡 โทนเสียงหลักมาจาก "ไฟล์เสียงตัวอย่าง" ที่อัปโหลด — พรีเซ็ตด้านบนจะช่วยปรับจังหวะการพูดให้เข้ากับสไตล์นั้น ๆ · ยิ่งเลือกความเร็ว "เร็ว" ยิ่งสร้างไว แต่คุณภาพลดลงเล็กน้อย</p>
       </section>
 
       <!-- Step 3: generate -->

@@ -115,6 +115,19 @@ HF_REPO = "VIZINTZOR/F5-TTS-THAI"
 # The Thai checkpoint was trained on the F5TTS_Base architecture.
 MODEL_ARCH = "F5TTS_Base"
 
+# Tone presets. F5-TTS has no explicit emotion control (the reference clip sets
+# the emotion), but the speaking pace is a real, audible lever, so each preset
+# maps to a speech-rate multiplier: >1 = faster/more energetic, <1 = calmer.
+TONE_PRESETS: dict[str, float] = {
+    "normal": 1.0,      # ปกติ / ทั่วไป
+    "sales": 1.12,      # แม่ค้า / ขายของ — สดใส กระตือรือร้น
+    "review": 1.18,     # รีวิว / ป้ายยา — ตื่นเต้น เร้าใจ
+    "ads": 1.1,         # โฆษณา — กระชับ ดึงดูด
+    "travel": 0.95,     # ท่องเที่ยว / บรรยาย — อบอุ่น สบาย
+    "formal": 0.92,     # ทางการ / ข่าว — สุขุม ชัดเจน
+    "storytelling": 0.9,  # เล่าเรื่อง / นุ่มนวล
+}
+
 
 def _thai_normalize(text: str) -> str:
     """Light Thai text clean-up. Uses pythainlp when available, else a no-op.
@@ -226,6 +239,7 @@ class VoiceCloneEngine:
         out_path: str,
         ref_text: str = "",
         nfe_step: int = 16,
+        speed: float = 1.0,
     ) -> str:
         """Generate Thai speech in the reference voice.
 
@@ -238,6 +252,8 @@ class VoiceCloneEngine:
             nfe_step: Number of denoising steps. Lower is faster but slightly
                 lower quality (8 = fastest, 16 = balanced, 32 = best). This is
                 the main speed lever on CPU.
+            speed: Speaking-rate multiplier (see ``TONE_PRESETS``). >1 speaks
+                faster/more energetically, <1 calmer.
 
         Returns:
             The output path as a string.
@@ -249,6 +265,7 @@ class VoiceCloneEngine:
             raise FileNotFoundError(f"Voice sample not found: {speaker_wav}")
 
         nfe_step = max(4, min(64, int(nfe_step)))
+        speed = max(0.5, min(2.0, float(speed)))
 
         tts = self._ensure_loaded()
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
@@ -259,6 +276,7 @@ class VoiceCloneEngine:
             gen_text=gen_text,
             file_wave=str(out_path),
             nfe_step=nfe_step,
+            speed=speed,
             remove_silence=False,
         )
         return str(out_path)

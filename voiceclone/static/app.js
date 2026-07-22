@@ -131,6 +131,7 @@ form.addEventListener("submit", async (e) => {
   data.append("text", textArea.value.trim());
   data.append("ref_text", refText.value.trim());
   data.append("nfe_step", document.querySelector("#nfe").value);
+  data.append("tone", document.querySelector("#tone").value);
 
   try {
     const res = await fetch("/api/generate", { method: "POST", body: data });

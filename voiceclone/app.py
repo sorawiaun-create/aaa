@@ -20,7 +20,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from tts_engine import engine
+from tts_engine import TONE_PRESETS, engine
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -43,6 +43,7 @@ async def generate(
     text: str = Form(...),
     ref_text: str = Form(""),
     nfe_step: int = Form(16),
+    tone: str = Form("normal"),
     sample: UploadFile = File(...),
 ) -> JSONResponse:
     """Clone the uploaded voice and speak ``text`` in Thai."""
@@ -80,6 +81,7 @@ async def generate(
             out_path=str(output_path),
             ref_text=(ref_text or "").strip(),
             nfe_step=nfe_step,
+            speed=TONE_PRESETS.get(tone, 1.0),
         )
     except Exception as exc:  # noqa: BLE001 — surface a clean error to the UI
         # Print the full traceback to the server console for debugging, and
