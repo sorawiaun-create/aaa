@@ -1,0 +1,10 @@
+{
+  "name": "cod-checker-spx-proxy",
+  "version": "1.0.0",
+  "description": "Backend proxy ที่เซ็น request ฝั่งเซิร์ฟเวอร์ ดึงข้อมูล COD จาก SPX แล้วเสิร์ฟหน้าเว็บตรวจสอบเงิน COD (เลี่ยง CORS + ไม่ให้ secret หลุดในเบราว์เซอร์)",
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

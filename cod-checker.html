@@ -117,25 +117,47 @@ function getByPath(obj, path) {
 
 // ---------- auto-mapping: เดาว่าคอลัมน์ไหนคืออะไร ----------
 const SYNONYMS = {
-  tracking:  ['tracking','trackingno','trackingnumber','track','awb','barcode','conno','con_no','pno','parcel','เลขพัสดุ','เลขติดตาม','เลขแทรค','พัสดุ','เลขtracking','หมายเลขพัสดุ'],
-  carrier:   ['carrier','express','provider','courier','shipping','logistic','logistics','ขนส่ง','บริษัทขนส่ง'],
-  codAmount: ['cod','codamount','codvalue','amount','value','total','price','ยอดcod','เงินปลายทาง','เก็บเงินปลายทาง','ยอดเก็บเงิน','ยอดเงิน','มูลค่า','ราคา','ยอด'],
-  received:  ['received','paidamount','remit','settle','settleamount','transferamount','เงินเข้า','ยอดโอน','ยอดที่โอน','โอนแล้ว','จ่ายแล้ว','ยอดรับ'],
-  status:    ['status','state','deliverystatus','สถานะ','สถานะพัสดุ','สถานะการจัดส่ง','ผลการจัดส่ง'],
-  shipDate:  ['shipdate','senddate','created','createdate','createdat','วันที่ส่ง','วันส่ง','วันที่สร้าง'],
-  deliveredDate: ['delivereddate','deliverydate','completedate','successdate','วันที่ส่งสำเร็จ','วันส่งสำเร็จ','วันที่จัดส่งสำเร็จ','วันสำเร็จ'],
-  paidDate:  ['paiddate','transferdate','settledate','remitdate','วันที่โอน','วันโอน','วันจ่าย','วันที่จ่าย','วันตัดเงิน'],
-  orderId:   ['orderid','order','orderno','order_no','ordernumber','ออเดอร์','เลขออเดอร์','เลขที่ออเดอร์','เลขคำสั่งซื้อ'],
+  tracking:  ['tracking','trackingno','trackingnumber','track','awb','waybill','waybillno','barcode','conno','pno','parcel','spxtn','sortcode','เลขพัสดุ','เลขติดตาม','เลขแทรค','พัสดุ','หมายเลขพัสดุ'],
+  carrier:   ['carrier','express','courier','shippingchannel','channel','logistic','logistics','provider','ขนส่ง','บริษัทขนส่ง','ช่องทางขนส่ง'],
+  codAmount: ['cod','codamount','codvalue','codfee','codcharge','goodsamount','orderamount','totalamount','amount','value','price','ยอดcod','เงินปลายทาง','เก็บเงินปลายทาง','ยอดเก็บเงิน','ยอดเงิน','มูลค่า','ราคา','ยอด'],
+  received:  ['received','paidamount','paid','settleamount','remitamount','paymentamount','collectedamount','actualamount','codcollected','transferamount','remit','settle','เงินเข้า','ยอดโอน','ยอดที่โอน','โอนแล้ว','จ่ายแล้ว','ยอดรับ'],
+  status:    ['status','orderstatus','deliverystatus','logisticsstatus','shipmentstatus','trackingstatus','state','สถานะ','สถานะพัสดุ','สถานะการจัดส่ง','ผลการจัดส่ง'],
+  shipDate:  ['shipdate','shiptime','senddate','sendtime','created','createdate','createtime','createdat','pickuptime','วันที่ส่ง','วันส่ง','วันที่สร้าง'],
+  deliveredDate: ['delivereddate','deliveredtime','deliverydate','delivertime','completedate','completetime','finishtime','successdate','successtime','signtime','signedtime','receivedtime','วันที่ส่งสำเร็จ','วันส่งสำเร็จ','วันที่จัดส่งสำเร็จ','วันสำเร็จ'],
+  paidDate:  ['paiddate','paidtime','paymenttime','transferdate','transfertime','settledate','settletime','remitdate','remittime','วันที่โอน','วันโอน','วันจ่าย','วันที่จ่าย','วันตัดเงิน'],
+  orderId:   ['orderid','ordersn','orderno','ordernumber','ordercode','ออเดอร์','เลขออเดอร์','เลขที่ออเดอร์','เลขคำสั่งซื้อ'],
 };
 const norm = (s) => String(s).toLowerCase().replace(/[\s_\-.]/g, '');
+// ให้คะแนนความเข้ากันระหว่าง header กับ synonym (ยิ่งตรงยิ่งสูง)
+function pairScore(hn, syns) {
+  let best = 0;
+  for (const s of syns) {
+    const sn = norm(s);
+    let sc = 0;
+    if (hn === sn) sc = 100;
+    else if (sn.length >= 3 && (hn.startsWith(sn) || hn.endsWith(sn))) sc = 70;
+    else if (sn.length >= 4 && hn.includes(sn)) sc = 45;
+    else if (hn.length >= 4 && sn.includes(hn)) sc = 25;
+    if (sc > best) best = sc;
+  }
+  return best;
+}
+// จับคู่แบบ global best-match: ให้คู่คะแนนสูงสุดชนะก่อน + header/field ใช้ได้ครั้งเดียว
+// กันปัญหา substring ชนกัน เช่น order_sn vs order_status, delivered_time
 function autoMap(headers) {
-  const map = {};
   const H = headers.map(h => ({ raw:h, n:norm(h) }));
-  for (const [field, syns] of Object.entries(SYNONYMS)) {
-    // exact ก่อน แล้วค่อย contains
-    let hit = H.find(h => syns.some(s => h.n === norm(s)));
-    if (!hit) hit = H.find(h => syns.some(s => h.n.includes(norm(s)) || norm(s).includes(h.n)));
-    if (hit) map[field] = hit.raw;
+  const pairs = [];
+  for (const [field, syns] of Object.entries(SYNONYMS))
+    for (const h of H) {
+      const sc = pairScore(h.n, syns);
+      if (sc > 0) pairs.push({ field, header: h.raw, sc });
+    }
+  pairs.sort((a, b) => b.sc - a.sc);
+  const map = {}, usedHeader = new Set();
+  for (const p of pairs) {
+    if (map[p.field] || usedHeader.has(p.header)) continue;
+    map[p.field] = p.header;
+    usedHeader.add(p.header);
   }
   return map;
 }
@@ -444,6 +466,8 @@ function DataTab(props) {
         </div>
       </div>
 
+      <SpxConnect onLoaded={(flat) => { setShipRaw(flat); setShipMap(autoMap(Object.keys(flat[0]))); }} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <FeedCard
           title="1) พัสดุ COD ที่ส่ง (เงินที่ต้องได้)"
@@ -468,6 +492,75 @@ function DataTab(props) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------- เชื่อม SPX ผ่าน proxy (server.js) — ต้องเปิดผ่าน http://localhost:PORT ----------
+function SpxConnect({ onLoaded }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [health, setHealth] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/health').then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+  }, []);
+
+  const run = async () => {
+    setLoading(true); setMsg('');
+    try {
+      const qs = new URLSearchParams();
+      if (from) qs.set('from', from);
+      if (to) qs.set('to', to);
+      const res = await fetch('/api/spx/cod?' + qs.toString());
+      const j = await res.json();
+      if (!res.ok || j.ok === false) throw new Error(j.error || ('HTTP ' + res.status));
+      const arr = j.data || [];
+      if (!arr.length) { setMsg('ดึงสำเร็จ แต่ไม่มีข้อมูลในช่วงวันที่นี้'); return; }
+      const flat = arr.map(o => {
+        const r = {};
+        for (const k of Object.keys(o)) r[k] = (o[k] && typeof o[k] === 'object') ? JSON.stringify(o[k]) : o[k];
+        return r;
+      });
+      onLoaded(flat);
+      setMsg((j.mock ? '[MOCK] ' : '') + 'ดึงจาก SPX สำเร็จ ' + arr.length + ' รายการ → ไปแท็บ "ภาพรวม" ได้เลย');
+    } catch (e) {
+      setMsg('ผิดพลาด: ' + e.message + ' — ต้องเปิดหน้านี้ผ่านเซิร์ฟเวอร์ proxy (http://localhost:3000) ไม่ใช่เปิดไฟล์ .html ตรง ๆ');
+    } finally { setLoading(false); }
+  };
+
+  const connected = health && health.ok;
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border-2 border-teal-200 p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xl">🚚</span>
+        <h3 className="font-bold text-slate-800">เชื่อมต่อ SPX (ดึงอัตโนมัติผ่าน proxy)</h3>
+        {connected
+          ? <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+              ● เชื่อมต่อ proxy แล้ว{health.mock ? ' · MOCK' : ''}
+            </span>
+          : <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-500">ยังไม่ได้เปิดผ่าน proxy</span>}
+      </div>
+      {!connected && (
+        <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3">
+          เปิดหน้านี้ผ่าน <b>http://localhost:3000</b> (รัน <code>node server.js</code> ก่อน) ปุ่มดึง SPX ถึงจะทำงาน
+        </p>
+      )}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-sm text-slate-600">ตั้งแต่วันที่
+          <input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="block mt-1 px-2 py-1.5 border border-slate-300 rounded-lg text-sm" />
+        </label>
+        <label className="text-sm text-slate-600">ถึงวันที่
+          <input type="date" value={to} onChange={e=>setTo(e.target.value)} className="block mt-1 px-2 py-1.5 border border-slate-300 rounded-lg text-sm" />
+        </label>
+        <button onClick={run} disabled={loading || !connected}
+          className="px-5 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-40">
+          {loading ? 'กำลังดึง…' : '⬇ ดึงข้อมูลจาก SPX'}
+        </button>
+      </div>
+      {msg && <p className={clsx('text-sm rounded-lg px-3 py-2 mt-3', msg.includes('สำเร็จ') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600')}>{msg}</p>}
     </div>
   );
 }
