@@ -218,63 +218,55 @@ def _thai_normalize(text: str) -> str:
 
 
 # F5-TTS degrades when asked to generate more than ~10 s of audio in one pass.
-# Thai text rarely has punctuation, so the model treats a whole paragraph as one
-# long sentence and the tail comes out garbled. We split the text into short
-# pieces (at sentence, then word boundaries) and generate each one separately.
-# ~90 Thai characters stays comfortably under the degradation threshold.
+# The user controls the pauses by pressing Enter (each line = one chunk, with a
+# pause between). Auto-splitting is only a safety net for a single line that is
+# so long it would exceed the ~10 s window. ~90 Thai characters ≈ under 10 s;
+# we give the user's own lines extra slack before we step in.
 MAX_CHUNK_CHARS = 90
+AUTO_SPLIT_LIMIT = int(MAX_CHUNK_CHARS * 1.7)
 
 
-def _split_text_for_tts(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
-    """Split Thai text into short chunks that each generate cleanly."""
+def _auto_split(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+    """Safety-net split of one over-long line at word (then char) boundaries."""
+    try:
+        from pythainlp import word_tokenize  # noqa: WPS433
+
+        words = word_tokenize(text, keep_whitespace=False)
+    except Exception:  # noqa: BLE001 — pythainlp optional
+        words = text.split(" ")
+
+    chunks: list[str] = []
+    current = ""
+    for word in words:
+        if current and len(current) + len(word) > max_chars:
+            chunks.append(current)
+            current = word
+        else:
+            current += word
+    if current:
+        chunks.append(current)
+    return chunks or [text]
+
+
+def _split_text_for_tts(text: str) -> list[str]:
+    """Split text into chunks at the user's line breaks (their chosen pauses).
+
+    A single line longer than ``AUTO_SPLIT_LIMIT`` is auto-split as a safety
+    net so it can't garble; otherwise the user's lines are respected exactly.
+    """
     text = (text or "").strip()
     if not text:
         return []
 
-    # First pass: sentences (pythainlp if available, else punctuation split).
-    try:
-        from pythainlp import sent_tokenize  # noqa: WPS433
-
-        sentences = sent_tokenize(text)
-    except Exception:  # noqa: BLE001 — pythainlp optional
-        sentences = re.split(r"(?<=[.!?。！?\n])\s*", text)
-
-    # Second pass: break any still-too-long sentence at word boundaries.
-    units: list[str] = []
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-        if len(sentence) <= max_chars:
-            units.append(sentence)
-            continue
-        try:
-            from pythainlp import word_tokenize  # noqa: WPS433
-
-            words = word_tokenize(sentence, keep_whitespace=False)
-        except Exception:  # noqa: BLE001
-            words = sentence.split(" ")
-        current = ""
-        for word in words:
-            if current and len(current) + len(word) > max_chars:
-                units.append(current)
-                current = word
-            else:
-                current += word
-        if current:
-            units.append(current)
-
-    # Final pass: greedily merge small units back up to max_chars.
     chunks: list[str] = []
-    current = ""
-    for unit in units:
-        if current and len(current) + len(unit) > max_chars:
-            chunks.append(current)
-            current = unit
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if len(line) <= AUTO_SPLIT_LIMIT:
+            chunks.append(line)
         else:
-            current += unit
-    if current:
-        chunks.append(current)
+            chunks.extend(_auto_split(line))
     return chunks
 
 
@@ -388,9 +380,6 @@ class VoiceCloneEngine:
         Returns:
             The output path as a string.
         """
-        gen_text = _thai_normalize(text)
-        if not gen_text:
-            raise ValueError("Text is empty.")
         if not Path(speaker_wav).is_file():
             raise FileNotFoundError(f"Voice sample not found: {speaker_wav}")
 
@@ -398,17 +387,22 @@ class VoiceCloneEngine:
         speed = max(0.5, min(2.0, float(speed)))
         ref_text = _thai_normalize(ref_text)
 
+        # Split on the user's line breaks FIRST (so their chosen pauses survive),
+        # then normalize each chunk (normalization collapses whitespace).
+        chunks = [_thai_normalize(c) for c in _split_text_for_tts(text)]
+        chunks = [c for c in chunks if c]
+        if not chunks:
+            raise ValueError("Text is empty.")
+
         tts = self._ensure_loaded()
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 
-        chunks = _split_text_for_tts(gen_text)
-
-        # Short text: one pass straight to the output file (fast path).
-        if len(chunks) <= 1:
+        # Short single-line text: one pass straight to the output file.
+        if len(chunks) == 1:
             tts.infer(
                 ref_file=str(speaker_wav),
                 ref_text=ref_text,
-                gen_text=gen_text,
+                gen_text=chunks[0],
                 file_wave=str(out_path),
                 nfe_step=nfe_step,
                 speed=speed,
@@ -416,8 +410,9 @@ class VoiceCloneEngine:
             )
             return str(out_path)
 
-        # Long text: generate each chunk separately (so none exceeds the
-        # ~10 s window where F5-TTS degrades), then stitch the audio together.
+        # Multiple lines: generate each separately (so none exceeds the ~10 s
+        # window where F5-TTS degrades), then stitch the audio together with a
+        # pause at each user-chosen break.
         import numpy as np  # noqa: WPS433
         import soundfile as sf  # noqa: WPS433
 
@@ -432,8 +427,18 @@ class VoiceCloneEngine:
             except Exception:  # noqa: BLE001 — fall back to per-chunk ASR
                 ref_text = ""
 
+        def _fade_edges(wav, sr, ms=8):
+            """Tiny fade in/out to avoid clicks where chunks are joined."""
+            n = int(sr * ms / 1000)
+            if n > 0 and wav.shape[0] > 2 * n:
+                ramp = np.linspace(0.0, 1.0, n, dtype=np.float32)
+                wav[:n] *= ramp
+                wav[-n:] *= ramp[::-1]
+            return wav
+
         pieces: list = []
         sr = 24000
+        gap = 0.18  # seconds of silence at each user-chosen pause
         for chunk in chunks:
             wav, sr, _ = tts.infer(
                 ref_file=str(speaker_wav),
@@ -443,9 +448,9 @@ class VoiceCloneEngine:
                 speed=speed,
                 remove_silence=False,
             )
-            pieces.append(np.asarray(wav, dtype=np.float32))
-            # Short pause between chunks for a natural join.
-            pieces.append(np.zeros(int(sr * 0.12), dtype=np.float32))
+            wav = _fade_edges(np.asarray(wav, dtype=np.float32), sr)
+            pieces.append(wav)
+            pieces.append(np.zeros(int(sr * gap), dtype=np.float32))
 
         final = np.concatenate(pieces[:-1]) if pieces else np.zeros(1, np.float32)
         sf.write(str(out_path), final, sr)
