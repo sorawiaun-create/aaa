@@ -60,6 +60,55 @@ def _register_ffmpeg_dlls() -> None:
 # Run as early as possible — before torch / torchcodec get imported.
 _register_ffmpeg_dlls()
 
+
+def _bypass_torchcodec() -> None:
+    """Route torchaudio's audio I/O through soundfile instead of torchcodec.
+
+    On many Windows setups (and with bleeding-edge PyTorch), torchcodec's DLLs
+    refuse to load — "Could not load libtorchcodec ... Could not find module
+    libtorchcodec_coreN.dll (or one of its dependencies)". F5-TTS only needs to
+    read/write plain WAV/FLAC/OGG (it pre-converts other formats with FFmpeg
+    first), which ``soundfile`` (libsndfile) does without torchcodec at all.
+
+    We replace ``torchaudio.load`` / ``save`` / ``info`` *before* F5-TTS is
+    imported so its internal calls never touch torchcodec.
+    """
+    try:
+        import numpy as np  # noqa: WPS433
+        import soundfile as sf  # noqa: WPS433
+        import torch  # noqa: WPS433
+        import torchaudio  # noqa: WPS433
+    except Exception:  # noqa: BLE001 — nothing to patch if these are missing
+        return
+
+    def _load(filepath, *args, **kwargs):  # noqa: ANN001
+        data, sr = sf.read(str(filepath), dtype="float32", always_2d=True)
+        # soundfile gives (frames, channels); torchaudio uses (channels, frames).
+        return torch.from_numpy(np.ascontiguousarray(data.T)), sr
+
+    def _save(filepath, src, sample_rate, *args, **kwargs):  # noqa: ANN001
+        arr = src.detach().cpu().numpy()
+        if arr.ndim == 2:
+            arr = arr.T  # (channels, frames) -> (frames, channels)
+        sf.write(str(filepath), arr, int(sample_rate))
+
+    def _info(filepath, *args, **kwargs):  # noqa: ANN001
+        meta = sf.info(str(filepath))
+
+        class _Info:
+            sample_rate = int(meta.samplerate)
+            num_frames = int(meta.frames)
+            num_channels = int(meta.channels)
+            bits_per_sample = 16
+            encoding = "PCM_S"
+
+        return _Info()
+
+    torchaudio.load = _load
+    torchaudio.save = _save
+    torchaudio.info = _info
+
+
 # Hugging Face repo holding the Thai F5-TTS checkpoint + vocab.
 HF_REPO = "VIZINTZOR/F5-TTS-THAI"
 
@@ -144,8 +193,11 @@ class VoiceCloneEngine:
             if self._tts is not None:
                 return self._tts
 
-            # Ensure FFmpeg DLLs are registered before torchcodec loads.
+            # Ensure FFmpeg DLLs are registered, and route audio I/O through
+            # soundfile — both BEFORE importing F5-TTS so torchcodec is never
+            # needed.
             _register_ffmpeg_dlls()
+            _bypass_torchcodec()
 
             import torch  # noqa: WPS433
             from f5_tts.api import F5TTS  # noqa: WPS433
@@ -201,3 +253,6 @@ class VoiceCloneEngine:
 
 # Module-level singleton used by the web app.
 engine = VoiceCloneEngine()
+
+# Simple marker so it's easy to confirm the updated engine is the one running.
+print("[VoiceClone] engine ready (soundfile audio backend, torchcodec bypass)", flush=True)
