@@ -129,15 +129,84 @@ TONE_PRESETS: dict[str, float] = {
 }
 
 
-def _thai_normalize(text: str) -> str:
-    """Light Thai text clean-up. Uses pythainlp when available, else a no-op.
+# The Thai model can only pronounce Thai characters, so Arabic/Thai digits and
+# Latin letters must be rewritten as their Thai reading first, otherwise they
+# are dropped and the surrounding sentence comes out garbled.
 
-    Good normalization noticeably improves Thai pronunciation, but we never
-    hard-fail if pythainlp is missing.
+# Thai numerals -> Arabic, so the number reader can handle both.
+_THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
+
+# English letter names, for spelling out unknown words / acronyms.
+_EN_LETTER = {
+    "a": "เอ", "b": "บี", "c": "ซี", "d": "ดี", "e": "อี", "f": "เอฟ",
+    "g": "จี", "h": "เอช", "i": "ไอ", "j": "เจ", "k": "เค", "l": "แอล",
+    "m": "เอ็ม", "n": "เอ็น", "o": "โอ", "p": "พี", "q": "คิว", "r": "อาร์",
+    "s": "เอส", "t": "ที", "u": "ยู", "v": "วี", "w": "ดับเบิลยู",
+    "x": "เอ็กซ์", "y": "วาย", "z": "แซด",
+}
+
+# Common marketing / social-media English words -> Thai spelling.
+_EN_WORDS = {
+    "tiktok": "ติ๊กต็อก", "youtube": "ยูทูบ", "facebook": "เฟซบุ๊ก",
+    "instagram": "อินสตาแกรม", "ig": "ไอจี", "reels": "รีลส์", "reel": "รีล",
+    "live": "ไลฟ์", "line": "ไลน์", "shopee": "ช้อปปี้", "lazada": "ลาซาด้า",
+    "shop": "ช็อป", "order": "ออเดอร์", "dm": "ดีเอ็ม", "inbox": "อินบ็อกซ์",
+    "admin": "แอดมิน", "add": "แอด", "sale": "เซล", "sales": "เซล",
+    "ok": "โอเค", "okay": "โอเค", "promotion": "โปรโมชัน", "promo": "โปรโม",
+    "discount": "ดิสเคาน์", "review": "รีวิว", "content": "คอนเทนต์",
+    "clip": "คลิป", "subscribe": "ซับสไครบ์", "like": "ไลก์", "share": "แชร์",
+    "comment": "คอมเมนต์", "follow": "ฟอลโลว์", "brand": "แบรนด์",
+    "new": "นิว", "free": "ฟรี", "set": "เซต", "size": "ไซซ์",
+    "color": "คัลเลอร์", "online": "ออนไลน์", "app": "แอป", "wow": "ว้าว",
+}
+
+
+def _read_number(token: str) -> str:
+    """Read a numeric token as Thai words. Falls back to the token on error."""
+    try:
+        from pythainlp.util import num_to_thaiword  # noqa: WPS433
+    except Exception:  # noqa: BLE001 — pythainlp optional
+        return token
+
+    raw = token.replace(",", "")
+    try:
+        if "." in raw:
+            int_part, _, dec_part = raw.partition(".")
+            left = num_to_thaiword(int(int_part)) if int_part else "ศูนย์"
+            right = "".join(num_to_thaiword(int(d)) for d in dec_part)
+            return f"{left}จุด{right}"
+        # Phone-like numbers (leading zero) or very long ones read digit by digit.
+        if (raw.startswith("0") and len(raw) > 1) or len(raw) > 9:
+            return "".join(num_to_thaiword(int(d)) for d in raw)
+        return num_to_thaiword(int(raw))
+    except Exception:  # noqa: BLE001
+        return token
+
+
+def _read_english(word: str) -> str:
+    """Read an English word as Thai: known word, else spelled out by letter."""
+    low = word.lower()
+    if low in _EN_WORDS:
+        return _EN_WORDS[low]
+    return "".join(_EN_LETTER.get(ch, "") for ch in low)
+
+
+def _thai_normalize(text: str) -> str:
+    """Rewrite text so the Thai model can pronounce it.
+
+    Converts digits and English words to their Thai reading, then applies
+    pythainlp's normalizer. Degrades gracefully if pythainlp is unavailable.
     """
     text = (text or "").strip()
     if not text:
         return text
+
+    text = text.translate(_THAI_DIGITS)
+    # Numbers (with optional thousands separators / decimals).
+    text = re.sub(r"\d[\d,]*(?:\.\d+)?", lambda m: _read_number(m.group()), text)
+    # English words / acronyms.
+    text = re.sub(r"[A-Za-z]+", lambda m: _read_english(m.group()), text)
+
     try:
         from pythainlp.util import normalize  # noqa: WPS433
 
