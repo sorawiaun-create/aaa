@@ -1,46 +1,47 @@
-"""VoiceClone AI — text-to-speech engine with zero-shot voice cloning.
+"""VoiceClone AI — Thai text-to-speech engine with zero-shot voice cloning.
 
-Wraps the XTTS-v2 model (via the coqui-tts community fork). The model is loaded
-lazily on first use so that starting the web server stays fast; the first
-generation request will take longer while the model downloads / loads into
-memory.
+Uses **F5-TTS** with the Thai fine-tuned checkpoint published by VIZINTZOR
+(``VIZINTZOR/F5-TTS-THAI``). F5-TTS clones a voice from a short reference clip
+and can speak Thai. Everything runs locally on your machine.
 
-Everything runs locally on your own machine — no audio is sent to any server.
+The model + vocab are downloaded from the Hugging Face Hub on first use and
+cached, so the first generation takes a while; subsequent runs are fast.
 """
 
 from __future__ import annotations
 
-import os
+import re
 import threading
 from pathlib import Path
 
-# Languages supported by the XTTS-v2 model. Key = code passed to the model,
-# value = human-readable name shown in the UI.
-SUPPORTED_LANGUAGES: dict[str, str] = {
-    "en": "English",
-    "es": "Español (Spanish)",
-    "fr": "Français (French)",
-    "de": "Deutsch (German)",
-    "it": "Italiano (Italian)",
-    "pt": "Português (Portuguese)",
-    "pl": "Polski (Polish)",
-    "tr": "Türkçe (Turkish)",
-    "ru": "Русский (Russian)",
-    "nl": "Nederlands (Dutch)",
-    "cs": "Čeština (Czech)",
-    "ar": "العربية (Arabic)",
-    "zh-cn": "中文 (Chinese)",
-    "ja": "日本語 (Japanese)",
-    "hu": "Magyar (Hungarian)",
-    "ko": "한국어 (Korean)",
-    "hi": "हिन्दी (Hindi)",
-}
+# Hugging Face repo holding the Thai F5-TTS checkpoint + vocab.
+HF_REPO = "VIZINTZOR/F5-TTS-THAI"
 
-MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
+# The Thai checkpoint was trained on the F5TTS_Base architecture.
+MODEL_ARCH = "F5TTS_Base"
+
+
+def _thai_normalize(text: str) -> str:
+    """Light Thai text clean-up. Uses pythainlp when available, else a no-op.
+
+    Good normalization noticeably improves Thai pronunciation, but we never
+    hard-fail if pythainlp is missing.
+    """
+    text = (text or "").strip()
+    if not text:
+        return text
+    try:
+        from pythainlp.util import normalize  # noqa: WPS433
+
+        text = normalize(text)
+    except Exception:  # noqa: BLE001 — pythainlp is optional
+        pass
+    # Collapse runs of whitespace.
+    return re.sub(r"\s+", " ", text).strip()
 
 
 class VoiceCloneEngine:
-    """Lazily-loaded singleton wrapper around the XTTS-v2 model."""
+    """Lazily-loaded singleton wrapper around the Thai F5-TTS model."""
 
     def __init__(self) -> None:
         self._tts = None
@@ -51,6 +52,43 @@ class VoiceCloneEngine:
     def device(self) -> str:
         return self._device
 
+    def _pick_files(self) -> tuple[str, str]:
+        """Find and download the best checkpoint + vocab from the HF repo.
+
+        Filenames on the repo change over time, so we list the repo and pick
+        the highest-step full checkpoint (preferring ``.safetensors``) rather
+        than hard-coding a name that may disappear.
+        """
+        from huggingface_hub import HfApi, hf_hub_download  # noqa: WPS433
+
+        files = HfApi().list_repo_files(HF_REPO)
+
+        def step_of(name: str) -> int:
+            match = re.search(r"(\d+)", Path(name).stem)
+            return int(match.group(1)) if match else -1
+
+        checkpoints = [
+            f
+            for f in files
+            if f.endswith((".safetensors", ".pt"))
+            and "small" not in f.lower()
+            and "vocos" not in f.lower()
+        ]
+        if not checkpoints:
+            checkpoints = [f for f in files if f.endswith((".safetensors", ".pt"))]
+        if not checkpoints:
+            raise RuntimeError(f"No model checkpoint found in {HF_REPO}.")
+
+        # Prefer safetensors, then the highest training step.
+        checkpoints.sort(key=lambda f: (f.endswith(".safetensors"), step_of(f)))
+        ckpt_name = checkpoints[-1]
+
+        vocab_name = next((f for f in files if Path(f).name == "vocab.txt"), None)
+
+        ckpt_path = hf_hub_download(HF_REPO, ckpt_name)
+        vocab_path = hf_hub_download(HF_REPO, vocab_name) if vocab_name else ""
+        return ckpt_path, vocab_path
+
     def _ensure_loaded(self):
         """Load the model on first use. Thread-safe."""
         if self._tts is not None:
@@ -60,54 +98,54 @@ class VoiceCloneEngine:
             if self._tts is not None:
                 return self._tts
 
-            # Import here so the module can be inspected (and languages listed)
-            # without paying the heavy import cost up front.
             import torch  # noqa: WPS433
-            from TTS.api import TTS  # noqa: WPS433
-
-            # Accept the Coqui model license non-interactively so the download
-            # does not block on a terminal prompt inside the web server.
-            os.environ.setdefault("COQUI_TOS_AGREED", "1")
+            from f5_tts.api import F5TTS  # noqa: WPS433
 
             self._device = "cuda" if torch.cuda.is_available() else "cpu"
-            self._tts = TTS(MODEL_NAME).to(self._device)
+            ckpt_file, vocab_file = self._pick_files()
+
+            self._tts = F5TTS(
+                model=MODEL_ARCH,
+                ckpt_file=ckpt_file,
+                vocab_file=vocab_file,
+                device=self._device,
+            )
             return self._tts
 
     def synthesize(
         self,
         text: str,
-        speaker_wav: str | os.PathLike,
-        language: str,
-        out_path: str | os.PathLike,
+        speaker_wav: str,
+        out_path: str,
+        ref_text: str = "",
     ) -> str:
-        """Generate speech that mimics ``speaker_wav`` saying ``text``.
+        """Generate Thai speech in the reference voice.
 
         Args:
-            text: The text to speak.
-            speaker_wav: Path to the reference voice sample (wav/mp3/flac/...).
-            language: One of ``SUPPORTED_LANGUAGES``.
+            text: The Thai text to speak.
+            speaker_wav: Path to the reference voice sample.
             out_path: Where to write the generated ``.wav`` file.
+            ref_text: Transcript of what is said in ``speaker_wav``. Leave empty
+                to let the model transcribe the sample automatically (slower).
 
         Returns:
             The output path as a string.
         """
-        text = (text or "").strip()
-        if not text:
+        gen_text = _thai_normalize(text)
+        if not gen_text:
             raise ValueError("Text is empty.")
-        if language not in SUPPORTED_LANGUAGES:
-            raise ValueError(f"Unsupported language: {language!r}")
         if not Path(speaker_wav).is_file():
             raise FileNotFoundError(f"Voice sample not found: {speaker_wav}")
 
         tts = self._ensure_loaded()
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 
-        tts.tts_to_file(
-            text=text,
-            speaker_wav=str(speaker_wav),
-            language=language,
-            file_path=str(out_path),
-            split_sentences=True,
+        tts.infer(
+            ref_file=str(speaker_wav),
+            ref_text=_thai_normalize(ref_text),
+            gen_text=gen_text,
+            file_wave=str(out_path),
+            remove_silence=True,
         )
         return str(out_path)
 

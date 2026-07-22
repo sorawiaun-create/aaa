@@ -1,4 +1,4 @@
-"""VoiceClone AI — local web app.
+"""VoiceClone AI — local web app (Thai voice cloning).
 
 Run with:
 
@@ -6,8 +6,8 @@ Run with:
 
 then open http://127.0.0.1:8000 in your browser.
 
-Upload a short voice sample, type some text, pick a language, and download the
-generated speech. Everything runs locally on your machine.
+Upload a short voice sample, type Thai text, and download the generated speech.
+Everything runs locally on your machine.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from tts_engine import SUPPORTED_LANGUAGES, engine
+from tts_engine import engine
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -37,42 +37,34 @@ OUTPUTS_DIR.mkdir(exist_ok=True)
 app = FastAPI(title="VoiceClone AI", docs_url=None, redoc_url=None)
 
 
-@app.get("/api/languages")
-def languages() -> dict:
-    """Return the languages supported by the model."""
-    return {"languages": SUPPORTED_LANGUAGES}
-
-
 @app.post("/api/generate")
 async def generate(
     text: str = Form(...),
-    language: str = Form("en"),
+    ref_text: str = Form(""),
     sample: UploadFile = File(...),
 ) -> JSONResponse:
-    """Clone the uploaded voice and speak ``text`` in ``language``."""
+    """Clone the uploaded voice and speak ``text`` in Thai."""
     text = (text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="กรุณาพิมพ์ข้อความ (Text is required).")
     if len(text) > MAX_TEXT_CHARS:
         raise HTTPException(
             status_code=400,
-            detail=f"ข้อความยาวเกินไป (max {MAX_TEXT_CHARS} characters).",
+            detail=f"ข้อความยาวเกินไป (สูงสุด {MAX_TEXT_CHARS} ตัวอักษร).",
         )
-    if language not in SUPPORTED_LANGUAGES:
-        raise HTTPException(status_code=400, detail=f"Unsupported language: {language}")
 
     suffix = Path(sample.filename or "").suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
         raise HTTPException(
             status_code=400,
-            detail=f"ชนิดไฟล์ไม่รองรับ (allowed: {', '.join(sorted(ALLOWED_SUFFIXES))}).",
+            detail=f"ชนิดไฟล์ไม่รองรับ (รองรับ: {', '.join(sorted(ALLOWED_SUFFIXES))}).",
         )
 
     data = await sample.read()
     if not data:
         raise HTTPException(status_code=400, detail="ไฟล์เสียงว่างเปล่า (empty file).")
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=400, detail="ไฟล์ใหญ่เกินไป (max 25 MB).")
+        raise HTTPException(status_code=400, detail="ไฟล์ใหญ่เกินไป (สูงสุด 25 MB).")
 
     job_id = uuid.uuid4().hex
     sample_path = SAMPLES_DIR / f"{job_id}{suffix}"
@@ -82,9 +74,9 @@ async def generate(
     try:
         engine.synthesize(
             text=text,
-            speaker_wav=sample_path,
-            language=language,
-            out_path=output_path,
+            speaker_wav=str(sample_path),
+            out_path=str(output_path),
+            ref_text=(ref_text or "").strip(),
         )
     except Exception as exc:  # noqa: BLE001 — surface a clean error to the UI
         raise HTTPException(status_code=500, detail=f"สร้างเสียงไม่สำเร็จ: {exc}") from exc

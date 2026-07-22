@@ -1,8 +1,14 @@
 # VoiceClone AI — Python dependencies
 #
-# Core voice-cloning TTS engine (maintained community fork of Coqui TTS).
-# Provides the XTTS-v2 model used for zero-shot voice cloning.
-coqui-tts>=0.24.1
+# F5-TTS: flow-matching text-to-speech with zero-shot voice cloning.
+# Used together with the Thai fine-tuned checkpoint (VIZINTZOR/F5-TTS-THAI).
+f5-tts>=1.1.0
+
+# Download the Thai checkpoint + vocab from the Hugging Face Hub.
+huggingface_hub>=0.23.0
+
+# Thai text normalization (optional but improves pronunciation).
+pythainlp>=5.0.0
 
 # Web server + file uploads
 fastapi>=0.110.0

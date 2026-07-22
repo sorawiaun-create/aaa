@@ -28,7 +28,7 @@
           <div class="dz-idle">
             <div class="dz-icon">⬆️</div>
             <div class="dz-title">ลากไฟล์เสียงมาวาง หรือคลิกเพื่อเลือก</div>
-            <div class="dz-hint">รองรับ WAV, MP3, FLAC, OGG, M4A · แนะนำ 6–20 วินาที เสียงชัด ไม่มีเสียงรบกวน</div>
+            <div class="dz-hint">รองรับ WAV, MP3, FLAC, OGG, M4A · แนะนำ 5–12 วินาที เสียงชัด ไม่มีเสียงรบกวน</div>
           </div>
           <div class="dz-file" hidden>
             <div class="dz-icon">🎵</div>
@@ -40,21 +40,25 @@
           </div>
         </label>
         <audio id="samplePreview" controls hidden></audio>
+
+        <label class="reftext">
+          ข้อความที่พูดในไฟล์ตัวอย่าง <span class="opt">(ไม่บังคับ)</span>
+          <input type="text" id="refText" name="ref_text"
+                 placeholder="เช่น สวัสดีครับ วันนี้อากาศดีมาก" />
+          <span class="reftext-hint">พิมพ์ให้ตรงกับเสียงในไฟล์จะโคลนได้เหมือนขึ้น · เว้นว่างได้ ระบบจะถอดเสียงให้อัตโนมัติ (ช้ากว่า)</span>
+        </label>
       </section>
 
-      <!-- Step 2: text + language -->
+      <!-- Step 2: text -->
       <section class="step">
         <div class="step-head"><span class="num">2</span><h2>พิมพ์ข้อความ</h2></div>
         <textarea id="text" name="text" rows="5" maxlength="5000"
-                  placeholder="พิมพ์ข้อความที่ต้องการให้พูด..."></textarea>
+                  placeholder="พิมพ์ข้อความภาษาไทยที่ต้องการให้พูด..."></textarea>
         <div class="row">
-          <label class="lang">
-            ภาษา
-            <select id="language" name="language"></select>
-          </label>
+          <span></span>
           <span id="count" class="count">0 / 5000</span>
         </div>
-        <p class="note">หมายเหตุ: โมเดลรองรับหลายภาษา แต่ยังไม่รองรับภาษาไทยโดยตรง — ดูรายละเอียดใน README</p>
+        <p class="note">💡 ประโยคสั้น–กลางจะได้เสียงที่เป็นธรรมชาติที่สุด · ข้อความยาวระบบจะแบ่งอ่านให้อัตโนมัติ</p>
       </section>
 
       <!-- Step 3: generate -->

@@ -14,7 +14,7 @@ const samplePreview = $("#samplePreview");
 
 const textArea = $("#text");
 const count = $("#count");
-const langSelect = $("#language");
+const refText = $("#refText");
 
 const submitBtn = $("#submit");
 const spinner = submitBtn.querySelector(".spinner");
@@ -26,24 +26,6 @@ const output = $("#output");
 const download = $("#download");
 
 let sampleObjectUrl = null;
-
-// ---- Load supported languages ------------------------------------------------
-async function loadLanguages() {
-  try {
-    const res = await fetch("/api/languages");
-    const { languages } = await res.json();
-    langSelect.innerHTML = "";
-    for (const [code, name] of Object.entries(languages)) {
-      const opt = document.createElement("option");
-      opt.value = code;
-      opt.textContent = name;
-      langSelect.appendChild(opt);
-    }
-  } catch {
-    langSelect.innerHTML = '<option value="en">English</option>';
-  }
-}
-loadLanguages();
 
 // ---- File handling -----------------------------------------------------------
 function humanSize(bytes) {
@@ -147,7 +129,7 @@ form.addEventListener("submit", async (e) => {
   const data = new FormData();
   data.append("sample", fileInput.files[0]);
   data.append("text", textArea.value.trim());
-  data.append("language", langSelect.value);
+  data.append("ref_text", refText.value.trim());
 
   try {
     const res = await fetch("/api/generate", { method: "POST", body: data });
