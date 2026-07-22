@@ -120,7 +120,7 @@ textarea {
 textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 12px; }
-.lang { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.lang, .speed { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 select {
   background: var(--card); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px;

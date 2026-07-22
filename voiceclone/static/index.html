@@ -55,10 +55,17 @@
         <textarea id="text" name="text" rows="5" maxlength="5000"
                   placeholder="พิมพ์ข้อความภาษาไทยที่ต้องการให้พูด..."></textarea>
         <div class="row">
-          <span></span>
+          <label class="speed">
+            ความเร็ว
+            <select id="nfe" name="nfe_step">
+              <option value="8">เร็วสุด (คุณภาพพอใช้)</option>
+              <option value="16" selected>เร็ว–สมดุล (แนะนำ)</option>
+              <option value="32">คุณภาพสูงสุด (ช้าสุด)</option>
+            </select>
+          </label>
           <span id="count" class="count">0 / 5000</span>
         </div>
-        <p class="note">💡 ประโยคสั้น–กลางจะได้เสียงที่เป็นธรรมชาติที่สุด · ข้อความยาวระบบจะแบ่งอ่านให้อัตโนมัติ</p>
+        <p class="note">💡 ประโยคสั้น–กลางจะได้เสียงที่เป็นธรรมชาติที่สุด · ยิ่งเลือก "เร็ว" ยิ่งสร้างไว แต่คุณภาพลดลงเล็กน้อย</p>
       </section>
 
       <!-- Step 3: generate -->

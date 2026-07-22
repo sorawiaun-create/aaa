@@ -42,6 +42,7 @@ app = FastAPI(title="VoiceClone AI", docs_url=None, redoc_url=None)
 async def generate(
     text: str = Form(...),
     ref_text: str = Form(""),
+    nfe_step: int = Form(16),
     sample: UploadFile = File(...),
 ) -> JSONResponse:
     """Clone the uploaded voice and speak ``text`` in Thai."""
@@ -78,6 +79,7 @@ async def generate(
             speaker_wav=str(sample_path),
             out_path=str(output_path),
             ref_text=(ref_text or "").strip(),
+            nfe_step=nfe_step,
         )
     except Exception as exc:  # noqa: BLE001 — surface a clean error to the UI
         # Print the full traceback to the server console for debugging, and

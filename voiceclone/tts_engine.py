@@ -203,6 +203,12 @@ class VoiceCloneEngine:
             from f5_tts.api import F5TTS  # noqa: WPS433
 
             self._device = "cuda" if torch.cuda.is_available() else "cpu"
+
+            # On CPU, make sure PyTorch uses every core available.
+            if self._device == "cpu":
+                cores = os.cpu_count() or 1
+                torch.set_num_threads(cores)
+
             ckpt_file, vocab_file = self._pick_files()
 
             self._tts = F5TTS(
@@ -219,6 +225,7 @@ class VoiceCloneEngine:
         speaker_wav: str,
         out_path: str,
         ref_text: str = "",
+        nfe_step: int = 16,
     ) -> str:
         """Generate Thai speech in the reference voice.
 
@@ -228,6 +235,9 @@ class VoiceCloneEngine:
             out_path: Where to write the generated ``.wav`` file.
             ref_text: Transcript of what is said in ``speaker_wav``. Leave empty
                 to let the model transcribe the sample automatically (slower).
+            nfe_step: Number of denoising steps. Lower is faster but slightly
+                lower quality (8 = fastest, 16 = balanced, 32 = best). This is
+                the main speed lever on CPU.
 
         Returns:
             The output path as a string.
@@ -238,6 +248,8 @@ class VoiceCloneEngine:
         if not Path(speaker_wav).is_file():
             raise FileNotFoundError(f"Voice sample not found: {speaker_wav}")
 
+        nfe_step = max(4, min(64, int(nfe_step)))
+
         tts = self._ensure_loaded()
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -246,7 +258,8 @@ class VoiceCloneEngine:
             ref_text=_thai_normalize(ref_text),
             gen_text=gen_text,
             file_wave=str(out_path),
-            remove_silence=True,
+            nfe_step=nfe_step,
+            remove_silence=False,
         )
         return str(out_path)
 
