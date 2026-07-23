@@ -99,6 +99,17 @@ export function useStore() {
     return added;
   }, []);
 
+  // Insert-or-replace fee records by id (used by settlement re-imports, so
+  // re-uploading the same month's report overwrites rather than skips).
+  const upsertFees = useCallback((records) => {
+    setFees((prev) => {
+      const ids = new Set(records.map((r) => r.id));
+      const kept = prev.filter((r) => !ids.has(r.id));
+      return [...kept, ...records];
+    });
+    return records.length;
+  }, []);
+
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
@@ -117,6 +128,6 @@ export function useStore() {
     products, sales, fees, mappings,
     setProducts, setSales, setFees, setMappings,
     upsertProduct, removeProduct, mergeProducts,
-    addSales, addFees, clearAll, importAll,
+    addSales, addFees, upsertFees, clearAll, importAll,
   };
 }

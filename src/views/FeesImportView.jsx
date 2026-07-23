@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
 import {
   Upload, Receipt, CheckCircle, XCircle, Info, StopCircle, Trash2, FileText,
+  FileSpreadsheet, Wallet,
 } from 'lucide-react';
 import { SectionCard, Button, Banner, EmptyState, Badge } from '../components/ui.jsx';
 import { parsePdfFee } from '../lib/pdfParser.js';
-import { formatCurrency, formatNumber } from '../lib/format.js';
+import { parseSettlementWorkbook } from '../lib/settlementParser.js';
+import { formatCurrency, formatNumber, monthLabel } from '../lib/format.js';
 
 export default function FeesImportView({ store }) {
   const [processing, setProcessing] = useState(false);
@@ -54,8 +56,97 @@ export default function FeesImportView({ store }) {
     error: statusList.filter((s) => s.status === 'error').length,
   };
 
+  const [settleMsg, setSettleMsg] = useState('');
+  const [settleErr, setSettleErr] = useState('');
+
+  const onSettlement = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setSettleMsg('');
+    setSettleErr('');
+    try {
+      const XLSX = await import('xlsx');
+      const records = [];
+      const notes = [];
+      for (const file of files) {
+        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+        const res = parseSettlementWorkbook(XLSX, wb, file.name);
+        if (res.status === 'success' && res.data) {
+          records.push(res.data);
+          const d = res.data;
+          notes.push(
+            `${res.platform} · ${monthLabel(d.monthKey)}: รายได้ ${formatCurrency(d.revenue)} · ค่าธรรมเนียม ${formatCurrency(d.total)} · เงินโอน ${formatCurrency(d.payout)}`
+          );
+        } else {
+          notes.push(`${file.name}: ไม่รู้จักรูปแบบไฟล์ settlement`);
+        }
+      }
+      if (records.length) store.upsertFees(records);
+      setSettleMsg(notes.join('\n'));
+      if (!records.length) setSettleErr('ไม่พบไฟล์ settlement ที่อ่านได้ (รองรับรายงานรายรับ Shopee และ รายงาน TikTok)');
+    } catch (err) {
+      setSettleErr(`อ่านไฟล์ไม่สำเร็จ: ${err.message}`);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const settlementDocs = store.fees.filter((f) => f.source === 'settlement');
+
   return (
     <div className="space-y-6">
+      <SectionCard title="นำเข้าไฟล์ Settlement / รายรับ (Excel)" icon={FileSpreadsheet}>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-slate-500">
+            อัปโหลด <b>รายงานรายรับ (Shopee)</b> หรือ <b>รายงาน settlement (TikTok)</b> เป็นไฟล์ Excel —
+            ระบบจะดึง <b>ค่าธรรมเนียมจริงทั้งเดือน</b> (คอมมิชชั่น, ค่าบริการ, ธุรกรรม, โฆษณา, ขนส่ง ฯลฯ),
+            รายได้ และยอดเงินโอนจริง มาใช้หักหากำไรสุทธิให้อัตโนมัติ
+          </p>
+          <label className="block border-2 border-dashed border-emerald-200 rounded-2xl p-8 text-center cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/40 transition-colors">
+            <input type="file" accept=".xlsx,.xls" multiple className="hidden" onChange={onSettlement} />
+            <Wallet size={32} className="mx-auto text-emerald-300 mb-2" />
+            <p className="text-sm font-medium text-slate-600">คลิกเพื่อเลือกไฟล์ Settlement (.xlsx)</p>
+            <p className="text-xs text-slate-400 mt-1">เลือกได้หลายไฟล์/หลายเดือน — อัปซ้ำเดือนเดิมจะเขียนทับ</p>
+          </label>
+          {settleErr && <Banner tone="error">{settleErr}</Banner>}
+          {settleMsg && (
+            <Banner tone="success">
+              <CheckCircle size={16} className="mt-0.5 shrink-0" />
+              <span className="whitespace-pre-line">{settleMsg}</span>
+            </Banner>
+          )}
+        </div>
+      </SectionCard>
+
+      {settlementDocs.length > 0 && (
+        <SectionCard title={`Settlement ในระบบ (${settlementDocs.length})`} icon={Wallet}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th className="px-5 py-2.5">แพลตฟอร์ม</th>
+                  <th className="px-5 py-2.5">เดือน</th>
+                  <th className="px-5 py-2.5 text-right">รายได้</th>
+                  <th className="px-5 py-2.5 text-right">ค่าธรรมเนียมรวม</th>
+                  <th className="px-5 py-2.5 text-right">เงินโอนจริง</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {settlementDocs.map((f) => (
+                  <tr key={f.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-2"><Badge color={f.platform === 'shopee' ? 'shopee' : 'tiktok'}>{f.platform === 'shopee' ? 'Shopee' : 'TikTok'}</Badge></td>
+                    <td className="px-5 py-2 text-slate-600">{monthLabel(f.monthKey)}</td>
+                    <td className="px-5 py-2 text-right text-slate-700">{formatCurrency(f.revenue)}</td>
+                    <td className="px-5 py-2 text-right text-red-500">{formatCurrency(f.total)}</td>
+                    <td className="px-5 py-2 text-right font-medium text-emerald-600">{formatCurrency(f.payout)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
       <SectionCard title="นำเข้าค่าธรรมเนียม (ใบเสร็จ PDF)" icon={Receipt}>
         <div className="p-5 space-y-4">
           <p className="text-sm text-slate-500">

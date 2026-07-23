@@ -16,6 +16,9 @@ export default function DashboardView({ recon, store }) {
   const hasData = store.sales.length > 0 || store.fees.length > 0;
   const profitPositive = recon.netProfit >= 0;
 
+  const identifiedFees =
+    recon.fees.ads + recon.fees.affiliate + recon.fees.commission + recon.fees.logistics +
+    recon.fees.transaction + recon.fees.service + recon.fees.growth + recon.fees.ams + recon.fees.infra;
   const feeBreakdown = [
     { name: 'โฆษณา (Ads)', value: recon.fees.ads },
     { name: 'Affiliate', value: recon.fees.affiliate },
@@ -24,7 +27,8 @@ export default function DashboardView({ recon, store }) {
     { name: 'ธุรกรรม', value: recon.fees.transaction },
     { name: 'บริการ', value: recon.fees.service },
     { name: 'Growth', value: recon.fees.growth },
-    { name: 'อื่นๆ', value: recon.fees.ams + recon.fees.infra },
+    { name: 'โครงสร้างพื้นฐาน/AMS', value: recon.fees.ams + recon.fees.infra },
+    { name: 'อื่นๆ / ปรับยอด', value: Math.max(0, recon.fees.total - identifiedFees) },
   ].filter((x) => x.value > 0);
 
   const pl = [
@@ -66,6 +70,64 @@ export default function DashboardView({ recon, store }) {
         <KpiCard title="กำไรสุทธิ" value={formatCurrency(recon.netProfit)} subtext={profitPositive ? 'กำไร' : 'ขาดทุน'} icon={profitPositive ? TrendingUp : TrendingDown} accent={profitPositive ? 'green' : 'red'} />
         <KpiCard title="อัตรากำไรสุทธิ" value={formatPercent(recon.netMargin)} subtext="Net Margin" icon={Percent} accent="purple" />
       </div>
+
+      {/* Settlement-based P&L (authoritative platform figures) */}
+      {recon.settlement.hasData && (
+        <SectionCard title="กระทบยอดจากไฟล์ Settlement (ยอดจริงจากแพลตฟอร์ม)" icon={Wallet}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th className="px-5 py-3">แพลตฟอร์ม</th>
+                  <th className="px-5 py-3 text-right">รายได้ (ยอดขาย)</th>
+                  <th className="px-5 py-3 text-right">ค่าธรรมเนียมรวม</th>
+                  <th className="px-5 py-3 text-right">เงินโอนจริง</th>
+                  <th className="px-5 py-3 text-right">ต้นทุนสินค้า (COGS)</th>
+                  <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {['shopee', 'tiktok'].map((p) => {
+                  const d = recon.settlement.byPlatform[p];
+                  if (!d.revenue && !d.fees) return null;
+                  const cogsP = recon.byPlatform[p].cogs;
+                  const net = d.payout - cogsP;
+                  return (
+                    <tr key={p} className="hover:bg-slate-50">
+                      <td className="px-5 py-3">{p === 'shopee' ? <Badge color="shopee">Shopee</Badge> : <Badge color="tiktok">TikTok</Badge>}</td>
+                      <td className="px-5 py-3 text-right">{formatCurrency(d.revenue)}</td>
+                      <td className="px-5 py-3 text-right text-red-500">{formatCurrency(d.fees)}</td>
+                      <td className="px-5 py-3 text-right text-slate-600">{formatCurrency(d.payout)}</td>
+                      <td className="px-5 py-3 text-right text-slate-500">{formatCurrency(cogsP)}</td>
+                      <td className={`px-5 py-3 text-right font-bold ${net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(net)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-200">
+                <tr>
+                  <td className="px-5 py-3">รวม</td>
+                  <td className="px-5 py-3 text-right">{formatCurrency(recon.settlement.revenue)}</td>
+                  <td className="px-5 py-3 text-right text-red-600">{formatCurrency(recon.settlement.fees)}</td>
+                  <td className="px-5 py-3 text-right">{formatCurrency(recon.settlement.payout)}</td>
+                  <td className="px-5 py-3 text-right">{formatCurrency(recon.settlement.cogs)}</td>
+                  <td className={`px-5 py-3 text-right ${recon.settlement.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.settlement.netProfit)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div className="px-5 pb-4">
+            <Banner tone="info">
+              <Info size={15} className="mt-0.5 shrink-0" />
+              <span>
+                รายได้/ค่าธรรมเนียม/เงินโอน = ยอดจริงทั้งเดือนจากไฟล์ settlement · <b>กำไรสุทธิ = เงินโอนจริง − ต้นทุนสินค้า</b>.
+                ต้นทุนสินค้าคำนวณจากจำนวนที่ขายในไฟล์ออเดอร์ที่นำเข้า × ต้นทุนต่อ SKU — เพื่อความแม่นยำ
+                ควรนำเข้าไฟล์ออเดอร์ให้ครอบคลุมช่วงเวลาเดียวกับ settlement
+              </span>
+            </Banner>
+          </div>
+        </SectionCard>
+      )}
 
       {/* Trend + P&L */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as XLSX from 'xlsx';
 import { computeReconciliation } from '../src/lib/reconcile.js';
 import { autoDetectMapping, applyMapping, distinctStatuses } from '../src/lib/salesParser.js';
+import { parseSettlementWorkbook } from '../src/lib/settlementParser.js';
 import { parseMoney, normalizeDate, monthKeyOf } from '../src/lib/format.js';
 
 test('parseMoney handles messy formats', () => {
@@ -120,4 +122,67 @@ test('computeReconciliation flags unmatched SKUs and filters platform', () => {
 test('distinctStatuses returns sorted unique', () => {
   const recs = [{ status: 'b' }, { status: 'a' }, { status: 'b' }, { status: '' }];
   assert.deepEqual(distinctStatuses(recs), ['a', 'b']);
+});
+
+const wbFrom = (name, aoa) => {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), name);
+  return wb;
+};
+
+test('settlement parser reads Shopee income report', () => {
+  const wb = wbFrom('Summary', [
+    ['รายงานรายรับของฉัน'],
+    ['จาก', '2026-05-01'],
+    ['1. รายได้ทั้งหมด', '', '', 1000],
+    ['ค่าคอมมิชชั่น AMS', '', -50, ''],
+    ['ค่าคอมมิชชั่น', '', -200, ''],
+    ['ค่าธุรกรรมการชำระเงิน', '', -100, ''],
+    ['3. จำนวนเงินทั้งหมดที่โอนแล้ว', '', '', 700],
+  ]);
+  const res = parseSettlementWorkbook(XLSX, wb, 'shopee.xlsx');
+  assert.equal(res.status, 'success');
+  assert.equal(res.data.platform, 'shopee');
+  assert.equal(res.data.revenue, 1000);
+  assert.equal(res.data.payout, 700);
+  assert.equal(res.data.total, 300); // revenue - payout
+  assert.equal(res.data.comm, 200); // exact match, not stolen by "AMS" row
+  assert.equal(res.data.ams, 50);
+  assert.equal(res.data.trans, 100);
+  assert.equal(res.data.monthKey, '2026-05');
+});
+
+test('settlement parser reads TikTok report', () => {
+  const wb = wbFrom('รายงาน', [
+    ['', 'ช่วงเวลา', '', '', '', '2026/05/01-2026/05/31'],
+    ['', '', 'รายได้รวม', '', '', '2000'],
+    ['', '', 'ค่าธรรมเนียมทั้งหมด', '', '', '-500'],
+    ['', '', 'ค่าคอมมิชชั่น TikTok Shop', '', '', '-300'],
+    ['', 'จำนวนเงินที่ชำระทั้งหมด', '', '', '', '1500'],
+  ]);
+  const res = parseSettlementWorkbook(XLSX, wb, 'tiktok.xlsx');
+  assert.equal(res.status, 'success');
+  assert.equal(res.data.platform, 'tiktok');
+  assert.equal(res.data.revenue, 2000);
+  assert.equal(res.data.payout, 1500);
+  assert.equal(res.data.total, 500);
+  assert.equal(res.data.comm, 300);
+  assert.equal(res.data.monthKey, '2026-05');
+});
+
+test('settlement feeds engine net profit (payout - COGS)', () => {
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 5, unitPrice: 100, revenue: 500, status: 'ok' },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
+  const settlement = {
+    id: 'settlement:shopee:2026-05', platform: 'shopee', source: 'settlement',
+    monthKey: '2026-05', revenue: 1000, payout: 700, total: 300, comm: 200, trans: 100,
+  };
+  const r = computeReconciliation({ sales, products, fees: [settlement], filters: { platform: 'all' } });
+  assert.equal(r.settlement.hasData, true);
+  assert.equal(r.settlement.revenue, 1000);
+  assert.equal(r.settlement.payout, 700);
+  assert.equal(r.settlement.cogs, 200); // 5 * 40
+  assert.equal(r.settlement.netProfit, 500); // payout 700 - cogs 200
 });

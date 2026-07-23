@@ -175,6 +175,32 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     }))
     .sort((a, b) => (a.monthKey < b.monthKey ? -1 : 1));
 
+  // --- Settlement summary (authoritative platform revenue/fees/payout) ---
+  const settlementDocs = fees.filter((f) => f.source === 'settlement' && feePass(f));
+  const settlement = {
+    hasData: settlementDocs.length > 0,
+    revenue: 0,
+    payout: 0,
+    fees: 0,
+    byPlatform: {
+      shopee: { revenue: 0, payout: 0, fees: 0 },
+      tiktok: { revenue: 0, payout: 0, fees: 0 },
+    },
+  };
+  settlementDocs.forEach((d) => {
+    const p = mapPlatform(d.platform);
+    settlement.revenue += d.revenue || 0;
+    settlement.payout += d.payout || 0;
+    settlement.fees += d.total || 0;
+    settlement.byPlatform[p].revenue += d.revenue || 0;
+    settlement.byPlatform[p].payout += d.payout || 0;
+    settlement.byPlatform[p].fees += d.total || 0;
+  });
+  // Net profit using authoritative settlement payout, minus COGS from sales.
+  settlement.cogs = cogs;
+  settlement.netProfit = settlement.payout - cogs;
+  settlement.netMargin = settlement.revenue ? (settlement.netProfit / settlement.revenue) * 100 : 0;
+
   return {
     revenue,
     cogs,
@@ -183,6 +209,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     fees: feeTotals,
     netProfit,
     netMargin,
+    settlement,
     unitsSold,
     orderCount: orderIds.size,
     lineCount: filteredSales.length,
