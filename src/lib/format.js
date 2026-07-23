@@ -8,6 +8,17 @@ export const formatCurrency = (amount) =>
     maximumFractionDigits: 2,
   }).format(Number.isFinite(amount) ? amount : 0);
 
+// Compact baht for KPI tiles so 7-figure amounts fit (฿1.02M, ฿512K, ฿98.4K).
+export const formatBahtCompact = (amount) => {
+  const n = Number(amount) || 0;
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1_000_000) return `${sign}฿${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 100_000) return `${sign}฿${Math.round(abs / 1000)}K`;
+  if (abs >= 10_000) return `${sign}฿${(abs / 1000).toFixed(1)}K`;
+  return formatCurrency0(n);
+};
+
 // Whole-baht currency (no decimals) for compact KPI tiles.
 export const formatCurrency0 = (amount) =>
   new Intl.NumberFormat('th-TH', {

@@ -8,7 +8,7 @@ import {
   Receipt, AlertTriangle, ShoppingBag, Video, Package, Award, Info,
 } from 'lucide-react';
 import { KpiCard, SectionCard, EmptyState, Banner, Badge } from '../components/ui.jsx';
-import { formatCurrency, formatCurrency0, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
+import { formatCurrency, formatBahtCompact, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
 
 const PIE_COLORS = ['#FF5722', '#FE2C55', '#2196F3', '#00C853', '#FFC107', '#9C27B0', '#00BCD4', '#795548'];
 
@@ -103,16 +103,30 @@ export default function DashboardView({ recon, store }) {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard title="รายได้รวม" value={formatCurrency0(recon.revenue)} subtext={`${formatNumber(recon.orderCount)} ออเดอร์`} icon={Wallet} accent="emerald" />
-        <KpiCard title="ต้นทุนสินค้า" value={formatCurrency0(recon.cogs)} subtext={`${formatNumber(recon.unitsSold)} ชิ้น`} icon={Package} accent="orange" />
-        <KpiCard title="กำไรขั้นต้น" value={formatCurrency0(recon.grossProfit)} subtext={formatPercent(recon.grossMargin)} icon={TrendingUp} accent="blue" />
-        <KpiCard title="ค่าธรรมเนียม" value={formatCurrency0(recon.fees.total)} subtext={`Ads ${formatCurrency0(recon.fees.ads)}`} icon={Receipt} accent="pink" />
-        <KpiCard title="กำไรสุทธิ" value={formatCurrency0(recon.netProfit)} subtext={profitPositive ? 'กำไร' : 'ขาดทุน'} icon={profitPositive ? TrendingUp : TrendingDown} accent={profitPositive ? 'green' : 'red'} />
+        <KpiCard title="รายได้รวม" value={formatBahtCompact(recon.revenue)} valueTitle={formatCurrency(recon.revenue)} subtext={`${formatNumber(recon.orderCount)} ออเดอร์`} icon={Wallet} accent="emerald" />
+        <KpiCard title="ต้นทุนสินค้า" value={formatBahtCompact(recon.cogs)} valueTitle={formatCurrency(recon.cogs)} subtext={`${formatNumber(recon.unitsSold)} ชิ้น`} icon={Package} accent="orange" />
+        <KpiCard title="กำไรขั้นต้น" value={formatBahtCompact(recon.grossProfit)} valueTitle={formatCurrency(recon.grossProfit)} subtext={formatPercent(recon.grossMargin)} icon={TrendingUp} accent="blue" />
+        <KpiCard title="ค่าธรรมเนียม" value={formatBahtCompact(recon.fees.total)} valueTitle={formatCurrency(recon.fees.total)} subtext={`Ads ${formatBahtCompact(recon.fees.ads)}`} icon={Receipt} accent="pink" />
+        <KpiCard title="กำไรสุทธิ" value={formatBahtCompact(recon.netProfit)} valueTitle={formatCurrency(recon.netProfit)} subtext={profitPositive ? 'กำไร' : 'ขาดทุน'} icon={profitPositive ? TrendingUp : TrendingDown} accent={profitPositive ? 'green' : 'red'} />
         <KpiCard title="อัตรากำไรสุทธิ" value={formatPercent(recon.netMargin)} subtext="Net Margin" icon={Percent} accent="purple" />
       </div>
 
       {/* Settlement-based P&L (authoritative platform figures) */}
-      {recon.settlement.hasData && (
+      {recon.settlement.hasData && (() => {
+        // Coverage = how much of the settlement revenue the imported order file
+        // accounts for. COGS only covers those orders, so low coverage means the
+        // reported profit is overstated.
+        const coverageOf = (p) => {
+          const sr = recon.settlement.byPlatform[p].revenue;
+          return sr > 0 ? (recon.byPlatform[p].revenue / sr) * 100 : null;
+        };
+        const lowCoverage = ['shopee', 'tiktok'].filter((p) => {
+          const d = recon.settlement.byPlatform[p];
+          const c = coverageOf(p);
+          return (d.revenue || d.fees) && c != null && c < 90;
+        });
+        const covColor = (c) => (c == null ? 'text-slate-400' : c >= 95 ? 'text-emerald-600' : c >= 70 ? 'text-amber-600' : 'text-red-500');
+        return (
         <SectionCard title="กระทบยอดจากไฟล์ Settlement (ยอดจริงจากแพลตฟอร์ม)" icon={Wallet}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -123,6 +137,7 @@ export default function DashboardView({ recon, store }) {
                   <th className="px-5 py-3 text-right">ค่าธรรมเนียมรวม</th>
                   <th className="px-5 py-3 text-right">เงินโอนจริง</th>
                   <th className="px-5 py-3 text-right">ต้นทุนสินค้า (COGS)</th>
+                  <th className="px-5 py-3 text-right">ครอบคลุม COGS</th>
                   <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
                 </tr>
               </thead>
@@ -132,6 +147,7 @@ export default function DashboardView({ recon, store }) {
                   if (!d.revenue && !d.fees) return null;
                   const cogsP = recon.byPlatform[p].cogs;
                   const net = d.payout - cogsP;
+                  const cov = coverageOf(p);
                   return (
                     <tr key={p} className="hover:bg-slate-50">
                       <td className="px-5 py-3">{p === 'shopee' ? <Badge color="shopee">Shopee</Badge> : <Badge color="tiktok">TikTok</Badge>}</td>
@@ -139,6 +155,7 @@ export default function DashboardView({ recon, store }) {
                       <td className="px-5 py-3 text-right text-red-500">{formatCurrency(d.fees)}</td>
                       <td className="px-5 py-3 text-right text-slate-600">{formatCurrency(d.payout)}</td>
                       <td className="px-5 py-3 text-right text-slate-500">{formatCurrency(cogsP)}</td>
+                      <td className={`px-5 py-3 text-right font-medium ${covColor(cov)}`}>{cov == null ? '-' : formatPercent(cov)}</td>
                       <td className={`px-5 py-3 text-right font-bold ${net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(net)}</td>
                     </tr>
                   );
@@ -151,23 +168,35 @@ export default function DashboardView({ recon, store }) {
                   <td className="px-5 py-3 text-right text-red-600">{formatCurrency(recon.settlement.fees)}</td>
                   <td className="px-5 py-3 text-right">{formatCurrency(recon.settlement.payout)}</td>
                   <td className="px-5 py-3 text-right">{formatCurrency(recon.settlement.cogs)}</td>
+                  <td className="px-5 py-3 text-right text-slate-500">{recon.settlement.revenue > 0 ? formatPercent((recon.revenue / recon.settlement.revenue) * 100) : '-'}</td>
                   <td className={`px-5 py-3 text-right ${recon.settlement.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.settlement.netProfit)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <div className="px-5 pb-4">
+          <div className="px-5 pb-4 space-y-2">
+            {lowCoverage.length > 0 && (
+              <Banner tone="warn">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                <span>
+                  ไฟล์ออเดอร์ครอบคลุมยอดขายไม่ครบ ({lowCoverage.map((p) => `${p === 'shopee' ? 'Shopee' : 'TikTok'} ${formatPercent(coverageOf(p))}`).join(', ')}) —
+                  ต้นทุนสินค้าจึงคิดไม่ครบ ทำให้ <b>กำไรสุทธิที่แสดงสูงเกินจริง</b> แนะนำให้ export ไฟล์ออเดอร์ให้ครบทั้งเดือนเดียวกับ settlement
+                  {recon.missingCostCount > 0 && ` และตั้งต้นทุนให้ครบอีก ${recon.missingCostCount} SKU`}
+                </span>
+              </Banner>
+            )}
             <Banner tone="info">
               <Info size={15} className="mt-0.5 shrink-0" />
               <span>
                 รายได้/ค่าธรรมเนียม/เงินโอน = ยอดจริงทั้งเดือนจากไฟล์ settlement · <b>กำไรสุทธิ = เงินโอนจริง − ต้นทุนสินค้า</b>.
-                ต้นทุนสินค้าคำนวณจากจำนวนที่ขายในไฟล์ออเดอร์ที่นำเข้า × ต้นทุนต่อ SKU — เพื่อความแม่นยำ
-                ควรนำเข้าไฟล์ออเดอร์ให้ครอบคลุมช่วงเวลาเดียวกับ settlement
+                ต้นทุนสินค้าคำนวณจาก <b>ไฟล์ออเดอร์</b> (จำนวนที่ขายราย SKU × ต้นทุนต่อ SKU ที่คุณตั้งเอง) — ไฟล์ settlement ไม่มีต้นทุนสินค้า.
+                คอลัมน์ “ครอบคลุม COGS” คือสัดส่วนยอดขายในไฟล์ออเดอร์เทียบกับ settlement (ควรใกล้ 100% จึงจะแม่น)
               </span>
             </Banner>
           </div>
         </SectionCard>
-      )}
+        );
+      })()}
 
       {/* Trend + P&L */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -3,7 +3,7 @@ import React from 'react';
 export const cn = (...parts) => parts.filter(Boolean).join(' ');
 
 // KPI / metric card with an accent icon.
-export const KpiCard = ({ title, value, subtext, icon: Icon, accent = 'slate', trend }) => {
+export const KpiCard = ({ title, value, valueTitle, subtext, icon: Icon, accent = 'slate', trend }) => {
   const accents = {
     emerald: 'bg-emerald-50 text-emerald-600',
     orange: 'bg-orange-50 text-orange-600',
@@ -25,7 +25,7 @@ export const KpiCard = ({ title, value, subtext, icon: Icon, accent = 'slate', t
         <p className="text-slate-500 text-xs font-medium leading-tight" title={title}>
           {title}
         </p>
-        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-800 mt-1 tabular-nums tracking-tight break-words">
+        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-800 mt-1 tabular-nums tracking-tight break-words" title={valueTitle}>
           {value}
         </h3>
         {subtext && (
