@@ -187,14 +187,30 @@ function SalesSummary({ store }) {
       {store.sales.length === 0 ? (
         <EmptyState icon={ShoppingBag} title="ยังไม่มีข้อมูลยอดขาย" hint="อัปโหลดไฟล์ด้านบนเพื่อเริ่มต้น" />
       ) : (
-        <div className="p-5 flex gap-6">
+        <div className="p-5 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
             <Badge color="shopee">Shopee</Badge>
             <span className="font-bold">{formatNumber(byPlatform.shopee || 0)}</span> รายการ
+            {byPlatform.shopee > 0 && (
+              <button
+                onClick={() => window.confirm('ลบเฉพาะยอดขาย Shopee?') && store.setSales(store.sales.filter((s) => s.platform !== 'shopee'))}
+                className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
+              >
+                ลบ Shopee
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Badge color="tiktok">TikTok</Badge>
             <span className="font-bold">{formatNumber(byPlatform.tiktok || 0)}</span> รายการ
+            {byPlatform.tiktok > 0 && (
+              <button
+                onClick={() => window.confirm('ลบเฉพาะยอดขาย TikTok?') && store.setSales(store.sales.filter((s) => s.platform !== 'tiktok'))}
+                className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
+              >
+                ลบ TikTok
+              </button>
+            )}
           </div>
         </div>
       )}

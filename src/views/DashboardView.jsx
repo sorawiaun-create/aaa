@@ -8,7 +8,7 @@ import {
   Receipt, AlertTriangle, ShoppingBag, Video, Package, Award,
 } from 'lucide-react';
 import { KpiCard, SectionCard, EmptyState, Banner, Badge } from '../components/ui.jsx';
-import { formatCurrency, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
+import { formatCurrency, formatCurrency0, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
 
 const PIE_COLORS = ['#FF5722', '#FE2C55', '#2196F3', '#00C853', '#FFC107', '#9C27B0', '#00BCD4', '#795548'];
 
@@ -89,12 +89,12 @@ export default function DashboardView({ recon, store }) {
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KpiCard title="รายได้รวม" value={formatCurrency(recon.revenue)} subtext={`${formatNumber(recon.orderCount)} ออเดอร์`} icon={Wallet} accent="emerald" />
-        <KpiCard title="ต้นทุนสินค้า (COGS)" value={formatCurrency(recon.cogs)} subtext={`${formatNumber(recon.unitsSold)} ชิ้น`} icon={Package} accent="orange" />
-        <KpiCard title="กำไรขั้นต้น" value={formatCurrency(recon.grossProfit)} subtext={formatPercent(recon.grossMargin)} icon={TrendingUp} accent="blue" />
-        <KpiCard title="ค่าธรรมเนียม+โฆษณา" value={formatCurrency(recon.fees.total)} subtext={`Ads ${formatCurrency(recon.fees.ads)}`} icon={Receipt} accent="pink" />
-        <KpiCard title="กำไรสุทธิ" value={formatCurrency(recon.netProfit)} subtext={profitPositive ? 'กำไร' : 'ขาดทุน'} icon={profitPositive ? TrendingUp : TrendingDown} accent={profitPositive ? 'green' : 'red'} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard title="รายได้รวม" value={formatCurrency0(recon.revenue)} subtext={`${formatNumber(recon.orderCount)} ออเดอร์`} icon={Wallet} accent="emerald" />
+        <KpiCard title="ต้นทุนสินค้า" value={formatCurrency0(recon.cogs)} subtext={`${formatNumber(recon.unitsSold)} ชิ้น`} icon={Package} accent="orange" />
+        <KpiCard title="กำไรขั้นต้น" value={formatCurrency0(recon.grossProfit)} subtext={formatPercent(recon.grossMargin)} icon={TrendingUp} accent="blue" />
+        <KpiCard title="ค่าธรรมเนียม" value={formatCurrency0(recon.fees.total)} subtext={`Ads ${formatCurrency0(recon.fees.ads)}`} icon={Receipt} accent="pink" />
+        <KpiCard title="กำไรสุทธิ" value={formatCurrency0(recon.netProfit)} subtext={profitPositive ? 'กำไร' : 'ขาดทุน'} icon={profitPositive ? TrendingUp : TrendingDown} accent={profitPositive ? 'green' : 'red'} />
         <KpiCard title="อัตรากำไรสุทธิ" value={formatPercent(recon.netMargin)} subtext="Net Margin" icon={Percent} accent="purple" />
       </div>
 

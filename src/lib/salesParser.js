@@ -95,11 +95,32 @@ export function autoDetectMapping(headers) {
   return mapping;
 }
 
-// Read a File (csv/xlsx/xls) -> { headers, rows }. Rows are objects keyed by header.
-// Requires the SheetJS `XLSX` module passed in (keeps this file testable in Node).
-export async function readSpreadsheet(file, XLSX) {
+// Read a File into a SheetJS workbook, handling Thai encodings.
+// CSVs are often exported as TIS-620 / Windows-874 (not UTF-8); reading those
+// bytes as Latin-1 produces mojibake like "¡ÃÐ¶Ò§" instead of "กระถาง". We try
+// strict UTF-8 first and fall back to Windows-874 when that fails.
+export async function readWorkbook(file, XLSX) {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+  const isCsv = /\.csv$/i.test(file.name || '') || file.type === 'text/csv';
+  if (isCsv) {
+    let text;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+    } catch {
+      try {
+        text = new TextDecoder('windows-874').decode(buf);
+      } catch {
+        text = new TextDecoder('utf-8').decode(buf);
+      }
+    }
+    return XLSX.read(text, { type: 'string' });
+  }
+  return XLSX.read(buf, { type: 'array', cellDates: false });
+}
+
+// Read a File (csv/xlsx/xls) -> { headers, rows }. Rows are objects keyed by header.
+export async function readSpreadsheet(file, XLSX) {
+  const wb = await readWorkbook(file, XLSX);
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
   const headers = rows.length ? Object.keys(rows[0]) : [];

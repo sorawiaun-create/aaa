@@ -56,6 +56,12 @@ export function useStore() {
     setProducts((prev) => prev.filter((p) => String(p.sku).trim().toLowerCase() !== key));
   }, []);
 
+  // Bulk delete products by a set/array of SKUs.
+  const removeProducts = useCallback((skus) => {
+    const keys = new Set([...skus].map((s) => String(s).trim().toLowerCase()));
+    setProducts((prev) => prev.filter((p) => !keys.has(String(p.sku).trim().toLowerCase())));
+  }, []);
+
   // Merge products by SKU (used by CSV cost import). Returns count added/updated.
   const mergeProducts = useCallback((incoming) => {
     let added = 0;
@@ -123,6 +129,8 @@ export function useStore() {
     return records.length;
   }, []);
 
+  const clearOrderFees = useCallback(() => setOrderFees([]), []);
+
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
@@ -142,7 +150,7 @@ export function useStore() {
   return {
     products, sales, fees, orderFees, mappings,
     setProducts, setSales, setFees, setOrderFees, setMappings,
-    upsertProduct, removeProduct, mergeProducts,
-    addSales, addFees, upsertFees, addOrderFees, clearAll, importAll,
+    upsertProduct, removeProduct, removeProducts, mergeProducts,
+    addSales, addFees, upsertFees, addOrderFees, clearOrderFees, clearAll, importAll,
   };
 }

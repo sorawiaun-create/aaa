@@ -157,8 +157,15 @@ export function parseSettlementWorkbook(XLSX, wb, fileName = '') {
       .map((c) => String(c ?? ''))
       .join(' ');
 
-    const isTikTok = names.includes('รายงาน') && flat.includes('ค่าธรรมเนียมทั้งหมด');
-    const isShopee = names.includes('Summary') || flat.includes('รายงานรายรับของฉัน');
+    // Detect by content labels (robust to sheet-name/language variations).
+    const isTikTok =
+      flat.includes('ค่าธรรมเนียมทั้งหมด') ||
+      (flat.includes('รายได้รวม') && flat.includes('จำนวนเงินที่ชำระทั้งหมด'));
+    const isShopee =
+      names.includes('Summary') ||
+      names.includes('Income') ||
+      flat.includes('รายงานรายรับของฉัน') ||
+      flat.includes('จำนวนเงินทั้งหมดที่โอนแล้ว');
 
     if (isTikTok) {
       const data = parseTikTok(sheets);
@@ -168,7 +175,7 @@ export function parseSettlementWorkbook(XLSX, wb, fileName = '') {
       const data = parseShopee(sheets);
       return { status: 'success', platform: 'Shopee Settlement', file: fileName, data };
     }
-    return { status: 'unknown', file: fileName, data: null };
+    return { status: 'unknown', file: fileName, data: null, sheets: wb.SheetNames };
   } catch (err) {
     return { status: 'error', file: fileName, message: err.message, data: null };
   }

@@ -1,13 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { Package, Plus, Trash2, Upload, AlertTriangle, Search, Download } from 'lucide-react';
-import { SectionCard, Button, EmptyState, Banner, Badge } from '../components/ui.jsx';
-import { formatCurrency, parseMoney } from '../lib/format.js';
+import { Package, Plus, Trash2, Upload, AlertTriangle, Search, Download, CheckSquare, Square, X } from 'lucide-react';
+import { SectionCard, Button, EmptyState, Banner, Badge, cn } from '../components/ui.jsx';
+import { formatCurrency, formatNumber, parseMoney } from '../lib/format.js';
 
 export default function ProductsView({ store, recon }) {
-  const { products, upsertProduct, removeProduct, mergeProducts } = store;
+  const { products, upsertProduct, removeProduct, removeProducts, mergeProducts } = store;
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState({ sku: '', name: '', unitCost: '', category: '' });
   const [importMsg, setImportMsg] = useState('');
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+
+  const toggleSel = (sku) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(sku) ? next.delete(sku) : next.add(sku);
+      return next;
+    });
 
   const unmatched = new Set(recon.unmatchedSkus.map((s) => String(s).trim().toLowerCase()));
 
@@ -42,8 +51,8 @@ export default function ProductsView({ store, recon }) {
     setImportMsg('');
     try {
       const XLSX = await import('xlsx');
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: 'array' });
+      const { readWorkbook } = await import('../lib/salesParser.js');
+      const wb = await readWorkbook(file, XLSX);
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
       const pick = (row, names) => {
         const key = Object.keys(row).find((k) =>
@@ -83,6 +92,25 @@ export default function ProductsView({ store, recon }) {
   };
 
   const missingCount = products.filter((p) => !p.unitCost).length;
+
+  const filteredSkus = filtered.map((p) => p.sku);
+  const allSel = filteredSkus.length > 0 && filteredSkus.every((s) => selected.has(s));
+  const toggleAll = () =>
+    setSelected((prev) => {
+      if (allSel) {
+        const next = new Set(prev);
+        filteredSkus.forEach((s) => next.delete(s));
+        return next;
+      }
+      return new Set([...prev, ...filteredSkus]);
+    });
+  const deleteSelected = () => {
+    if (selected.size === 0) return;
+    if (window.confirm(`ลบสินค้า ${formatNumber(selected.size)} รายการที่เลือก?`)) {
+      removeProducts(selected);
+      setSelected(new Set());
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -137,12 +165,26 @@ export default function ProductsView({ store, recon }) {
         title={`ทะเบียนสินค้า (${products.length})`}
         icon={Package}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {missingCount > 0 && <Badge color="amber">{missingCount} ยังไม่ตั้งต้นทุน</Badge>}
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ค้นหา SKU/ชื่อ" className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none" />
             </div>
+            {!selectMode ? (
+              <Button variant="secondary" size="sm" icon={CheckSquare} onClick={() => setSelectMode(true)} disabled={!products.length}>
+                เลือกเพื่อลบ
+              </Button>
+            ) : (
+              <>
+                <Button variant="danger" size="sm" icon={Trash2} onClick={deleteSelected} disabled={selected.size === 0}>
+                  ลบที่เลือก ({selected.size})
+                </Button>
+                <Button variant="ghost" size="sm" icon={X} onClick={() => { setSelectMode(false); setSelected(new Set()); }}>
+                  ยกเลิก
+                </Button>
+              </>
+            )}
           </div>
         }
       >
@@ -153,6 +195,13 @@ export default function ProductsView({ store, recon }) {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
                 <tr>
+                  {selectMode && (
+                    <th className="px-4 py-3 w-10">
+                      <button onClick={toggleAll} className="text-slate-500 hover:text-blue-600 align-middle" title="เลือกทั้งหมด">
+                        {allSel ? <CheckSquare size={16} /> : <Square size={16} />}
+                      </button>
+                    </th>
+                  )}
                   <th className="px-5 py-3">SKU</th>
                   <th className="px-5 py-3">ชื่อสินค้า</th>
                   <th className="px-5 py-3">หมวดหมู่</th>
@@ -163,8 +212,16 @@ export default function ProductsView({ store, recon }) {
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((p) => {
                   const isUnmatched = unmatched.has(String(p.sku).trim().toLowerCase());
+                  const isSel = selected.has(p.sku);
                   return (
-                    <tr key={p.sku} className="hover:bg-slate-50">
+                    <tr key={p.sku} className={cn('hover:bg-slate-50', isSel && 'bg-blue-50/50')}>
+                      {selectMode && (
+                        <td className="px-4 py-3">
+                          <button onClick={() => toggleSel(p.sku)} className={cn('align-middle', isSel ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600')}>
+                            {isSel ? <CheckSquare size={16} /> : <Square size={16} />}
+                          </button>
+                        </td>
+                      )}
                       <td className="px-5 py-3 font-mono text-xs text-slate-700">
                         {p.sku} {isUnmatched && <Badge color="amber">ขายแต่ไม่มีต้นทุน</Badge>}
                       </td>
@@ -180,7 +237,7 @@ export default function ProductsView({ store, recon }) {
                         />
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <button onClick={() => removeProduct(p.sku)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50">
+                        <button onClick={() => removeProduct(p.sku)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50" title="ลบรายการนี้">
                           <Trash2 size={15} />
                         </button>
                       </td>

@@ -67,11 +67,12 @@ export default function FeesImportView({ store }) {
     setSettleErr('');
     try {
       const XLSX = await import('xlsx');
+      const { readWorkbook } = await import('../lib/salesParser.js');
       const records = [];
       const notes = [];
       let orderFeeCount = 0;
       for (const file of files) {
-        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+        const wb = await readWorkbook(file, XLSX);
         const res = parseSettlementWorkbook(XLSX, wb, file.name);
         if (res.status === 'success' && res.data) {
           records.push(res.data);
@@ -80,7 +81,8 @@ export default function FeesImportView({ store }) {
             `${res.platform} · ${monthLabel(d.monthKey)}: รายได้ ${formatCurrency(d.revenue)} · ค่าธรรมเนียม ${formatCurrency(d.total)} · เงินโอน ${formatCurrency(d.payout)}`
           );
         } else {
-          notes.push(`${file.name}: ไม่รู้จักรูปแบบไฟล์ settlement`);
+          const sheetInfo = res.sheets?.length ? ` (sheets: ${res.sheets.join(', ')})` : '';
+          notes.push(`${file.name}: ไม่รู้จักรูปแบบไฟล์ settlement${sheetInfo}`);
         }
         // Also pull per-order fees (for Order-ID join / true per-order profit).
         const of = parseOrderFees(XLSX, wb);
@@ -128,7 +130,17 @@ export default function FeesImportView({ store }) {
       </SectionCard>
 
       {settlementDocs.length > 0 && (
-        <SectionCard title={`Settlement ในระบบ (${settlementDocs.length})`} icon={Wallet}>
+        <SectionCard
+          title={`Settlement ในระบบ (${settlementDocs.length})`}
+          icon={Wallet}
+          action={
+            store.orderFees.length > 0 && (
+              <Button variant="ghost" size="sm" icon={Trash2} onClick={() => window.confirm('ลบค่าธรรมเนียมรายออเดอร์ทั้งหมด?') && store.clearOrderFees()}>
+                ลบค่าธรรมเนียมรายออเดอร์ ({formatNumber(store.orderFees.length)})
+              </Button>
+            )
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
@@ -138,6 +150,7 @@ export default function FeesImportView({ store }) {
                   <th className="px-5 py-2.5 text-right">รายได้</th>
                   <th className="px-5 py-2.5 text-right">ค่าธรรมเนียมรวม</th>
                   <th className="px-5 py-2.5 text-right">เงินโอนจริง</th>
+                  <th className="px-5 py-2.5"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -148,6 +161,11 @@ export default function FeesImportView({ store }) {
                     <td className="px-5 py-2 text-right text-slate-700">{formatCurrency(f.revenue)}</td>
                     <td className="px-5 py-2 text-right text-red-500">{formatCurrency(f.total)}</td>
                     <td className="px-5 py-2 text-right font-medium text-emerald-600">{formatCurrency(f.payout)}</td>
+                    <td className="px-5 py-2 text-right">
+                      <button onClick={() => store.setFees(store.fees.filter((x) => x.id !== f.id))} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50" title="ลบรายการนี้">
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -256,6 +274,7 @@ export default function FeesImportView({ store }) {
                   <th className="px-5 py-2.5">เลขที่เอกสาร</th>
                   <th className="px-5 py-2.5 text-right">โฆษณา</th>
                   <th className="px-5 py-2.5 text-right">รวม (VAT)</th>
+                  <th className="px-5 py-2.5"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -266,6 +285,11 @@ export default function FeesImportView({ store }) {
                     <td className="px-5 py-2 font-mono text-xs text-slate-500 truncate max-w-[180px]">{f.id}</td>
                     <td className="px-5 py-2 text-right text-slate-500">{formatCurrency(f.ads)}</td>
                     <td className="px-5 py-2 text-right font-medium text-slate-800">{formatCurrency(f.total)}</td>
+                    <td className="px-5 py-2 text-right">
+                      <button onClick={() => store.setFees(store.fees.filter((x) => x !== f))} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50" title="ลบรายการนี้">
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

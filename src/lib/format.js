@@ -8,6 +8,14 @@ export const formatCurrency = (amount) =>
     maximumFractionDigits: 2,
   }).format(Number.isFinite(amount) ? amount : 0);
 
+// Whole-baht currency (no decimals) for compact KPI tiles.
+export const formatCurrency0 = (amount) =>
+  new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(amount) ? amount : 0);
+
 export const formatNumber = (n, digits = 0) =>
   new Intl.NumberFormat('th-TH', {
     minimumFractionDigits: digits,

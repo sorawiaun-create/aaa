@@ -15,19 +15,21 @@ export const KpiCard = ({ title, value, subtext, icon: Icon, accent = 'slate', t
     slate: 'bg-slate-100 text-slate-600',
   };
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-start gap-4 transition-transform hover:-translate-y-0.5 duration-200">
+    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-start gap-3 transition-transform hover:-translate-y-0.5 duration-200">
       {Icon && (
-        <div className={cn('p-3 rounded-xl shrink-0', accents[accent] || accents.slate)}>
+        <div className={cn('p-2.5 rounded-xl shrink-0', accents[accent] || accents.slate)}>
           <Icon className="w-5 h-5" />
         </div>
       )}
-      <div className="min-w-0">
-        <p className="text-slate-500 text-sm font-medium truncate" title={title}>
+      <div className="min-w-0 flex-1">
+        <p className="text-slate-500 text-xs font-medium leading-tight" title={title}>
           {title}
         </p>
-        <h3 className="text-xl md:text-2xl font-bold text-slate-800 mt-0.5">{value}</h3>
+        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-800 mt-1 tabular-nums tracking-tight break-words">
+          {value}
+        </h3>
         {subtext && (
-          <p className="text-slate-400 text-xs mt-1 truncate" title={subtext}>
+          <p className="text-slate-400 text-[11px] mt-0.5 truncate" title={subtext}>
             {subtext}
           </p>
         )}
