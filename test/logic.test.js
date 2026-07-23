@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as XLSX from 'xlsx';
-import { computeReconciliation } from '../src/lib/reconcile.js';
+import { computeReconciliation, computeOrderReconciliation } from '../src/lib/reconcile.js';
 import { autoDetectMapping, applyMapping, distinctStatuses } from '../src/lib/salesParser.js';
 import { parseSettlementWorkbook } from '../src/lib/settlementParser.js';
+import { parseOrderFees } from '../src/lib/orderFeeParser.js';
 import { parseMoney, normalizeDate, monthKeyOf } from '../src/lib/format.js';
 
 test('parseMoney handles messy formats', () => {
@@ -168,6 +169,56 @@ test('settlement parser reads TikTok report', () => {
   assert.equal(res.data.total, 500);
   assert.equal(res.data.comm, 300);
   assert.equal(res.data.monthKey, '2026-05');
+});
+
+test('order-fee parser reads Shopee Income sheet by Order ID', () => {
+  const wb = XLSX.utils.book_new();
+  // Income sheet: junk rows, then a header row, then per-order rows.
+  const aoa = [
+    ['ชื่อผู้ใช้ (ผู้ขาย)', 'จาก', 'ถึง'],
+    ['sorawitata', '2026-05-01', '2026-05-31'],
+    [], [], ['ยอดรวม (฿)'],
+    ['ลำดับที่', 'หมายเลขคำสั่งซื้อ', 'วันที่ทำการสั่งซื้อ', 'ค่าคอมมิชชั่น AMS', 'ค่าคอมมิชชั่น', 'ค่าบริการ', 'ค่าธรรมเนียมโครงสร้างพื้นฐานแพลตฟอร์ม', 'ค่าธุรกรรมการชำระเงิน', 'จำนวนเงินทั้งหมดที่โอนแล้ว (฿)'],
+    [1, 'ORD-1', '2026-05-10', -4, -30, -1, -1, -10, 100],
+    [2, 'ORD-2', '2026-05-11', 0, -20, 0, 0, -5, 60],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Income');
+  const { platform, records } = parseOrderFees(XLSX, wb);
+  assert.equal(platform, 'shopee');
+  assert.equal(records.length, 2);
+  const o1 = records.find((r) => r.orderId === 'ORD-1');
+  assert.equal(o1.total, 46); // 4+30+1+1+10
+  assert.equal(o1.monthKey, '2026-05');
+});
+
+test('computeOrderReconciliation joins sales to per-order fees by Order ID', () => {
+  const sales = [
+    // ORD-1: two SKU lines
+    { id: 'a', platform: 'shopee', orderId: 'ORD-1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 2, revenue: 200, status: 'ok' },
+    { id: 'b', platform: 'shopee', orderId: 'ORD-1', date: '10/05/2026', monthKey: '2026-05', sku: 'B', qty: 1, revenue: 100, status: 'ok' },
+    // ORD-2: settled
+    { id: 'c', platform: 'shopee', orderId: 'ORD-2', date: '11/05/2026', monthKey: '2026-05', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
+    // ORD-3: no settlement fee yet (pending)
+    { id: 'd', platform: 'shopee', orderId: 'ORD-3', date: '12/05/2026', monthKey: '2026-05', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 40 }, { sku: 'B', name: 'B', unitCost: 30 }];
+  const orderFees = [
+    { id: 'shopee:ORD-1', platform: 'shopee', orderId: 'ORD-1', total: 46 },
+    { id: 'shopee:ORD-2', platform: 'shopee', orderId: 'ORD-2', total: 15 },
+  ];
+  const { rows, totals } = computeOrderReconciliation({ sales, products, orderFees, filters: { platform: 'all' } });
+  assert.equal(totals.orderCount, 3);
+  assert.equal(totals.matchedCount, 2);
+  assert.equal(totals.pendingCount, 1);
+  const ord1 = rows.find((r) => r.orderId === 'ORD-1');
+  assert.equal(ord1.revenue, 300);
+  assert.equal(ord1.cogs, 110); // 2*40 + 1*30
+  assert.equal(ord1.fee, 46);
+  assert.equal(ord1.netProfit, 144); // 300 - 110 - 46
+  // matched totals: rev 400, cogs 150, fees 61 -> net 189
+  assert.equal(totals.matchedRevenue, 400);
+  assert.equal(totals.fees, 61);
+  assert.equal(totals.netProfit, 189);
 });
 
 test('settlement feeds engine net profit (payout - COGS)', () => {

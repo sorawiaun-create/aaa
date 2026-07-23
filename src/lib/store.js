@@ -4,6 +4,7 @@ const KEYS = {
   products: 'ptr_products_v1',
   sales: 'ptr_sales_v1',
   fees: 'ptr_fees_v1',
+  orderFees: 'ptr_orderfees_v1',
   mappings: 'ptr_mappings_v1',
 };
 
@@ -29,11 +30,13 @@ export function useStore() {
   const [products, setProducts] = useState(() => load(KEYS.products, []));
   const [sales, setSales] = useState(() => load(KEYS.sales, []));
   const [fees, setFees] = useState(() => load(KEYS.fees, []));
+  const [orderFees, setOrderFees] = useState(() => load(KEYS.orderFees, []));
   const [mappings, setMappings] = useState(() => load(KEYS.mappings, {}));
 
   useEffect(() => save(KEYS.products, products), [products]);
   useEffect(() => save(KEYS.sales, sales), [sales]);
   useEffect(() => save(KEYS.fees, fees), [fees]);
+  useEffect(() => save(KEYS.orderFees, orderFees), [orderFees]);
   useEffect(() => save(KEYS.mappings, mappings), [mappings]);
 
   // --- Products (SKU cost master) ---
@@ -110,10 +113,21 @@ export function useStore() {
     return records.length;
   }, []);
 
+  // Per-order fees: insert-or-replace by id so re-imports overwrite.
+  const addOrderFees = useCallback((records) => {
+    setOrderFees((prev) => {
+      const ids = new Set(records.map((r) => r.id));
+      const kept = prev.filter((r) => !ids.has(r.id));
+      return [...kept, ...records];
+    });
+    return records.length;
+  }, []);
+
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
     setFees([]);
+    setOrderFees([]);
     setMappings({});
   }, []);
 
@@ -121,13 +135,14 @@ export function useStore() {
     if (snapshot.products) setProducts(snapshot.products);
     if (snapshot.sales) setSales(snapshot.sales);
     if (snapshot.fees) setFees(snapshot.fees);
+    if (snapshot.orderFees) setOrderFees(snapshot.orderFees);
     if (snapshot.mappings) setMappings(snapshot.mappings);
   }, []);
 
   return {
-    products, sales, fees, mappings,
-    setProducts, setSales, setFees, setMappings,
+    products, sales, fees, orderFees, mappings,
+    setProducts, setSales, setFees, setOrderFees, setMappings,
     upsertProduct, removeProduct, mergeProducts,
-    addSales, addFees, upsertFees, clearAll, importAll,
+    addSales, addFees, upsertFees, addOrderFees, clearAll, importAll,
   };
 }

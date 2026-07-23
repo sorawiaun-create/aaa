@@ -220,3 +220,91 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     missingCostCount: unmatched.size,
   };
 }
+
+/**
+ * Order-level TRUE profit by joining sales lines to per-order fees on Order ID.
+ * The order/SKU file and the settlement file have no SKU in common, but share
+ * the Order ID — so we group sales by order, attach the order's actual fees,
+ * and compute: net profit = revenue − COGS − order fees.
+ *
+ * Orders with no matching settlement row yet are "pending" (fees not released).
+ */
+export function computeOrderReconciliation({ sales = [], products = [], orderFees = [], filters = {} }) {
+  const costBySku = {};
+  products.forEach((p) => {
+    const k = skuKey(p.sku);
+    if (k) costBySku[k] = p;
+  });
+
+  const feeByOrder = {};
+  orderFees.forEach((f) => {
+    feeByOrder[`${mapPlatform(f.platform)}:${String(f.orderId).trim()}`] = f;
+  });
+
+  const platformFilter = filters.platform || 'all';
+  const { from, to, statuses } = filters;
+  const monthInRange = (mk) => {
+    if (!mk) return !from && !to;
+    if (from && mk < from) return false;
+    if (to && mk > to) return false;
+    return true;
+  };
+  const salesPass = (s) => {
+    if (platformFilter !== 'all' && s.platform !== platformFilter) return false;
+    if (!monthInRange(s.monthKey)) return false;
+    if (statuses && statuses.length && s.status && !statuses.includes(s.status)) return false;
+    return true;
+  };
+
+  const orders = {};
+  sales.filter(salesPass).forEach((s) => {
+    if (!s.orderId) return;
+    const key = `${s.platform}:${String(s.orderId).trim()}`;
+    if (!orders[key]) {
+      orders[key] = {
+        key, platform: s.platform, orderId: s.orderId, date: s.date,
+        monthKey: s.monthKey, lines: 0, qty: 0, revenue: 0, cogs: 0, hasAllCost: true,
+      };
+    }
+    const o = orders[key];
+    o.lines += 1;
+    o.qty += s.qty;
+    o.revenue += s.revenue;
+    const prod = costBySku[skuKey(s.sku)];
+    o.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
+    if (!prod && skuKey(s.sku)) o.hasAllCost = false;
+  });
+
+  const rows = Object.values(orders)
+    .map((o) => {
+      const f = feeByOrder[o.key];
+      const matched = !!f;
+      const fee = matched ? f.total : 0;
+      const grossProfit = o.revenue - o.cogs;
+      const netProfit = grossProfit - fee;
+      return {
+        ...o, fee, matched, grossProfit, netProfit,
+        margin: o.revenue ? (netProfit / o.revenue) * 100 : 0,
+      };
+    })
+    .sort((a, b) => (a.monthKey < b.monthKey ? 1 : a.monthKey > b.monthKey ? -1 : b.revenue - a.revenue));
+
+  const matchedRows = rows.filter((r) => r.matched);
+  const sum = (arr, k) => arr.reduce((a, r) => a + r[k], 0);
+  const totals = {
+    orderCount: rows.length,
+    matchedCount: matchedRows.length,
+    pendingCount: rows.length - matchedRows.length,
+    matchRate: rows.length ? (matchedRows.length / rows.length) * 100 : 0,
+    revenue: sum(rows, 'revenue'),
+    cogs: sum(rows, 'cogs'),
+    matchedRevenue: sum(matchedRows, 'revenue'),
+    matchedCogs: sum(matchedRows, 'cogs'),
+    fees: sum(matchedRows, 'fee'),
+  };
+  totals.netProfit = totals.matchedRevenue - totals.matchedCogs - totals.fees;
+  totals.netMargin = totals.matchedRevenue ? (totals.netProfit / totals.matchedRevenue) * 100 : 0;
+  totals.hasOrderFees = orderFees.length > 0;
+
+  return { rows, totals };
+}

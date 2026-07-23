@@ -6,6 +6,7 @@ import {
 import { SectionCard, Button, Banner, EmptyState, Badge } from '../components/ui.jsx';
 import { parsePdfFee } from '../lib/pdfParser.js';
 import { parseSettlementWorkbook } from '../lib/settlementParser.js';
+import { parseOrderFees } from '../lib/orderFeeParser.js';
 import { formatCurrency, formatNumber, monthLabel } from '../lib/format.js';
 
 export default function FeesImportView({ store }) {
@@ -68,6 +69,7 @@ export default function FeesImportView({ store }) {
       const XLSX = await import('xlsx');
       const records = [];
       const notes = [];
+      let orderFeeCount = 0;
       for (const file of files) {
         const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
         const res = parseSettlementWorkbook(XLSX, wb, file.name);
@@ -80,8 +82,15 @@ export default function FeesImportView({ store }) {
         } else {
           notes.push(`${file.name}: ไม่รู้จักรูปแบบไฟล์ settlement`);
         }
+        // Also pull per-order fees (for Order-ID join / true per-order profit).
+        const of = parseOrderFees(XLSX, wb);
+        if (of.records.length) {
+          store.addOrderFees(of.records);
+          orderFeeCount += of.records.length;
+        }
       }
       if (records.length) store.upsertFees(records);
+      if (orderFeeCount) notes.push(`+ ค่าธรรมเนียมรายออเดอร์ ${formatNumber(orderFeeCount)} รายการ (ใช้จับคู่ Order ID → กำไรจริงรายออเดอร์)`);
       setSettleMsg(notes.join('\n'));
       if (!records.length) setSettleErr('ไม่พบไฟล์ settlement ที่อ่านได้ (รองรับรายงานรายรับ Shopee และ รายงาน TikTok)');
     } catch (err) {

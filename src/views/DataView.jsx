@@ -16,6 +16,7 @@ export default function DataView({ store }) {
       products: store.products,
       sales: store.sales,
       fees: store.fees,
+      orderFees: store.orderFees,
       mappings: store.mappings,
     };
     const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });

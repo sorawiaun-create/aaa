@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Upload, Package, Scale, Receipt, Database,
-  Filter, ShoppingBag, Video, TrendingUp,
+  Filter, ShoppingBag, Video, TrendingUp, Link2,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
-import { computeReconciliation } from './lib/reconcile.js';
+import { computeReconciliation, computeOrderReconciliation } from './lib/reconcile.js';
 import { distinctStatuses } from './lib/salesParser.js';
 import { cn, Badge } from './components/ui.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -12,11 +12,13 @@ import SalesImportView from './views/SalesImportView.jsx';
 import ProductsView from './views/ProductsView.jsx';
 import FeesImportView from './views/FeesImportView.jsx';
 import ReconcileView from './views/ReconcileView.jsx';
+import OrderProfitView from './views/OrderProfitView.jsx';
 import DataView from './views/DataView.jsx';
 
 const NAV = [
   { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
-  { id: 'reconcile', label: 'กระทบยอด / กำไร', icon: Scale },
+  { id: 'orders', label: 'กำไรจริง (รายออเดอร์)', icon: Link2 },
+  { id: 'reconcile', label: 'กำไรราย SKU', icon: Scale },
   { id: 'products', label: 'สินค้า & ต้นทุน', icon: Package },
   { id: 'sales', label: 'นำเข้ายอดขาย', icon: Upload },
   { id: 'fees', label: 'นำเข้าค่าธรรมเนียม', icon: Receipt },
@@ -54,7 +56,18 @@ export default function App() {
     [store.sales, store.products, store.fees, filters]
   );
 
-  const showFilters = view === 'dashboard' || view === 'reconcile';
+  const orderRecon = useMemo(
+    () =>
+      computeOrderReconciliation({
+        sales: store.sales,
+        products: store.products,
+        orderFees: store.orderFees,
+        filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
+      }),
+    [store.sales, store.products, store.orderFees, filters]
+  );
+
+  const showFilters = view === 'dashboard' || view === 'reconcile' || view === 'orders';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex">
@@ -121,6 +134,7 @@ export default function App() {
           )}
 
           {view === 'dashboard' && <DashboardView recon={recon} store={store} />}
+          {view === 'orders' && <OrderProfitView orderRecon={orderRecon} store={store} />}
           {view === 'reconcile' && <ReconcileView recon={recon} store={store} />}
           {view === 'products' && <ProductsView store={store} recon={recon} />}
           {view === 'sales' && <SalesImportView store={store} />}
