@@ -280,6 +280,38 @@ test('computeOrderReconciliation joins sales to per-order fees by Order ID', () 
   assert.equal(totals.netProfit, 189);
 });
 
+test('general expenses reduce company net profit and month totals', () => {
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 10, unitPrice: 100, revenue: 1000, status: 'ok', fee: 100, feeComm: 100 },
+    { id: '2', platform: 'shopee', orderId: 'O2', date: '10/06/2026', monthKey: '2026-06', sku: 'A', qty: 5, unitPrice: 100, revenue: 500, status: 'ok', fee: 50, feeComm: 50 },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
+  const expenses = [
+    { id: 'e1', month: '2026-05', category: 'เงินเดือน', amount: 300 },
+    { id: 'e2', month: '2026-05', category: 'ค่าเช่า', amount: 200 },
+    { id: 'e3', month: '2026-06', category: 'เงินเดือน', amount: 100 },
+  ];
+  const r = computeReconciliation({ sales, products, fees: [], expenses, filters: { platform: 'all' } });
+  // sales net profit = (1000+500) - (600) cogs - (150) fees = 750
+  assert.equal(r.netProfit, 750);
+  assert.equal(r.opexTotal, 600);
+  assert.equal(r.companyNetProfit, 150); // 750 - 600
+  const may = r.byMonth.find((m) => m.monthKey === '2026-05');
+  assert.equal(may.opex, 500);
+  // may sales profit = 1000 - 400 - 100 = 500; company = 500 - 500 = 0
+  assert.equal(may.profit, 500);
+  assert.equal(may.companyProfit, 0);
+});
+
+test('expenses respect the month-range filter', () => {
+  const expenses = [
+    { id: 'e1', month: '2026-05', category: 'x', amount: 300 },
+    { id: 'e2', month: '2026-06', category: 'y', amount: 100 },
+  ];
+  const r = computeReconciliation({ sales: [], products: [], expenses, filters: { platform: 'all', from: '2026-06', to: '2026-06' } });
+  assert.equal(r.opexTotal, 100); // only June counted
+});
+
 test('settlement feeds engine net profit (payout - COGS)', () => {
   const sales = [
     { id: '1', platform: 'shopee', orderId: 'O1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 5, unitPrice: 100, revenue: 500, status: 'ok' },

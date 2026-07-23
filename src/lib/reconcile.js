@@ -32,7 +32,7 @@ function addFee(acc, f) {
  *
  * filters: { platform: 'all'|'shopee'|'tiktok', from, to (YYYY-MM), statuses: string[]|null }
  */
-export function computeReconciliation({ sales = [], products = [], fees = [], orderFees = [], filters = {} }) {
+export function computeReconciliation({ sales = [], products = [], fees = [], orderFees = [], expenses = [], filters = {} }) {
   const costBySku = {};
   products.forEach((p) => {
     const k = skuKey(p.sku);
@@ -229,13 +229,32 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
     const m = ensureMonth(f.monthKey || monthKeyOf(f.date));
     m.fees += f.total || 0;
   });
+
+  // --- General (operating) expenses by month (company-wide, date-range filtered) ---
+  const expensesInRange = expenses.filter((e) => monthInRange(e.month));
+  let opexTotal = 0;
+  expensesInRange.forEach((e) => {
+    const amt = Number(e.amount) || 0;
+    opexTotal += amt;
+    const m = ensureMonth(e.month);
+    m.opex = (m.opex || 0) + amt;
+  });
+
   const byMonth = Object.values(monthMap)
-    .map((m) => ({
-      ...m,
-      cost: m.cogs + m.fees,
-      profit: m.revenue - m.cogs - m.fees,
-    }))
+    .map((m) => {
+      const opex = m.opex || 0;
+      const profit = m.revenue - m.cogs - m.fees;
+      return {
+        ...m,
+        opex,
+        cost: m.cogs + m.fees,
+        profit, // profit from sales (before general expenses)
+        companyProfit: profit - opex, // net company profit/loss after opex
+      };
+    })
     .sort((a, b) => (a.monthKey < b.monthKey ? -1 : 1));
+
+  const companyNetProfit = netProfit - opexTotal;
 
   // --- Settlement summary (authoritative platform revenue/fees/payout) ---
   const settlementDocs = fees.filter((f) => f.source === 'settlement' && feePass(f));
@@ -271,6 +290,8 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
     fees: feeTotals,
     netProfit,
     netMargin,
+    opexTotal,
+    companyNetProfit,
     settlement,
     unitsSold,
     orderCount: orderIds.size,

@@ -5,8 +5,14 @@ const KEYS = {
   sales: 'ptr_sales_v1',
   fees: 'ptr_fees_v1',
   orderFees: 'ptr_orderfees_v1',
+  expenses: 'ptr_expenses_v1',
   mappings: 'ptr_mappings_v1',
 };
+
+const uid = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const load = (key, fallback) => {
   try {
@@ -31,12 +37,14 @@ export function useStore() {
   const [sales, setSales] = useState(() => load(KEYS.sales, []));
   const [fees, setFees] = useState(() => load(KEYS.fees, []));
   const [orderFees, setOrderFees] = useState(() => load(KEYS.orderFees, []));
+  const [expenses, setExpenses] = useState(() => load(KEYS.expenses, []));
   const [mappings, setMappings] = useState(() => load(KEYS.mappings, {}));
 
   useEffect(() => save(KEYS.products, products), [products]);
   useEffect(() => save(KEYS.sales, sales), [sales]);
   useEffect(() => save(KEYS.fees, fees), [fees]);
   useEffect(() => save(KEYS.orderFees, orderFees), [orderFees]);
+  useEffect(() => save(KEYS.expenses, expenses), [expenses]);
   useEffect(() => save(KEYS.mappings, mappings), [mappings]);
 
   // --- Products (SKU cost master) ---
@@ -131,11 +139,23 @@ export function useStore() {
 
   const clearOrderFees = useCallback(() => setOrderFees([]), []);
 
+  // --- General (operating) expenses ---
+  const addExpense = useCallback((exp) => {
+    setExpenses((prev) => [...prev, { id: uid(), ...exp }]);
+  }, []);
+  const updateExpense = useCallback((id, patch) => {
+    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+  const removeExpense = useCallback((id) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
     setFees([]);
     setOrderFees([]);
+    setExpenses([]);
     setMappings({});
   }, []);
 
@@ -144,13 +164,15 @@ export function useStore() {
     if (snapshot.sales) setSales(snapshot.sales);
     if (snapshot.fees) setFees(snapshot.fees);
     if (snapshot.orderFees) setOrderFees(snapshot.orderFees);
+    if (snapshot.expenses) setExpenses(snapshot.expenses);
     if (snapshot.mappings) setMappings(snapshot.mappings);
   }, []);
 
   return {
-    products, sales, fees, orderFees, mappings,
-    setProducts, setSales, setFees, setOrderFees, setMappings,
+    products, sales, fees, orderFees, expenses, mappings,
+    setProducts, setSales, setFees, setOrderFees, setExpenses, setMappings,
     upsertProduct, removeProduct, removeProducts, mergeProducts,
-    addSales, addFees, upsertFees, addOrderFees, clearOrderFees, clearAll, importAll,
+    addSales, addFees, upsertFees, addOrderFees, clearOrderFees,
+    addExpense, updateExpense, removeExpense, clearAll, importAll,
   };
 }

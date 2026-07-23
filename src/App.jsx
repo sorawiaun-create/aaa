@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Upload, Package, Scale, Receipt, Database,
-  Filter, ShoppingBag, Video, TrendingUp, Link2, BarChart3,
+  Filter, ShoppingBag, Video, TrendingUp, Link2, BarChart3, Banknote,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from './lib/reconcile.js';
@@ -15,6 +15,7 @@ import FeesImportView from './views/FeesImportView.jsx';
 import ReconcileView from './views/ReconcileView.jsx';
 import OrderProfitView from './views/OrderProfitView.jsx';
 import ProductAnalyticsView from './views/ProductAnalyticsView.jsx';
+import ExpensesView from './views/ExpensesView.jsx';
 import DataView from './views/DataView.jsx';
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { id: 'orders', label: 'กำไรจริง (รายออเดอร์)', icon: Link2 },
   { id: 'reconcile', label: 'กำไรราย SKU', icon: Scale },
   { id: 'analytics', label: 'วิเคราะห์สินค้า', icon: BarChart3 },
+  { id: 'expenses', label: 'รายจ่ายทั่วไป', icon: Banknote },
   { id: 'products', label: 'สินค้า & ต้นทุน', icon: Package },
   { id: 'sales', label: 'นำเข้ายอดขาย', icon: Upload },
   { id: 'fees', label: 'นำเข้าค่าธรรมเนียม', icon: Receipt },
@@ -56,9 +58,10 @@ export default function App() {
         products: store.products,
         fees: store.fees,
         orderFees: store.orderFees,
+        expenses: store.expenses,
         filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
       }),
-    [store.sales, store.products, store.fees, store.orderFees, filters]
+    [store.sales, store.products, store.fees, store.orderFees, store.expenses, filters]
   );
 
   const orderRecon = useMemo(
@@ -157,6 +160,7 @@ export default function App() {
           {view === 'orders' && <OrderProfitView orderRecon={orderRecon} store={store} />}
           {view === 'reconcile' && <ReconcileView recon={recon} store={store} />}
           {view === 'analytics' && <ProductAnalyticsView analytics={analytics} />}
+          {view === 'expenses' && <ExpensesView store={store} recon={recon} />}
           {view === 'products' && <ProductsView store={store} recon={recon} />}
           {view === 'sales' && <SalesImportView store={store} />}
           {view === 'fees' && <FeesImportView store={store} />}

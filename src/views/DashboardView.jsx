@@ -64,6 +64,19 @@ export default function DashboardView({ recon, store }) {
     { label: 'กำไรขั้นต้น (Gross Profit)', value: recon.grossProfit, strong: true, tone: 'text-blue-700', sub: formatPercent(recon.grossMargin) },
     { label: 'หัก: ค่าธรรมเนียม + โฆษณา (รวม VAT)', value: -recon.fees.total, tone: 'text-slate-600' },
     { label: 'กำไรสุทธิ (Net Profit)', value: recon.netProfit, strong: true, tone: profitPositive ? 'text-emerald-700' : 'text-red-600', sub: formatPercent(recon.netMargin), divider: true },
+    ...(recon.opexTotal > 0
+      ? [
+          { label: 'หัก: รายจ่ายทั่วไป (Operating Exp.)', value: -recon.opexTotal, tone: 'text-slate-600' },
+          {
+            label: 'กำไร/ขาดทุนสุทธิบริษัท',
+            value: recon.companyNetProfit,
+            strong: true,
+            tone: recon.companyNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600',
+            sub: formatPercent(recon.revenue ? (recon.companyNetProfit / recon.revenue) * 100 : 0),
+            divider: true,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -295,9 +308,11 @@ export default function DashboardView({ recon, store }) {
                   <th className="px-5 py-3 text-right">รายได้</th>
                   <th className="px-5 py-3 text-right">โต MoM</th>
                   <th className="px-5 py-3 text-right">ต้นทุนรวม</th>
-                  <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
+                  <th className="px-5 py-3 text-right">กำไรจากการขาย</th>
                   <th className="px-5 py-3 text-right">โต MoM</th>
                   <th className="px-5 py-3 text-right">Margin</th>
+                  {recon.opexTotal > 0 && <th className="px-5 py-3 text-right">รายจ่ายทั่วไป</th>}
+                  {recon.opexTotal > 0 && <th className="px-5 py-3 text-right">กำไร/ขาดทุนบริษัท</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -310,6 +325,10 @@ export default function DashboardView({ recon, store }) {
                     <td className={`px-5 py-2.5 text-right font-bold ${m.profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(m.profit)}</td>
                     <td className="px-5 py-2.5 text-right"><Growth value={m.profitGrowth} /></td>
                     <td className="px-5 py-2.5 text-right text-slate-600">{formatPercent(m.margin)}</td>
+                    {recon.opexTotal > 0 && <td className="px-5 py-2.5 text-right text-orange-600">{m.opex ? formatCurrency(m.opex) : '-'}</td>}
+                    {recon.opexTotal > 0 && (
+                      <td className={`px-5 py-2.5 text-right font-bold ${m.companyProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(m.companyProfit)}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -333,7 +352,7 @@ export default function DashboardView({ recon, store }) {
                   <th className="px-5 py-3 text-right">ยอดขาย</th>
                   <th className="px-5 py-3 text-right">กำไรขั้นต้น</th>
                   <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
-                  <th className="px-5 py-3 text-right">Margin</th>
+                  <th className="px-5 py-3 text-right">% กำไรสุทธิ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -352,7 +371,9 @@ export default function DashboardView({ recon, store }) {
                     <td className={`px-5 py-2.5 text-right font-semibold ${p.fees > 0 ? (p.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-300'}`}>
                       {p.fees > 0 ? formatCurrency(p.netProfit) : '—'}
                     </td>
-                    <td className="px-5 py-2.5 text-right text-slate-600">{formatPercent(p.margin)}</td>
+                    <td className={`px-5 py-2.5 text-right font-semibold ${p.fees > 0 ? (p.netMargin >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-400'}`}>
+                      {p.fees > 0 ? formatPercent(p.netMargin) : formatPercent(p.margin)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
