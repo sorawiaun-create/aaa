@@ -109,6 +109,8 @@ export default function ReconcileView({ recon, store }) {
                   <th className="px-4 py-3 text-right bg-amber-50">ต้นทุน/หน่วย</th>
                   <th className="px-4 py-3 text-right">ต้นทุนรวม</th>
                   <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('grossProfit')}>กำไรขั้นต้น <Arrow k="grossProfit" /></th>
+                  <th className="px-4 py-3 text-right">ค่าธรรมเนียม</th>
+                  <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('netProfit')}>กำไรสุทธิ <Arrow k="netProfit" /></th>
                   <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('margin')}>Margin <Arrow k="margin" /></th>
                 </tr>
               </thead>
@@ -132,6 +134,8 @@ export default function ReconcileView({ recon, store }) {
                     </td>
                     <td className="px-4 py-2.5 text-right text-slate-500">{formatCurrency(r.cogs)}</td>
                     <td className={`px-4 py-2.5 text-right font-bold ${r.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(r.grossProfit)}</td>
+                    <td className="px-4 py-2.5 text-right text-red-500">{r.fees > 0 ? formatCurrency(r.fees) : '—'}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold ${r.fees > 0 ? (r.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-300'}`}>{r.fees > 0 ? formatCurrency(r.netProfit) : '—'}</td>
                     <td className={`px-4 py-2.5 text-right ${r.margin >= 0 ? 'text-slate-600' : 'text-red-500'}`}>{formatPercent(r.margin)}</td>
                   </tr>
                 ))}
@@ -143,7 +147,9 @@ export default function ReconcileView({ recon, store }) {
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-right">{formatCurrency(recon.cogs)}</td>
                   <td className={`px-4 py-3 text-right ${recon.grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.grossProfit)}</td>
-                  <td className="px-4 py-3 text-right">{formatPercent(recon.grossMargin)}</td>
+                  <td className="px-4 py-3 text-right text-red-600">{formatCurrency(recon.fees.total)}</td>
+                  <td className={`px-4 py-3 text-right ${recon.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.netProfit)}</td>
+                  <td className="px-4 py-3 text-right">{formatPercent(recon.netMargin)}</td>
                 </tr>
               </tfoot>
             </table>

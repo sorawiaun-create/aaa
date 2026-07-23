@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Wallet, Coins, TrendingUp, TrendingDown, Percent, Megaphone,
-  Receipt, AlertTriangle, ShoppingBag, Video, Package,
+  Receipt, AlertTriangle, ShoppingBag, Video, Package, Award,
 } from 'lucide-react';
 import { KpiCard, SectionCard, EmptyState, Banner, Badge } from '../components/ui.jsx';
 import { formatCurrency, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
@@ -15,6 +15,8 @@ const PIE_COLORS = ['#FF5722', '#FE2C55', '#2196F3', '#00C853', '#FFC107', '#9C2
 export default function DashboardView({ recon, store }) {
   const hasData = store.sales.length > 0 || store.fees.length > 0;
   const profitPositive = recon.netProfit >= 0;
+
+  const topProducts = [...recon.bySku].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
   const identifiedFees =
     recon.fees.ads + recon.fees.affiliate + recon.fees.commission + recon.fees.logistics +
@@ -256,6 +258,52 @@ export default function DashboardView({ recon, store }) {
           </div>
         </SectionCard>
       </div>
+
+      {/* Top products by sales */}
+      <SectionCard title="สินค้าขายดี Top 10 (ตามยอดขาย)" icon={Award}>
+        {topProducts.length === 0 ? (
+          <EmptyState icon={Package} title="ยังไม่มีข้อมูลสินค้า" hint="นำเข้ายอดขายเพื่อดูสินค้าขายดี" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th className="px-5 py-3 w-10">#</th>
+                  <th className="px-5 py-3">สินค้า (SKU)</th>
+                  <th className="px-5 py-3 text-right">ขาย (ชิ้น)</th>
+                  <th className="px-5 py-3 text-right">ยอดขาย</th>
+                  <th className="px-5 py-3 text-right">กำไรขั้นต้น</th>
+                  <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
+                  <th className="px-5 py-3 text-right">Margin</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {topProducts.map((p, i) => (
+                  <tr key={p.sku} className="hover:bg-slate-50">
+                    <td className="px-5 py-2.5">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</span>
+                    </td>
+                    <td className="px-5 py-2.5">
+                      <div className="font-medium text-slate-700 truncate max-w-[260px]" title={p.name}>{p.name}</div>
+                      <div className="font-mono text-[11px] text-slate-400">{p.sku}</div>
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-medium">{formatNumber(p.qty)}</td>
+                    <td className="px-5 py-2.5 text-right text-slate-700">{formatCurrency(p.revenue)}</td>
+                    <td className="px-5 py-2.5 text-right text-blue-600">{formatCurrency(p.grossProfit)}</td>
+                    <td className={`px-5 py-2.5 text-right font-semibold ${p.fees > 0 ? (p.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-300'}`}>
+                      {p.fees > 0 ? formatCurrency(p.netProfit) : '—'}
+                    </td>
+                    <td className="px-5 py-2.5 text-right text-slate-600">{formatPercent(p.margin)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-xs text-slate-400 px-5 py-3">
+              กำไรสุทธิแสดงเมื่อมีค่าธรรมเนียมของสินค้านั้น (Shopee: ในไฟล์ · TikTok: เชื่อม Order ID) — ดูรายตัวเต็มที่หน้า “กำไรราย SKU”
+            </p>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }

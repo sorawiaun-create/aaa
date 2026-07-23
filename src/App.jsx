@@ -51,9 +51,10 @@ export default function App() {
         sales: store.sales,
         products: store.products,
         fees: store.fees,
+        orderFees: store.orderFees,
         filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
       }),
-    [store.sales, store.products, store.fees, filters]
+    [store.sales, store.products, store.fees, store.orderFees, filters]
   );
 
   const orderRecon = useMemo(

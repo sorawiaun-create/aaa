@@ -171,6 +171,48 @@ test('settlement parser reads TikTok report', () => {
   assert.equal(res.data.monthKey, '2026-05');
 });
 
+test('inline line fees drive per-SKU net profit and override settlement (no double count)', () => {
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 2, revenue: 200, status: 'ok', fee: 30, feeComm: 20, feeTrans: 6, feeService: 4 },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
+  // A settlement aggregate that must be IGNORED because inline fees exist for shopee.
+  const fees = [{ id: 'f', platform: 'shopee', monthKey: '2026-05', total: 999 }];
+  const r = computeReconciliation({ sales, products, fees, filters: { platform: 'all' } });
+  assert.equal(r.fees.total, 30); // inline wins, 999 ignored
+  assert.equal(r.fees.commission, 20);
+  assert.equal(r.netProfit, 90); // 200 - 80 - 30
+  assert.equal(r.bySku[0].fees, 30);
+  assert.equal(r.bySku[0].netProfit, 90);
+});
+
+test('joined order fees are allocated to SKU lines by revenue share', () => {
+  const sales = [
+    { id: '1', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 0 },
+    { id: '2', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '10/05/2026', sku: 'B', qty: 1, revenue: 300, status: 'ok', fee: 0 },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 10 }, { sku: 'B', name: 'B', unitCost: 30 }];
+  const orderFees = [{ id: 'tiktok:T1', platform: 'tiktok', orderId: 'T1', total: 40 }];
+  const r = computeReconciliation({ sales, products, fees: [], orderFees, filters: { platform: 'all' } });
+  assert.equal(r.fees.total, 40);
+  const A = r.bySku.find((x) => x.sku === 'A');
+  const B = r.bySku.find((x) => x.sku === 'B');
+  assert.equal(A.fees, 10); // 40 * 100/400
+  assert.equal(B.fees, 30); // 40 * 300/400
+  assert.equal(r.netProfit, 320); // 400 - 40 cogs - 40 fees
+});
+
+test('order profit view matches Shopee via inline fees without a settlement file', () => {
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 20 },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
+  const { rows, totals } = computeOrderReconciliation({ sales, products, orderFees: [], filters: { platform: 'all' } });
+  assert.equal(totals.matchedCount, 1); // matched via inline fee, no settlement needed
+  assert.equal(rows[0].feeSource, 'inline');
+  assert.equal(rows[0].netProfit, 40); // 100 - 40 - 20
+});
+
 test('order-fee parser reads Shopee Income sheet by Order ID', () => {
   const wb = XLSX.utils.book_new();
   // Income sheet: junk rows, then a header row, then per-order rows.

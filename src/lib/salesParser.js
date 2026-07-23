@@ -10,6 +10,10 @@ export const SALES_FIELDS = [
   { key: 'unitPrice', label: 'ราคาต่อหน่วย (Unit Price)', required: false },
   { key: 'revenue', label: 'ยอดขาย/ยอดรวมรายการ (Revenue)', required: false },
   { key: 'status', label: 'สถานะ (Status)', required: false },
+  // Optional inline platform fees (present in Shopee order exports).
+  { key: 'commission', label: 'ค่าคอมมิชชั่น (ในไฟล์)', required: false, group: 'fee' },
+  { key: 'transaction', label: 'ค่าธรรมเนียมธุรกรรม (ในไฟล์)', required: false, group: 'fee' },
+  { key: 'serviceFee', label: 'ค่าบริการ (ในไฟล์)', required: false, group: 'fee' },
 ];
 
 // Candidate header names per field (lowercased, matched by "includes").
@@ -50,6 +54,9 @@ const CANDIDATES = {
   status: [
     'order status', 'status', 'สถานะคำสั่งซื้อ', 'สถานะการสั่งซื้อ', 'สถานะ',
   ],
+  commission: ['ค่าคอมมิชชั่น', 'ค่าคอมมิชชัน', 'commission fee', 'commission'],
+  transaction: ['transaction fee', 'ค่าธรรมเนียมการทำธุรกรรม', 'ค่าธุรกรรมการชำระเงิน', 'ค่าธุรกรรม'],
+  serviceFee: ['ค่าบริการ', 'service fee'],
 };
 
 const norm = (s) => String(s ?? '').trim().toLowerCase();
@@ -120,6 +127,12 @@ export function applyMapping(rows, mapping, platform, fileName = '') {
     const status = String(get('status') ?? '').trim();
     const productName = String(get('productName') ?? '').trim();
 
+    // Inline per-line platform fees (Shopee order exports carry these).
+    const feeComm = mapping.commission ? Math.abs(parseMoney(get('commission'))) : 0;
+    const feeTrans = mapping.transaction ? Math.abs(parseMoney(get('transaction'))) : 0;
+    const feeService = mapping.serviceFee ? Math.abs(parseMoney(get('serviceFee'))) : 0;
+    const fee = feeComm + feeTrans + feeService;
+
     records.push({
       id: `${platform}:${orderId || fileName}:${sku}:${index}`,
       platform,
@@ -132,6 +145,10 @@ export function applyMapping(rows, mapping, platform, fileName = '') {
       unitPrice,
       revenue,
       status,
+      feeComm,
+      feeTrans,
+      feeService,
+      fee,
     });
   });
   return records;

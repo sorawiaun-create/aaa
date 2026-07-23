@@ -32,11 +32,16 @@ function addFee(acc, f) {
  *
  * filters: { platform: 'all'|'shopee'|'tiktok', from, to (YYYY-MM), statuses: string[]|null }
  */
-export function computeReconciliation({ sales = [], products = [], fees = [], filters = {} }) {
+export function computeReconciliation({ sales = [], products = [], fees = [], orderFees = [], filters = {} }) {
   const costBySku = {};
   products.forEach((p) => {
     const k = skuKey(p.sku);
     if (k) costBySku[k] = p;
+  });
+
+  const feeByOrder = {};
+  orderFees.forEach((f) => {
+    feeByOrder[`${mapPlatform(f.platform)}:${String(f.orderId).trim()}`] = f;
   });
 
   const platformFilter = filters.platform || 'all';
@@ -58,6 +63,24 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
 
   const filteredSales = sales.filter(salesPass);
 
+  // Revenue per order (for allocating order-level fees down to each line).
+  const orderRevenue = {};
+  filteredSales.forEach((s) => {
+    const k = `${s.platform}:${String(s.orderId).trim()}`;
+    orderRevenue[k] = (orderRevenue[k] || 0) + s.revenue;
+  });
+
+  // Effective fee for a single sales line: inline fee if the file carries one
+  // (Shopee), otherwise this line's revenue-share of its order's joined fee
+  // (TikTok, matched on Order ID). Returns 0 if neither is available.
+  const lineEffFee = (s) => {
+    if ((s.fee || 0) > 0) return s.fee;
+    const k = `${s.platform}:${String(s.orderId).trim()}`;
+    const jf = feeByOrder[k];
+    if (jf && orderRevenue[k] > 0) return (jf.total || 0) * (s.revenue / orderRevenue[k]);
+    return 0;
+  };
+
   // --- SKU-level aggregation ---
   const skuMap = {};
   let revenue = 0;
@@ -71,6 +94,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     const prod = costBySku[k];
     const unitCost = prod ? prod.unitCost || 0 : 0;
     const lineCogs = unitCost * s.qty;
+    const lineFee = lineEffFee(s);
 
     revenue += s.revenue;
     cogs += lineCogs;
@@ -86,6 +110,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
         qty: 0,
         revenue: 0,
         cogs: 0,
+        fees: 0,
         unitCost,
         hasCost: !!prod,
       };
@@ -94,17 +119,23 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     m.qty += s.qty;
     m.revenue += s.revenue;
     m.cogs += lineCogs;
+    m.fees += lineFee;
   });
 
   const bySku = Object.values(skuMap)
     .map((m) => ({
       ...m,
       grossProfit: m.revenue - m.cogs,
+      netProfit: m.revenue - m.cogs - m.fees,
       margin: m.revenue ? ((m.revenue - m.cogs) / m.revenue) * 100 : 0,
+      netMargin: m.revenue ? ((m.revenue - m.cogs - m.fees) / m.revenue) * 100 : 0,
     }))
     .sort((a, b) => b.grossProfit - a.grossProfit);
 
-  // --- Fees aggregation (respecting platform + date range) ---
+  // --- Fees aggregation (unified, no double counting) ---
+  // Priority per platform: effective per-line/per-order fees (from sales +
+  // orderFees). Fall back to the monthly settlement/PDF `fees` array only for
+  // platforms that have no effective line/order fees.
   const feePass = (f) => {
     const fp = mapPlatform(f.platform);
     if (platformFilter !== 'all' && fp !== platformFilter) return false;
@@ -112,37 +143,65 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     if (!monthInRange(mk)) return false;
     return true;
   };
+
   const feeTotals = emptyFees();
-  fees.filter(feePass).forEach((f) => addFee(feeTotals, f));
+  const effFeeByPlatform = { shopee: 0, tiktok: 0 };
+
+  // (a) inline line fees
+  filteredSales.forEach((s) => {
+    if ((s.fee || 0) <= 0) return;
+    const p = mapPlatform(s.platform);
+    feeTotals.total += s.fee;
+    feeTotals.commission += s.feeComm || 0;
+    feeTotals.transaction += s.feeTrans || 0;
+    feeTotals.service += s.feeService || 0;
+    effFeeByPlatform[p] += s.fee;
+  });
+  // (b) joined per-order fees (orders without inline fees), counted once
+  const seenOrders = new Set();
+  filteredSales.forEach((s) => {
+    if ((s.fee || 0) > 0) return;
+    const k = `${s.platform}:${String(s.orderId).trim()}`;
+    if (seenOrders.has(k)) return;
+    const jf = feeByOrder[k];
+    if (!jf) return;
+    seenOrders.add(k);
+    addFee(feeTotals, jf);
+    effFeeByPlatform[mapPlatform(s.platform)] += jf.total || 0;
+  });
+  // (c) monthly settlement/PDF fees for platforms with no effective fees
+  fees.filter(feePass).forEach((f) => {
+    if (effFeeByPlatform[mapPlatform(f.platform)] > 0) return;
+    addFee(feeTotals, f);
+  });
 
   const grossProfit = revenue - cogs;
   const netProfit = grossProfit - feeTotals.total;
   const grossMargin = revenue ? (grossProfit / revenue) * 100 : 0;
   const netMargin = revenue ? (netProfit / revenue) * 100 : 0;
 
-  // --- Per-platform split ---
+  // --- Per-platform split (uses the same unified effective fees) ---
   const platforms = ['shopee', 'tiktok'];
   const byPlatform = {};
   platforms.forEach((p) => {
-    const pRevenue = filteredSales
-      .filter((s) => s.platform === p)
-      .reduce((a, s) => a + s.revenue, 0);
-    const pCogs = filteredSales
-      .filter((s) => s.platform === p)
-      .reduce((a, s) => {
-        const prod = costBySku[skuKey(s.sku)];
-        return a + (prod ? (prod.unitCost || 0) * s.qty : 0);
-      }, 0);
-    const pFees = emptyFees();
-    fees
-      .filter((f) => feePass(f) && mapPlatform(f.platform) === p)
-      .forEach((f) => addFee(pFees, f));
-    const pNet = pRevenue - pCogs - pFees.total;
+    const pSales = filteredSales.filter((s) => mapPlatform(s.platform) === p);
+    const pRevenue = pSales.reduce((a, s) => a + s.revenue, 0);
+    const pCogs = pSales.reduce((a, s) => {
+      const prod = costBySku[skuKey(s.sku)];
+      return a + (prod ? (prod.unitCost || 0) * s.qty : 0);
+    }, 0);
+    let pFees = effFeeByPlatform[p] || 0;
+    if (pFees <= 0) {
+      fees
+        .filter((f) => feePass(f) && mapPlatform(f.platform) === p)
+        .forEach((f) => { pFees += f.total || 0; });
+    }
+    const pNet = pRevenue - pCogs - pFees;
     byPlatform[p] = {
       revenue: pRevenue,
       cogs: pCogs,
       grossProfit: pRevenue - pCogs,
-      fees: pFees.total,
+      fees: pFees,
       netProfit: pNet,
       margin: pRevenue ? (pNet / pRevenue) * 100 : 0,
     };
@@ -162,8 +221,11 @@ export function computeReconciliation({ sales = [], products = [], fees = [], fi
     m.revenue += s.revenue;
     const prod = costBySku[skuKey(s.sku)];
     m.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
+    m.fees += lineEffFee(s);
   });
+  // Add settlement/PDF fees only for platforms without effective line/order fees.
   fees.filter(feePass).forEach((f) => {
+    if (effFeeByPlatform[mapPlatform(f.platform)] > 0) return;
     const m = ensureMonth(f.monthKey || monthKeyOf(f.date));
     m.fees += f.total || 0;
   });
@@ -263,13 +325,15 @@ export function computeOrderReconciliation({ sales = [], products = [], orderFee
     if (!orders[key]) {
       orders[key] = {
         key, platform: s.platform, orderId: s.orderId, date: s.date,
-        monthKey: s.monthKey, lines: 0, qty: 0, revenue: 0, cogs: 0, hasAllCost: true,
+        monthKey: s.monthKey, lines: 0, qty: 0, revenue: 0, cogs: 0,
+        inlineFee: 0, hasAllCost: true,
       };
     }
     const o = orders[key];
     o.lines += 1;
     o.qty += s.qty;
     o.revenue += s.revenue;
+    o.inlineFee += s.fee || 0;
     const prod = costBySku[skuKey(s.sku)];
     o.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
     if (!prod && skuKey(s.sku)) o.hasAllCost = false;
@@ -277,13 +341,17 @@ export function computeOrderReconciliation({ sales = [], products = [], orderFee
 
   const rows = Object.values(orders)
     .map((o) => {
-      const f = feeByOrder[o.key];
-      const matched = !!f;
-      const fee = matched ? f.total : 0;
+      // Prefer the order file's own inline fees (Shopee), else the fee joined
+      // from the settlement file by Order ID (TikTok).
+      const joined = feeByOrder[o.key];
+      const hasInline = o.inlineFee > 0;
+      const matched = hasInline || !!joined;
+      const fee = hasInline ? o.inlineFee : joined ? joined.total : 0;
+      const feeSource = hasInline ? 'inline' : joined ? 'join' : null;
       const grossProfit = o.revenue - o.cogs;
       const netProfit = grossProfit - fee;
       return {
-        ...o, fee, matched, grossProfit, netProfit,
+        ...o, fee, matched, feeSource, grossProfit, netProfit,
         margin: o.revenue ? (netProfit / o.revenue) * 100 : 0,
       };
     })
