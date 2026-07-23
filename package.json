@@ -1,0 +1,27 @@
+{
+  "name": "profit-reconciliation-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "แดชบอร์ดกำไร/ขาดทุน และกระทบยอดรายรับ-รายจ่าย สำหรับร้านค้า Shopee / TikTok",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "lucide-react": "^0.400.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "vite": "^5.4.0"
+  }
+}
