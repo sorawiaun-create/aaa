@@ -43,6 +43,35 @@ test('applyMapping derives revenue from qty * price when revenue missing', () =>
   assert.equal(recs[0].platform, 'shopee');
 });
 
+test('revenue maps to per-line column, not order-level totals (TikTok shape)', () => {
+  const headers = [
+    'Order ID', 'Seller SKU', 'Quantity', 'SKU Unit Original Price',
+    'SKU Subtotal After Discount', 'Order Amount', 'Order Status',
+  ];
+  const m = autoDetectMapping(headers);
+  // "Order Amount" repeats per line -> must NOT be chosen; per-line subtotal wins
+  assert.equal(m.revenue, 'SKU Subtotal After Discount');
+});
+
+test('revenue maps to net line column (Shopee shape)', () => {
+  const headers = ['หมายเลขคำสั่งซื้อ', 'เลขอ้างอิง SKU (SKU Reference No.)', 'จำนวน', 'ราคาขาย', 'ราคาขายสุทธิ', 'จำนวนเงินทั้งหมด'];
+  const m = autoDetectMapping(headers);
+  assert.equal(m.sku, 'เลขอ้างอิง SKU (SKU Reference No.)');
+  assert.equal(m.unitPrice, 'ราคาขาย');
+  assert.equal(m.revenue, 'ราคาขายสุทธิ');
+});
+
+test('applyMapping drops zero-qty zero-revenue description rows', () => {
+  const rows = [
+    { SKU: 'Seller sku input by the seller.', Qty: 0, Rev: '' }, // junk header-desc row
+    { SKU: 'REAL-1', Qty: 2, Rev: 178 },
+  ];
+  const recs = applyMapping(rows, { sku: 'SKU', qty: 'Qty', revenue: 'Rev' }, 'tiktok', 'f');
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].sku, 'REAL-1');
+  assert.equal(recs[0].revenue, 178);
+});
+
 test('computeReconciliation core math', () => {
   const sales = [
     { id: '1', platform: 'shopee', orderId: 'O1', date: '01/01/2025', monthKey: '2025-01', sku: 'A', qty: 2, unitPrice: 100, revenue: 200, status: 'สำเร็จ' },

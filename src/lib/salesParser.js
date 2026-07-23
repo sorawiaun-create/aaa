@@ -24,8 +24,8 @@ const CANDIDATES = {
     'paid time', 'วันที่สั่งซื้อ', 'วันที่ชำระเงิน', 'วันที่', 'date', 'time',
   ],
   sku: [
-    'seller sku', 'variation sku', 'sku id', 'sku reference', 'product sku',
-    'sku', 'รหัสสินค้า', 'รหัส sku', 'รหัส',
+    'seller sku', 'variation sku', 'sku reference', 'product sku', 'sku id',
+    'sku', 'รหัสอ้างอิง sku', 'เลขอ้างอิง sku', 'รหัสสินค้า', 'รหัส sku', 'รหัส',
   ],
   productName: [
     'product name', 'item name', 'variation name', 'product',
@@ -38,10 +38,14 @@ const CANDIDATES = {
     'unit price', 'original price', 'deal price', 'seller discounted price',
     'ราคาต่อหน่วย', 'ราคาขาย', 'ราคา', 'price',
   ],
+  // Prefer per-LINE net revenue. Order-level totals (e.g. "Order Amount",
+  // "จำนวนเงินทั้งหมด") are deliberately excluded — they repeat across every
+  // SKU line of a multi-line order and would overcount. Fall back to
+  // qty x unitPrice when no per-line column is present.
   revenue: [
-    'total settlement amount', 'settlement amount', 'order amount',
-    'total amount', 'sub total', 'subtotal', 'grand total',
-    'ยอดขายสุทธิ', 'ยอดรวมคำสั่งซื้อ', 'ยอดรวม', 'ยอดขาย', 'total',
+    'sku subtotal after discount', 'subtotal after discount',
+    'ราคาขายสุทธิ', 'ยอดขายสุทธิ', 'ยอดรวมค่าสินค้าหลังหักส่วนลด',
+    'net sales', 'net amount', 'total settlement amount', 'settlement amount',
   ],
   status: [
     'order status', 'status', 'สถานะคำสั่งซื้อ', 'สถานะการสั่งซื้อ', 'สถานะ',
@@ -103,11 +107,13 @@ export function applyMapping(rows, mapping, platform, fileName = '') {
 
     const sku = String(get('sku') ?? '').trim();
     const qty = Math.round(parseMoney(get('qty')) || 0) || 0;
-    if (!sku && qty === 0) return; // skip empty / summary rows
-
     const unitPrice = parseMoney(get('unitPrice'));
     let revenue = mapping.revenue ? parseMoney(get('revenue')) : 0;
     if (!revenue) revenue = unitPrice * qty;
+
+    // Skip description/blank/void rows that carry no sale (e.g. TikTok's
+    // second "field description" header row has qty 0 and no revenue).
+    if (qty <= 0 && revenue <= 0) return;
 
     const date = normalizeDate(get('date'));
     const orderId = String(get('orderId') ?? '').trim();
