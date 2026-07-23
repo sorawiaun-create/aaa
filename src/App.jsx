@@ -6,6 +6,7 @@ import {
 import { useStore } from './lib/store.js';
 import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from './lib/reconcile.js';
 import { distinctStatuses } from './lib/salesParser.js';
+import { useI18n } from './lib/i18n.jsx';
 import { cn, Badge } from './components/ui.jsx';
 import DashboardView from './views/DashboardView.jsx';
 import SalesImportView from './views/SalesImportView.jsx';
@@ -29,6 +30,7 @@ const NAV = [
 
 export default function App() {
   const store = useStore();
+  const { t, lang, setLang } = useI18n();
   const [view, setView] = useState('dashboard');
   const [filters, setFilters] = useState({ platform: 'all', from: '', to: '', statuses: [] });
 
@@ -92,8 +94,8 @@ export default function App() {
             <TrendingUp size={20} />
           </span>
           <div>
-            <div className="font-bold text-slate-800 leading-tight">Profit Desk</div>
-            <div className="text-[11px] text-slate-400">Shopee · TikTok</div>
+            <div className="font-bold text-slate-800 leading-tight">{t('app.title')}</div>
+            <div className="text-[11px] text-slate-400">{t('app.subtitle')}</div>
           </div>
         </div>
         <nav className="space-y-1">
@@ -109,20 +111,23 @@ export default function App() {
               )}
             >
               <item.icon size={18} />
-              {item.label}
+              {t(`nav.${item.id}`)}
             </button>
           ))}
         </nav>
-        <div className="mt-auto pt-4 border-t border-slate-100 text-[11px] text-slate-400 px-2 space-y-1">
-          <div className="flex justify-between"><span>สินค้า</span><b>{store.products.length}</b></div>
-          <div className="flex justify-between"><span>รายการขาย</span><b>{store.sales.length}</b></div>
-          <div className="flex justify-between"><span>เอกสารค่าธรรมเนียม</span><b>{store.fees.length}</b></div>
+        <div className="mt-auto pt-4 border-t border-slate-100 space-y-3">
+          <LangToggle lang={lang} setLang={setLang} t={t} />
+          <div className="text-[11px] text-slate-400 px-2 space-y-1">
+            <div className="flex justify-between"><span>{t('side.products')}</span><b>{store.products.length}</b></div>
+            <div className="flex justify-between"><span>{t('side.sales')}</span><b>{store.sales.length}</b></div>
+            <div className="flex justify-between"><span>{t('side.fees')}</span><b>{store.fees.length}</b></div>
+          </div>
         </div>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile nav */}
-        <div className="md:hidden bg-white border-b border-slate-200 p-2 flex gap-1 overflow-x-auto">
+        <div className="md:hidden bg-white border-b border-slate-200 p-2 flex gap-1 overflow-x-auto items-center">
           {NAV.map((item) => (
             <button
               key={item.id}
@@ -133,9 +138,10 @@ export default function App() {
               )}
             >
               <item.icon size={15} />
-              {item.label}
+              {t(`nav.${item.id}`)}
             </button>
           ))}
+          <div className="ml-auto shrink-0"><LangToggle lang={lang} setLang={setLang} compact /></div>
         </div>
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -162,6 +168,7 @@ export default function App() {
 }
 
 function FilterBar({ filters, setFilters, statusOptions }) {
+  const { t } = useI18n();
   const toggleStatus = (s) =>
     setFilters((f) => ({
       ...f,
@@ -191,13 +198,13 @@ function FilterBar({ filters, setFilters, statusOptions }) {
   return (
     <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
-        {platformBtn('all', 'ทั้งหมด', Filter)}
+        {platformBtn('all', t('filter.all'), Filter)}
         {platformBtn('shopee', 'Shopee', ShoppingBag)}
         {platformBtn('tiktok', 'TikTok', Video)}
       </div>
       <div className="h-6 w-px bg-slate-200 hidden sm:block" />
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-slate-500">เดือน</span>
+        <span className="text-slate-500">{t('filter.month')}</span>
         <input
           type="month"
           value={filters.from}
@@ -216,7 +223,7 @@ function FilterBar({ filters, setFilters, statusOptions }) {
             onClick={() => setFilters((f) => ({ ...f, from: '', to: '' }))}
             className="text-xs text-slate-400 hover:text-slate-600 underline"
           >
-            ล้าง
+            {t('filter.clear')}
           </button>
         )}
       </div>
@@ -224,7 +231,7 @@ function FilterBar({ filters, setFilters, statusOptions }) {
         <>
           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-slate-500">สถานะ</span>
+            <span className="text-sm text-slate-500">{t('filter.status')}</span>
             {statusOptions.map((s) => {
               const active = filters.statuses.length === 0 || filters.statuses.includes(s);
               return (
@@ -238,12 +245,31 @@ function FilterBar({ filters, setFilters, statusOptions }) {
                 onClick={() => setFilters((f) => ({ ...f, statuses: [] }))}
                 className="text-xs text-slate-400 hover:text-slate-600 underline"
               >
-                รีเซ็ต
+                {t('filter.reset')}
               </button>
             )}
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function LangToggle({ lang, setLang, compact = false }) {
+  return (
+    <div className={cn('flex bg-slate-100 p-1 rounded-lg', compact ? 'text-[11px]' : 'w-full')}>
+      {['th', 'en'].map((code) => (
+        <button
+          key={code}
+          onClick={() => setLang(code)}
+          className={cn(
+            'flex-1 px-2.5 py-1 rounded-md text-xs font-semibold uppercase transition-colors',
+            lang === code ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+          )}
+        >
+          {code}
+        </button>
+      ))}
     </div>
   );
 }

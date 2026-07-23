@@ -12,11 +12,36 @@ import { formatCurrency, formatPercent, formatNumber, compactCurrency, monthLabe
 
 const PIE_COLORS = ['#FF5722', '#FE2C55', '#2196F3', '#00C853', '#FFC107', '#9C27B0', '#00BCD4', '#795548'];
 
+// Month-over-month growth pill (green up / red down / grey n/a).
+const Growth = ({ value }) => {
+  if (value == null || !Number.isFinite(value)) return <span className="text-slate-300">—</span>;
+  const up = value >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${up ? 'text-emerald-600' : 'text-red-500'}`}>
+      {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+      {up ? '+' : ''}{value.toFixed(1)}%
+    </span>
+  );
+};
+
 export default function DashboardView({ recon, store }) {
   const hasData = store.sales.length > 0 || store.fees.length > 0;
   const profitPositive = recon.netProfit >= 0;
 
   const topProducts = [...recon.bySku].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+
+  // Monthly summary with month-over-month growth on revenue and net profit.
+  const monthlySummary = recon.byMonth.map((m, i) => {
+    const prev = recon.byMonth[i - 1];
+    const revGrowth = prev && prev.revenue ? ((m.revenue - prev.revenue) / prev.revenue) * 100 : null;
+    const profitGrowth = prev && prev.profit ? ((m.profit - prev.profit) / Math.abs(prev.profit)) * 100 : null;
+    return {
+      ...m,
+      margin: m.revenue ? (m.profit / m.revenue) * 100 : 0,
+      revGrowth,
+      profitGrowth,
+    };
+  });
 
   const identifiedFees =
     recon.fees.ads + recon.fees.affiliate + recon.fees.commission + recon.fees.logistics +
@@ -258,6 +283,40 @@ export default function DashboardView({ recon, store }) {
           </div>
         </SectionCard>
       </div>
+
+      {/* Monthly summary + MoM growth */}
+      {monthlySummary.length > 0 && (
+        <SectionCard title="สรุปรายเดือน & การเติบโต (MoM)" icon={TrendingUp}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th className="px-5 py-3">เดือน</th>
+                  <th className="px-5 py-3 text-right">รายได้</th>
+                  <th className="px-5 py-3 text-right">โต MoM</th>
+                  <th className="px-5 py-3 text-right">ต้นทุนรวม</th>
+                  <th className="px-5 py-3 text-right">กำไรสุทธิ</th>
+                  <th className="px-5 py-3 text-right">โต MoM</th>
+                  <th className="px-5 py-3 text-right">Margin</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {monthlySummary.map((m) => (
+                  <tr key={m.monthKey} className="hover:bg-slate-50">
+                    <td className="px-5 py-2.5 font-medium text-slate-700">{monthLabel(m.monthKey)}</td>
+                    <td className="px-5 py-2.5 text-right text-slate-700">{formatCurrency(m.revenue)}</td>
+                    <td className="px-5 py-2.5 text-right"><Growth value={m.revGrowth} /></td>
+                    <td className="px-5 py-2.5 text-right text-slate-500">{formatCurrency(m.cost)}</td>
+                    <td className={`px-5 py-2.5 text-right font-bold ${m.profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(m.profit)}</td>
+                    <td className="px-5 py-2.5 text-right"><Growth value={m.profitGrowth} /></td>
+                    <td className="px-5 py-2.5 text-right text-slate-600">{formatPercent(m.margin)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
 
       {/* Top products by sales */}
       <SectionCard title="สินค้าขายดี Top 10 (ตามยอดขาย)" icon={Award}>

@@ -317,6 +317,7 @@ export function computeProductMonthly({ sales = [], products = [], filters = {} 
     if (!skuMap[k]) {
       skuMap[k] = {
         sku: s.sku, name: prod?.name || s.productName || s.sku,
+        category: prod?.category || 'ไม่ระบุหมวด',
         platform: s.platform, qty: 0, revenue: 0, months: {},
       };
     }
