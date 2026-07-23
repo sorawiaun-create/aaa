@@ -284,6 +284,57 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
 }
 
 /**
+ * Per-product monthly analytics: units and revenue per SKU, broken down by
+ * month, for best-seller rankings and per-product sales trends.
+ */
+export function computeProductMonthly({ sales = [], products = [], filters = {} }) {
+  const costBySku = {};
+  products.forEach((p) => {
+    const k = skuKey(p.sku);
+    if (k) costBySku[k] = p;
+  });
+
+  const platformFilter = filters.platform || 'all';
+  const { from, to, statuses } = filters;
+  const inRange = (mk) => {
+    if (!mk) return !from && !to;
+    if (from && mk < from) return false;
+    if (to && mk > to) return false;
+    return true;
+  };
+  const pass = (s) =>
+    (platformFilter === 'all' || s.platform === platformFilter) &&
+    inRange(s.monthKey) &&
+    (!(statuses && statuses.length) || !s.status || statuses.includes(s.status));
+
+  const monthsSet = new Set();
+  const skuMap = {};
+  sales.filter(pass).forEach((s) => {
+    const mk = s.monthKey || 'ไม่ระบุ';
+    monthsSet.add(mk);
+    const k = skuKey(s.sku);
+    const prod = costBySku[k];
+    if (!skuMap[k]) {
+      skuMap[k] = {
+        sku: s.sku, name: prod?.name || s.productName || s.sku,
+        platform: s.platform, qty: 0, revenue: 0, months: {},
+      };
+    }
+    const m = skuMap[k];
+    m.qty += s.qty;
+    m.revenue += s.revenue;
+    if (!m.months[mk]) m.months[mk] = { qty: 0, revenue: 0 };
+    m.months[mk].qty += s.qty;
+    m.months[mk].revenue += s.revenue;
+  });
+
+  const months = [...monthsSet].filter((x) => x !== 'ไม่ระบุ').sort();
+  if (monthsSet.has('ไม่ระบุ')) months.push('ไม่ระบุ');
+  const productList = Object.values(skuMap).sort((a, b) => b.revenue - a.revenue);
+  return { months, products: productList };
+}
+
+/**
  * Order-level TRUE profit by joining sales lines to per-order fees on Order ID.
  * The order/SKU file and the settlement file have no SKU in common, but share
  * the Order ID — so we group sales by order, attach the order's actual fees,

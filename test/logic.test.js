@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as XLSX from 'xlsx';
-import { computeReconciliation, computeOrderReconciliation } from '../src/lib/reconcile.js';
+import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from '../src/lib/reconcile.js';
 import { autoDetectMapping, applyMapping, distinctStatuses } from '../src/lib/salesParser.js';
 import { parseSettlementWorkbook } from '../src/lib/settlementParser.js';
 import { parseOrderFees } from '../src/lib/orderFeeParser.js';
@@ -118,6 +118,23 @@ test('computeReconciliation flags unmatched SKUs and filters platform', () => {
   const rShopee = computeReconciliation({ sales, products, fees: [], filters: { platform: 'shopee' } });
   assert.equal(rShopee.revenue, 100);
   assert.equal(rShopee.missingCostCount, 0); // GHOST filtered out
+});
+
+test('computeProductMonthly aggregates units/revenue per SKU per month', () => {
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 2, revenue: 200, status: 'ok' },
+    { id: '2', platform: 'shopee', orderId: 'O2', monthKey: '2026-06', date: '10/06/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
+    { id: '3', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '11/05/2026', sku: 'B', qty: 5, revenue: 50, status: 'ok' },
+  ];
+  const { months, products } = computeProductMonthly({ sales, products: [{ sku: 'A', name: 'Product A' }], filters: { platform: 'all' } });
+  assert.deepEqual(months, ['2026-05', '2026-06']);
+  const A = products.find((p) => p.sku === 'A');
+  assert.equal(A.name, 'Product A'); // name resolved from product master
+  assert.equal(A.qty, 3);
+  assert.equal(A.revenue, 300);
+  assert.equal(A.months['2026-05'].revenue, 200);
+  assert.equal(A.months['2026-06'].qty, 1);
+  assert.equal(products[0].sku, 'A'); // sorted by revenue desc
 });
 
 test('distinctStatuses returns sorted unique', () => {
