@@ -49,6 +49,22 @@ npm run preview  # พรีวิว build
 npm test         # รันชุดทดสอบตรรกะการคำนวณ (node:test)
 ```
 
+## Deploy ออนไลน์ (ฟรี)
+
+แอปเป็นเว็บ static (ข้อมูลอยู่ใน browser) จึง deploy ฟรีได้ทันที มีไฟล์ config ให้แล้ว
+(`vercel.json`, `netlify.toml`)
+
+**Vercel:** ล็อกอิน vercel.com ด้วย GitHub → Add New → Project → เลือก repo นี้ →
+เลือก branch → Deploy (ตรวจว่า Framework = Vite, Build = `npm run build`, Output = `dist`)
+
+**Netlify:** ล็อกอิน netlify.com ด้วย GitHub → Add new site → Import an existing project →
+เลือก repo/branch → ค่าถูกตั้งไว้ใน `netlify.toml` แล้ว → Deploy
+
+**Cloudflare Pages:** Create application → Pages → Connect to Git → Build command `npm run build`,
+Output `dist`
+
+จะได้ลิงก์เว็บถาวรเปิดใช้จากมือถือ/ที่ไหนก็ได้ และทุกครั้งที่ push โค้ดใหม่ ระบบจะ deploy ให้อัตโนมัติ
+
 ## ขั้นตอนใช้งานแนะนำ
 
 1. ไปที่ **จัดการข้อมูล → โหลดข้อมูลตัวอย่าง** เพื่อดูภาพรวม (หรือข้ามไปใช้ไฟล์จริง)
