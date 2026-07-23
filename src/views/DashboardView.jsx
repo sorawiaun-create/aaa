@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Wallet, Coins, TrendingUp, TrendingDown, Percent, Megaphone,
-  Receipt, AlertTriangle, ShoppingBag, Video, Package, Award,
+  Receipt, AlertTriangle, ShoppingBag, Video, Package, Award, Info,
 } from 'lucide-react';
 import { KpiCard, SectionCard, EmptyState, Banner, Badge } from '../components/ui.jsx';
 import { formatCurrency, formatCurrency0, formatPercent, formatNumber, compactCurrency, monthLabel } from '../lib/format.js';
