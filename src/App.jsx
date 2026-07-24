@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, Upload, Package, Scale, Receipt, Database,
-  Filter, ShoppingBag, Video, TrendingUp, Link2, BarChart3, Banknote,
+  Filter, ShoppingBag, Video, TrendingUp, Link2, BarChart3, Banknote, ChevronDown,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from './lib/reconcile.js';
@@ -173,13 +173,20 @@ export default function App() {
 
 function FilterBar({ filters, setFilters, statusOptions }) {
   const { t } = useI18n();
+  const [statusOpen, setStatusOpen] = useState(false);
+  // statuses = list of INCLUDED statuses; empty = all. Toggling a checkbox from
+  // the "all" state starts excluding; re-selecting everything normalizes to all.
   const toggleStatus = (s) =>
-    setFilters((f) => ({
-      ...f,
-      statuses: f.statuses.includes(s)
-        ? f.statuses.filter((x) => x !== s)
-        : [...f.statuses, s],
-    }));
+    setFilters((f) => {
+      let next;
+      if (f.statuses.length === 0) next = statusOptions.filter((x) => x !== s);
+      else if (f.statuses.includes(s)) next = f.statuses.filter((x) => x !== s);
+      else next = [...f.statuses, s];
+      if (next.length === statusOptions.length) next = [];
+      return { ...f, statuses: next };
+    });
+  const statusChecked = (s) => filters.statuses.length === 0 || filters.statuses.includes(s);
+  const activeStatusCount = filters.statuses.length === 0 ? statusOptions.length : filters.statuses.length;
 
   const platformBtn = (id, label, Icon) => (
     <button
@@ -234,23 +241,33 @@ function FilterBar({ filters, setFilters, statusOptions }) {
       {statusOptions.length > 0 && (
         <>
           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-slate-500">{t('filter.status')}</span>
-            {statusOptions.map((s) => {
-              const active = filters.statuses.length === 0 || filters.statuses.includes(s);
-              return (
-                <button key={s} onClick={() => toggleStatus(s)}>
-                  <Badge color={active ? 'blue' : 'slate'}>{s}</Badge>
-                </button>
-              );
-            })}
-            {filters.statuses.length > 0 && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, statuses: [] }))}
-                className="text-xs text-slate-400 hover:text-slate-600 underline"
-              >
-                {t('filter.reset')}
-              </button>
+          <div className="relative">
+            <button
+              onClick={() => setStatusOpen((o) => !o)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            >
+              {t('filter.status')}
+              <Badge color={filters.statuses.length ? 'blue' : 'slate'}>{activeStatusCount}/{statusOptions.length}</Badge>
+              <ChevronDown size={14} className={statusOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
+            {statusOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+                <div className="absolute z-20 mt-1 right-0 sm:left-0 w-80 max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-lg p-2 max-h-72 overflow-auto custom-scrollbar">
+                  <div className="flex justify-between items-center px-2 py-1 mb-1 border-b border-slate-100">
+                    <span className="text-xs text-slate-400">เลือกสถานะที่จะนับ</span>
+                    <button onClick={() => setFilters((f) => ({ ...f, statuses: [] }))} className="text-xs text-blue-600 hover:underline">
+                      เลือกทั้งหมด
+                    </button>
+                  </div>
+                  {statusOptions.map((s) => (
+                    <label key={s} className="flex items-start gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-sm">
+                      <input type="checkbox" checked={statusChecked(s)} onChange={() => toggleStatus(s)} className="mt-0.5 shrink-0" />
+                      <span className="text-slate-600 leading-snug">{s}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </>
