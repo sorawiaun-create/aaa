@@ -49,7 +49,10 @@ export default function ReconcileView({ recon, store }) {
       ต้นทุนต่อหน่วย: r.unitCost,
       ต้นทุนรวม: r.cogs,
       กำไรขั้นต้น: r.grossProfit,
-      'Margin%': Number(r.margin.toFixed(2)),
+      'กำไรขั้นต้น%': Number(r.margin.toFixed(2)),
+      ค่าธรรมเนียม: Number(r.fees.toFixed(2)),
+      กำไรสุทธิ: Number((r.revenue - r.cogs - r.fees).toFixed(2)),
+      'กำไรสุทธิ%': Number(r.netMargin.toFixed(2)),
       สถานะต้นทุน: r.hasCost ? 'มี' : 'ยังไม่ตั้ง',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
@@ -109,9 +112,10 @@ export default function ReconcileView({ recon, store }) {
                   <th className="px-4 py-3 text-right bg-amber-50">ต้นทุน/หน่วย</th>
                   <th className="px-4 py-3 text-right">ต้นทุนรวม</th>
                   <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('grossProfit')}>กำไรขั้นต้น <Arrow k="grossProfit" /></th>
+                  <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('margin')}>% ขั้นต้น <Arrow k="margin" /></th>
                   <th className="px-4 py-3 text-right">ค่าธรรมเนียม</th>
                   <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('netProfit')}>กำไรสุทธิ <Arrow k="netProfit" /></th>
-                  <th className="px-4 py-3 text-right cursor-pointer" onClick={() => setSortKey('margin')}>Margin <Arrow k="margin" /></th>
+                  <th className="px-4 py-3 text-right cursor-pointer bg-emerald-50/60" onClick={() => setSortKey('netMargin')}>% กำไรสุทธิ <Arrow k="netMargin" /></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -134,9 +138,10 @@ export default function ReconcileView({ recon, store }) {
                     </td>
                     <td className="px-4 py-2.5 text-right text-slate-500">{formatCurrency(r.cogs)}</td>
                     <td className={`px-4 py-2.5 text-right font-bold ${r.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(r.grossProfit)}</td>
+                    <td className={`px-4 py-2.5 text-right ${r.margin >= 0 ? 'text-slate-600' : 'text-red-500'}`}>{formatPercent(r.margin)}</td>
                     <td className="px-4 py-2.5 text-right text-red-500">{r.fees > 0 ? formatCurrency(r.fees) : '—'}</td>
                     <td className={`px-4 py-2.5 text-right font-bold ${r.fees > 0 ? (r.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-300'}`}>{r.fees > 0 ? formatCurrency(r.netProfit) : '—'}</td>
-                    <td className={`px-4 py-2.5 text-right ${r.margin >= 0 ? 'text-slate-600' : 'text-red-500'}`}>{formatPercent(r.margin)}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold bg-emerald-50/40 ${r.fees > 0 ? (r.netMargin >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-slate-300'}`}>{r.fees > 0 ? formatPercent(r.netMargin) : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -147,9 +152,10 @@ export default function ReconcileView({ recon, store }) {
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-right">{formatCurrency(recon.cogs)}</td>
                   <td className={`px-4 py-3 text-right ${recon.grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.grossProfit)}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{formatPercent(recon.grossMargin)}</td>
                   <td className="px-4 py-3 text-right text-red-600">{formatCurrency(recon.fees.total)}</td>
                   <td className={`px-4 py-3 text-right ${recon.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(recon.netProfit)}</td>
-                  <td className="px-4 py-3 text-right">{formatPercent(recon.netMargin)}</td>
+                  <td className={`px-4 py-3 text-right bg-emerald-50/40 ${recon.netMargin >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatPercent(recon.netMargin)}</td>
                 </tr>
               </tfoot>
             </table>
