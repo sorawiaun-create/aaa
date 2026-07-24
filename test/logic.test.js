@@ -203,6 +203,23 @@ test('inline line fees drive per-SKU net profit and override settlement (no doub
   assert.equal(r.bySku[0].netProfit, 90);
 });
 
+test('Shopee order-level inline fees are counted once, not per line', () => {
+  // Shopee repeats the SAME order-level fee on every SKU line of an order.
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 30, feeComm: 30, feeTrans: 0, feeService: 0 },
+    { id: '2', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'B', qty: 1, revenue: 300, status: 'ok', fee: 30, feeComm: 30, feeTrans: 0, feeService: 0 },
+  ];
+  const products = [{ sku: 'A', name: 'A', unitCost: 0 }, { sku: 'B', name: 'B', unitCost: 0 }];
+  const r = computeReconciliation({ sales, products, fees: [], filters: { platform: 'all' } });
+  assert.equal(r.fees.total, 30); // once for the order, NOT 60
+  assert.equal(r.fees.commission, 30);
+  assert.equal(r.netProfit, 370); // 400 - 0 cogs - 30 fee
+  const A = r.bySku.find((x) => x.sku === 'A');
+  const B = r.bySku.find((x) => x.sku === 'B');
+  assert.equal(A.fees, 7.5); // 30 * 100/400
+  assert.equal(B.fees, 22.5); // 30 * 300/400
+});
+
 test('joined order fees are allocated to SKU lines by revenue share', () => {
   const sales = [
     { id: '1', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 0 },

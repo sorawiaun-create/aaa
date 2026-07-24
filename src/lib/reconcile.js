@@ -64,20 +64,36 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
   const filteredSales = sales.filter(salesPass);
 
   // Revenue per order (for allocating order-level fees down to each line).
+  // Shopee's inline fee columns are ORDER-LEVEL — the same value is repeated on
+  // every SKU line of a multi-line order — so they must be counted once per
+  // order (via max, since lines are identical) and then split across lines by
+  // revenue share, not summed per line (which would multiply the fee).
   const orderRevenue = {};
+  const orderInline = {}; // key -> { total, comm, trans, service }
   filteredSales.forEach((s) => {
     const k = `${s.platform}:${String(s.orderId).trim()}`;
     orderRevenue[k] = (orderRevenue[k] || 0) + s.revenue;
+    if ((s.fee || 0) > 0) {
+      const cur = orderInline[k] || { total: 0, comm: 0, trans: 0, service: 0 };
+      cur.total = Math.max(cur.total, s.fee || 0);
+      cur.comm = Math.max(cur.comm, s.feeComm || 0);
+      cur.trans = Math.max(cur.trans, s.feeTrans || 0);
+      cur.service = Math.max(cur.service, s.feeService || 0);
+      orderInline[k] = cur;
+    }
   });
 
-  // Effective fee for a single sales line: inline fee if the file carries one
-  // (Shopee), otherwise this line's revenue-share of its order's joined fee
-  // (TikTok, matched on Order ID). Returns 0 if neither is available.
+  // Effective fee for a single sales line = this line's revenue-share of its
+  // order's fee: inline order fee (Shopee) if present, otherwise the fee joined
+  // from the settlement file by Order ID (TikTok). 0 if neither is available.
   const lineEffFee = (s) => {
-    if ((s.fee || 0) > 0) return s.fee;
     const k = `${s.platform}:${String(s.orderId).trim()}`;
+    if (orderRevenue[k] <= 0) return 0;
+    const share = s.revenue / orderRevenue[k];
+    const oi = orderInline[k];
+    if (oi) return oi.total * share;
     const jf = feeByOrder[k];
-    if (jf && orderRevenue[k] > 0) return (jf.total || 0) * (s.revenue / orderRevenue[k]);
+    if (jf) return (jf.total || 0) * share;
     return 0;
   };
 
@@ -147,22 +163,20 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
   const feeTotals = emptyFees();
   const effFeeByPlatform = { shopee: 0, tiktok: 0 };
 
-  // (a) inline line fees
-  filteredSales.forEach((s) => {
-    if ((s.fee || 0) <= 0) return;
-    const p = mapPlatform(s.platform);
-    feeTotals.total += s.fee;
-    feeTotals.commission += s.feeComm || 0;
-    feeTotals.transaction += s.feeTrans || 0;
-    feeTotals.service += s.feeService || 0;
-    effFeeByPlatform[p] += s.fee;
+  // (a) inline order-level fees — once per order (already deduped in orderInline)
+  Object.entries(orderInline).forEach(([k, oi]) => {
+    const p = mapPlatform(k.split(':')[0]);
+    feeTotals.total += oi.total;
+    feeTotals.commission += oi.comm;
+    feeTotals.transaction += oi.trans;
+    feeTotals.service += oi.service;
+    effFeeByPlatform[p] += oi.total;
   });
   // (b) joined per-order fees (orders without inline fees), counted once
   const seenOrders = new Set();
   filteredSales.forEach((s) => {
-    if ((s.fee || 0) > 0) return;
     const k = `${s.platform}:${String(s.orderId).trim()}`;
-    if (seenOrders.has(k)) return;
+    if (orderInline[k] || seenOrders.has(k)) return;
     const jf = feeByOrder[k];
     if (!jf) return;
     seenOrders.add(k);
@@ -406,7 +420,8 @@ export function computeOrderReconciliation({ sales = [], products = [], orderFee
     o.lines += 1;
     o.qty += s.qty;
     o.revenue += s.revenue;
-    o.inlineFee += s.fee || 0;
+    // Inline fees are order-level (repeated per line) — take once, don't sum.
+    o.inlineFee = Math.max(o.inlineFee, s.fee || 0);
     const prod = costBySku[skuKey(s.sku)];
     o.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
     if (!prod && skuKey(s.sku)) o.hasAllCost = false;
