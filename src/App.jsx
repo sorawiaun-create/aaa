@@ -6,6 +6,7 @@ import {
 import { useStore } from './lib/store.js';
 import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from './lib/reconcile.js';
 import { distinctStatuses } from './lib/salesParser.js';
+import { monthKeyOf, monthLabel } from './lib/format.js';
 import { useI18n } from './lib/i18n.jsx';
 import { cn, Badge } from './components/ui.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -50,6 +51,15 @@ export default function App() {
   }, []);
 
   const statusOptions = useMemo(() => distinctStatuses(store.sales), [store.sales]);
+
+  // Months that actually have data — powers the single-month filter dropdown.
+  const monthOptions = useMemo(() => {
+    const set = new Set();
+    store.sales.forEach((s) => s.monthKey && set.add(s.monthKey));
+    store.fees.forEach((f) => { const mk = f.monthKey || monthKeyOf(f.date); if (mk) set.add(mk); });
+    store.expenses.forEach((e) => e.month && set.add(e.month));
+    return [...set].filter(Boolean).sort().reverse();
+  }, [store.sales, store.fees, store.expenses]);
 
   const recon = useMemo(
     () =>
@@ -153,13 +163,14 @@ export default function App() {
               filters={filters}
               setFilters={setFilters}
               statusOptions={statusOptions}
+              monthOptions={monthOptions}
             />
           )}
 
           {view === 'dashboard' && <DashboardView recon={recon} store={store} />}
           {view === 'orders' && <OrderProfitView orderRecon={orderRecon} store={store} />}
           {view === 'reconcile' && <ReconcileView recon={recon} store={store} />}
-          {view === 'analytics' && <ProductAnalyticsView analytics={analytics} />}
+          {view === 'analytics' && <ProductAnalyticsView analytics={analytics} recon={recon} />}
           {view === 'expenses' && <ExpensesView store={store} recon={recon} />}
           {view === 'products' && <ProductsView store={store} recon={recon} />}
           {view === 'sales' && <SalesImportView store={store} />}
@@ -171,7 +182,7 @@ export default function App() {
   );
 }
 
-function FilterBar({ filters, setFilters, statusOptions }) {
+function FilterBar({ filters, setFilters, statusOptions, monthOptions }) {
   const { t } = useI18n();
   const [statusOpen, setStatusOpen] = useState(false);
   // statuses = list of INCLUDED statuses; empty = all. Toggling a checkbox from
@@ -216,27 +227,19 @@ function FilterBar({ filters, setFilters, statusOptions }) {
       <div className="h-6 w-px bg-slate-200 hidden sm:block" />
       <div className="flex items-center gap-2 text-sm">
         <span className="text-slate-500">{t('filter.month')}</span>
-        <input
-          type="month"
-          value={filters.from}
-          onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
-          className="border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-        />
-        <span className="text-slate-400">–</span>
-        <input
-          type="month"
-          value={filters.to}
-          onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
-          className="border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-        />
-        {(filters.from || filters.to) && (
-          <button
-            onClick={() => setFilters((f) => ({ ...f, from: '', to: '' }))}
-            className="text-xs text-slate-400 hover:text-slate-600 underline"
-          >
-            {t('filter.clear')}
-          </button>
-        )}
+        <select
+          value={filters.from && filters.from === filters.to ? filters.from : ''}
+          onChange={(e) => {
+            const m = e.target.value;
+            setFilters((f) => ({ ...f, from: m, to: m }));
+          }}
+          className="border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+        >
+          <option value="">ทุกเดือน</option>
+          {monthOptions.map((m) => (
+            <option key={m} value={m}>{monthLabel(m)}</option>
+          ))}
+        </select>
       </div>
       {statusOptions.length > 0 && (
         <>

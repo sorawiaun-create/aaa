@@ -3,15 +3,31 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, Legend, PieChart, Pie,
 } from 'recharts';
-import { BarChart3, Package, Search, Download, Coins, Boxes, GitCompareArrows, Tags } from 'lucide-react';
-import { SectionCard, EmptyState, Button, PlatformBadge, Badge, cn } from '../components/ui.jsx';
+import { BarChart3, Package, Search, Download, Coins, Boxes, GitCompareArrows, Tags, Crown, TrendingUp, Grid2x2 } from 'lucide-react';
+import { SectionCard, EmptyState, Button, PlatformBadge, Badge, KpiCard, cn } from '../components/ui.jsx';
 import { formatCurrency, formatNumber, formatPercent, compactCurrency, monthLabel } from '../lib/format.js';
 
 const BAR_COLORS = ['#2563eb', '#0ea5e9', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6'];
 const LINE_COLORS = ['#2563eb', '#f97316', '#14b8a6', '#ec4899', '#8b5cf6'];
 
-export default function ProductAnalyticsView({ analytics }) {
+const median = (arr) => {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+
+// 2x2 product matrix: revenue (vs median) x margin (vs median)
+const MATRIX = {
+  star: { emoji: '⭐', name: 'ดาวเด่น', desc: 'ขายดี + กำไรดี → ดันต่อ/สต๊อกให้พอ', ring: 'border-emerald-200 bg-emerald-50/40', badge: 'green' },
+  workhorse: { emoji: '🐎', name: 'ม้างาน', desc: 'ขายดีแต่กำไรบาง → ลดต้นทุน/ปรับราคา', ring: 'border-amber-200 bg-amber-50/40', badge: 'amber' },
+  gem: { emoji: '💎', name: 'เพชรซ่อน', desc: 'กำไรดีแต่ขายน้อย → โปรโมทเพิ่ม', ring: 'border-blue-200 bg-blue-50/40', badge: 'blue' },
+  review: { emoji: '⚠️', name: 'ต้องทบทวน', desc: 'ขายน้อย + กำไรน้อย → พิจารณาเลิกขาย', ring: 'border-slate-200 bg-slate-50', badge: 'slate' },
+};
+
+export default function ProductAnalyticsView({ analytics, recon }) {
   const { months, products } = analytics;
+  const skus = recon?.bySku || [];
   const [metric, setMetric] = useState('revenue'); // 'revenue' | 'qty'
   const [query, setQuery] = useState('');
   const [selectedSku, setSelectedSku] = useState(products[0]?.sku || '');
@@ -65,6 +81,33 @@ export default function ProductAnalyticsView({ analytics }) {
   }, [products, metric]);
   const categoryTotal = categoryData.reduce((a, c) => a + c[metric], 0);
 
+  // Best-in-class leaders (by units, revenue, and real net profit)
+  const leaders = useMemo(() => {
+    if (!skus.length) return null;
+    const byQty = [...skus].sort((a, b) => b.qty - a.qty)[0];
+    const byRev = [...skus].sort((a, b) => b.revenue - a.revenue)[0];
+    const withFees = skus.filter((s) => s.fees > 0);
+    const byProfit = withFees.length ? [...withFees].sort((a, b) => b.netProfit - a.netProfit)[0] : null;
+    return { byQty, byRev, byProfit, count: skus.length };
+  }, [skus]);
+
+  // Product matrix: split by median revenue x median margin into 4 actionable groups
+  const matrix = useMemo(() => {
+    const valid = skus.filter((s) => s.revenue > 0);
+    const medRev = median(valid.map((s) => s.revenue));
+    const medMargin = median(valid.map((s) => (s.fees > 0 ? s.netMargin : s.margin)));
+    const groups = { star: [], workhorse: [], gem: [], review: [] };
+    valid.forEach((s) => {
+      const mg = s.fees > 0 ? s.netMargin : s.margin;
+      const hi = s.revenue >= medRev;
+      const good = mg >= medMargin;
+      const key = hi && good ? 'star' : hi && !good ? 'workhorse' : !hi && good ? 'gem' : 'review';
+      groups[key].push({ ...s, mg });
+    });
+    Object.values(groups).forEach((g) => g.sort((a, b) => b.revenue - a.revenue));
+    return groups;
+  }, [skus]);
+
   const tableRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = q
@@ -107,6 +150,49 @@ export default function ProductAnalyticsView({ analytics }) {
 
   return (
     <div className="space-y-6">
+      {/* Leader KPIs */}
+      {leaders && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard title="จำนวน SKU ที่ขาย" value={formatNumber(leaders.count)} subtext="รายการสินค้า" icon={Package} accent="slate" />
+          <KpiCard title="ขายดีสุด (จำนวน)" value={leaders.byQty.sku} valueTitle={leaders.byQty.name} subtext={`${formatNumber(leaders.byQty.qty)} ชิ้น`} icon={Boxes} accent="blue" />
+          <KpiCard title="รายได้สูงสุด" value={leaders.byRev.sku} valueTitle={leaders.byRev.name} subtext={formatCurrency(leaders.byRev.revenue)} icon={Coins} accent="emerald" />
+          <KpiCard title="กำไรสุทธิสูงสุด" value={leaders.byProfit ? leaders.byProfit.sku : '—'} valueTitle={leaders.byProfit?.name} subtext={leaders.byProfit ? formatCurrency(leaders.byProfit.netProfit) : 'ต้องมีค่าธรรมเนียม'} icon={Crown} accent="purple" />
+        </div>
+      )}
+
+      {/* Product matrix (star / workhorse / gem / review) */}
+      {skus.length > 0 && (
+        <SectionCard title="จัดกลุ่มสินค้า (Matrix: ยอดขาย × กำไร)" icon={Grid2x2}>
+          <div className="p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {['star', 'gem', 'workhorse', 'review'].map((key) => {
+                const meta = MATRIX[key];
+                const list = matrix[key];
+                return (
+                  <div key={key} className={cn('rounded-xl border p-4', meta.ring)}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5"><span className="text-lg">{meta.emoji}</span> {meta.name}</span>
+                      <Badge color={meta.badge}>{formatNumber(list.length)} SKU</Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 mb-2">{meta.desc}</p>
+                    <div className="space-y-1">
+                      {list.slice(0, 3).map((s) => (
+                        <div key={s.sku} className="flex items-center justify-between text-xs">
+                          <span className="font-mono text-slate-600 truncate max-w-[150px]" title={s.name}>{s.sku}</span>
+                          <span className="text-slate-500">{formatCurrency(s.revenue)} · {formatPercent(s.mg)}</span>
+                        </div>
+                      ))}
+                      {list.length === 0 && <p className="text-xs text-slate-300">— ไม่มี —</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-400 mt-3">แบ่งกลุ่มโดยเทียบกับ “ค่ากลาง” ของยอดขายและอัตรากำไรของร้าน · % คือกำไรสุทธิ (หรือกำไรขั้นต้นถ้ายังไม่มีค่าธรรมเนียม)</p>
+          </div>
+        </SectionCard>
+      )}
+
       {/* Top sellers bar */}
       <SectionCard title={`สินค้าขายดี Top 10 (ตาม${metricLabel})`} icon={BarChart3} action={<MetricToggle />}>
         <div className="p-5">
