@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 const KEYS = {
   products: 'ptr_products_v1',
   sales: 'ptr_sales_v1',
+  salesBatches: 'ptr_salesbatches_v1',
   fees: 'ptr_fees_v1',
   orderFees: 'ptr_orderfees_v1',
   expenses: 'ptr_expenses_v1',
@@ -35,6 +36,7 @@ const save = (key, value) => {
 export function useStore() {
   const [products, setProducts] = useState(() => load(KEYS.products, []));
   const [sales, setSales] = useState(() => load(KEYS.sales, []));
+  const [salesBatches, setSalesBatches] = useState(() => load(KEYS.salesBatches, []));
   const [fees, setFees] = useState(() => load(KEYS.fees, []));
   const [orderFees, setOrderFees] = useState(() => load(KEYS.orderFees, []));
   const [expenses, setExpenses] = useState(() => load(KEYS.expenses, []));
@@ -42,6 +44,7 @@ export function useStore() {
 
   useEffect(() => save(KEYS.products, products), [products]);
   useEffect(() => save(KEYS.sales, sales), [sales]);
+  useEffect(() => save(KEYS.salesBatches, salesBatches), [salesBatches]);
   useEffect(() => save(KEYS.fees, fees), [fees]);
   useEffect(() => save(KEYS.orderFees, orderFees), [orderFees]);
   useEffect(() => save(KEYS.expenses, expenses), [expenses]);
@@ -104,6 +107,40 @@ export function useStore() {
     return added;
   }, []);
 
+  // Import as a tracked batch so a single upload can be deleted later.
+  const addSalesBatch = useCallback(
+    (meta, records) => {
+      const batchId = uid();
+      const existing = new Set(sales.map((r) => r.id));
+      const fresh = records
+        .filter((r) => !existing.has(r.id))
+        .map((r) => ({ ...r, batchId }));
+      setSales((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...fresh.filter((r) => !seen.has(r.id))];
+      });
+      setSalesBatches((prev) => [
+        {
+          id: batchId,
+          fileName: meta.fileName || 'ไฟล์',
+          platform: meta.platform,
+          date: new Date().toISOString(),
+          count: fresh.length,
+          total: records.length,
+        },
+        ...prev,
+      ]);
+      return { added: fresh.length, batchId };
+    },
+    [sales]
+  );
+
+  // Delete one import batch: its sales rows + the batch entry.
+  const removeSalesBatch = useCallback((batchId) => {
+    setSales((prev) => prev.filter((r) => r.batchId !== batchId));
+    setSalesBatches((prev) => prev.filter((b) => b.id !== batchId));
+  }, []);
+
   // --- Fees (dedupe by document id) ---
   const addFees = useCallback((records) => {
     let added = 0;
@@ -153,6 +190,7 @@ export function useStore() {
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
+    setSalesBatches([]);
     setFees([]);
     setOrderFees([]);
     setExpenses([]);
@@ -162,6 +200,7 @@ export function useStore() {
   const importAll = useCallback((snapshot) => {
     if (snapshot.products) setProducts(snapshot.products);
     if (snapshot.sales) setSales(snapshot.sales);
+    setSalesBatches(snapshot.salesBatches || []);
     if (snapshot.fees) setFees(snapshot.fees);
     if (snapshot.orderFees) setOrderFees(snapshot.orderFees);
     if (snapshot.expenses) setExpenses(snapshot.expenses);
@@ -169,10 +208,10 @@ export function useStore() {
   }, []);
 
   return {
-    products, sales, fees, orderFees, expenses, mappings,
+    products, sales, salesBatches, fees, orderFees, expenses, mappings,
     setProducts, setSales, setFees, setOrderFees, setExpenses, setMappings,
     upsertProduct, removeProduct, removeProducts, mergeProducts,
-    addSales, addFees, upsertFees, addOrderFees, clearOrderFees,
+    addSales, addSalesBatch, removeSalesBatch, addFees, upsertFees, addOrderFees, clearOrderFees,
     addExpense, updateExpense, removeExpense, clearAll, importAll,
   };
 }

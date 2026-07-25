@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, ShoppingBag, Video, CheckCircle, ArrowRight, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Upload, ShoppingBag, Video, CheckCircle, ArrowRight, Trash2, FileSpreadsheet, History } from 'lucide-react';
 import { SectionCard, Button, Banner, EmptyState, Badge, PlatformBadge } from '../components/ui.jsx';
 import { readSpreadsheet, autoDetectMapping, applyMapping, SALES_FIELDS } from '../lib/salesParser.js';
 import { formatCurrency, formatNumber } from '../lib/format.js';
@@ -46,7 +46,7 @@ export default function SalesImportView({ store }) {
       return;
     }
     const records = applyMapping(parsed.rows, mapping, platform, parsed.fileName);
-    const added = store.addSales(records);
+    const { added } = store.addSalesBatch({ fileName: parsed.fileName, platform }, records);
     store.setMappings({ ...store.mappings, [platform]: mapping });
     setResult(`นำเข้า ${formatNumber(added)} รายการ (จากทั้งหมด ${formatNumber(records.length)} · ข้ามซ้ำ ${formatNumber(records.length - added)})`);
     setParsed(null);
@@ -158,8 +158,57 @@ export default function SalesImportView({ store }) {
         </SectionCard>
       )}
 
+      <ImportBatches store={store} />
       <SalesSummary store={store} />
     </div>
+  );
+}
+
+function ImportBatches({ store }) {
+  const batches = store.salesBatches || [];
+  if (batches.length === 0) return null;
+  const fmtDate = (iso) => {
+    try {
+      return new Date(iso).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+  return (
+    <SectionCard title={`ชุดที่นำเข้า (${batches.length})`} icon={History}>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+            <tr>
+              <th className="px-5 py-2.5">ไฟล์</th>
+              <th className="px-5 py-2.5">แพลตฟอร์ม</th>
+              <th className="px-5 py-2.5">เวลานำเข้า</th>
+              <th className="px-5 py-2.5 text-right">จำนวนรายการ</th>
+              <th className="px-5 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {batches.map((b) => (
+              <tr key={b.id} className="hover:bg-slate-50">
+                <td className="px-5 py-2.5 text-slate-700 truncate max-w-[240px]" title={b.fileName}>{b.fileName}</td>
+                <td className="px-5 py-2.5"><PlatformBadge platform={b.platform} /></td>
+                <td className="px-5 py-2.5 text-slate-500 text-xs whitespace-nowrap">{fmtDate(b.date)}</td>
+                <td className="px-5 py-2.5 text-right font-medium">{formatNumber(b.count)}</td>
+                <td className="px-5 py-2.5 text-right">
+                  <button
+                    onClick={() => window.confirm(`ลบชุดนำเข้า "${b.fileName}" (${formatNumber(b.count)} รายการ)?`) && store.removeSalesBatch(b.id)}
+                    className="inline-flex items-center gap-1 text-xs text-red-500 hover:bg-red-50 px-2.5 py-1.5 rounded-lg"
+                  >
+                    <Trash2 size={14} /> ลบชุดนี้
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-400 px-5 py-3">ลบเฉพาะชุดที่อัปโหลดผิดได้ โดยไม่กระทบข้อมูลชุดอื่น (ชุดที่นำเข้าก่อนอัปเดตนี้จะไม่แสดงที่นี่ — ใช้ปุ่มลบตามแพลตฟอร์มด้านล่างแทน)</p>
+    </SectionCard>
   );
 }
 

@@ -15,6 +15,7 @@ export default function DataView({ store }) {
       exportedAt: new Date().toISOString(),
       products: store.products,
       sales: store.sales,
+      salesBatches: store.salesBatches,
       fees: store.fees,
       orderFees: store.orderFees,
       expenses: store.expenses,
