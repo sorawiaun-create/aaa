@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
 import { runCampaign } from './orchestrator.js';
 import { createCampaignDir, buildHtmlPreview } from './output.js';
 import { savePostsManifest, publishCampaign } from './publisher/index.js';
+import { brainReady, brainProvider } from './brain.js';
 
 // โหลด .env แบบง่าย (ไม่ต้องพึ่ง dependency)
 function loadDotenv() {
@@ -31,8 +32,9 @@ const brief =
 console.log('🎬  เริ่มงานผลิตคอนเทนต์');
 console.log('📋  โจทย์:', brief, '\n');
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('❌  ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY — ดูวิธีตั้งค่าใน README / .env.example');
+if (!brainReady()) {
+  const need = brainProvider() === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
+  console.error(`❌  สมองของระบบยังไม่พร้อม — ตั้งค่า ${need} (ผู้ให้บริการ: ${brainProvider()}) ในหน้า Settings / .env`);
   process.exit(1);
 }
 

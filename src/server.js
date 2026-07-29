@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { createCampaignDir, buildHtmlPreview } from './output.js';
 import { savePostsManifest } from './publisher/index.js';
 import { generateImage, generateVideo } from './providers/media.js';
+import { brainReady } from './brain.js';
 
 // ============================================================================
 //  เว็บแอปควบคุมครบจบในที่เดียว (Studio + Settings)
@@ -44,12 +45,13 @@ const DEPTS = [
 
 // ---------- Settings fields ----------
 const FIELDS = [
-  { group: '🧠 สมองของระบบ (จำเป็น)', items: [
-    { key: 'ANTHROPIC_API_KEY', label: 'Anthropic API Key', hint: 'สมองที่คิด/เขียนคอนเทนต์ (Claude)', link: 'https://console.anthropic.com/settings/keys', secret: true, required: true },
+  { group: '🧠 สมองของระบบ (เลือก 1 เจ้า)', items: [
+    { key: 'BRAIN_PROVIDER', label: 'ใช้สมองของเจ้าไหน', type: 'select', options: [['anthropic', 'Claude (Anthropic)'], ['openai', 'OpenAI / ChatGPT']] },
+    { key: 'ANTHROPIC_API_KEY', label: 'Anthropic API Key', hint: 'กรอกถ้าเลือก Claude · เอาจาก console.anthropic.com (ไม่ใช่ claude.ai)', link: 'https://console.anthropic.com/settings/keys', secret: true },
   ]},
   { group: '🎨 สร้างภาพ / วิดีโอ (ไม่ใส่ก็ได้ — จะใช้ไฟล์ตัวอย่างแทน)', items: [
     { key: 'IMAGE_PROVIDER', label: 'ใช้อะไรสร้างภาพ', type: 'select', options: [['placeholder', 'ไฟล์ตัวอย่าง (ฟรี ไม่ต้องมี key)'], ['openai', 'OpenAI / ChatGPT (gpt-image-1)'], ['replicate', 'Replicate (FLUX)']] },
-    { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', hint: 'สำหรับสร้างภาพด้วย gpt-image-1 (เลือก OpenAI ด้านบน)', link: 'https://platform.openai.com/api-keys', secret: true },
+    { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', hint: 'คีย์เดียวใช้ได้ทั้งสร้างภาพ (gpt-image-1) และเป็นสมองระบบ (ถ้าเลือก OpenAI) · จาก platform.openai.com', link: 'https://platform.openai.com/api-keys', secret: true },
     { key: 'VIDEO_PROVIDER', label: 'ใช้อะไรสร้างวิดีโอ', type: 'select', options: [['placeholder', 'บรีฟตัวอย่าง (ฟรี)'], ['replicate', 'Replicate']] },
     { key: 'REPLICATE_API_TOKEN', label: 'Replicate API Token', hint: 'สำหรับ FLUX (ภาพ) และวิดีโอ (เลือก Replicate ด้านบน)', link: 'https://replicate.com/account/api-tokens', secret: true },
   ]},
@@ -178,7 +180,7 @@ function nav(active) {
 //  หน้า Studio
 // ============================================================================
 function renderStudio(env) {
-  const hasKey = !!env.ANTHROPIC_API_KEY;
+  const hasKey = brainReady();
   const roomEls = DEPTS.map((d) => `
     <div class="room idle" data-key="${d.key}" style="--skin:${d.skin};--hair:${d.hair};--shirt:${d.shirt}">
       <div class="top"><div class="ric">${d.icon}</div><div class="rname">${d.name}</div><div class="light"></div></div>
@@ -209,7 +211,7 @@ textarea:focus{outline:2px solid var(--blue);border-color:var(--blue);}
 </style></head><body>
 <div class="wrap">
   ${nav('studio')}
-  ${hasKey ? '' : '<div class="warn">⚠️ ยังไม่ได้ใส่ Anthropic API Key — กดได้เลยเพื่อดู <b>โหมดสาธิต</b> (ใช้ภาพตัวอย่าง) · ไป <a href="/settings" style="color:#ffd98a">⚙️ ตั้งค่า API</a> เพื่อผลิตด้วย AI จริง</div>'}
+  ${hasKey ? '' : '<div class="warn">⚠️ ยังไม่ได้ตั้งค่าสมอง (Claude หรือ OpenAI) — กดได้เลยเพื่อดู <b>โหมดสาธิต</b> (ใช้ภาพตัวอย่าง) · ไป <a href="/settings" style="color:#ffd98a">⚙️ ตั้งค่า API</a> เพื่อผลิตด้วย AI จริง</div>'}
   <div class="card">
     <h2>🎬 พิมพ์โจทย์แคมเปญ แล้วกดผลิต</h2>
     <textarea id="brief" placeholder="เช่น: เปิดตัวครีมกันแดดตัวใหม่ ลง TikTok, Instagram, Facebook กลุ่มผู้หญิง 18-30 โทนสนุกสดใส">เปิดตัวครีมกันแดด GlowShield SPF50+ ลง TikTok, Instagram และ Facebook กลุ่มผู้หญิง 18-30 โทนสนุกสดใส</textarea>
@@ -512,10 +514,10 @@ const server = http.createServer(async (req, res) => {
     try { brief = (JSON.parse(await readBody(req)).brief || '').trim(); } catch {}
     if (!brief) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"กรุณาพิมพ์โจทย์"}'); return; }
     const job = newJob();
-    if (process.env.ANTHROPIC_API_KEY) runReal(job, brief);
+    if (brainReady()) runReal(job, brief);
     else runDemo(job, brief).catch((e) => { pushEv(job, { type: 'error', message: e.message }); endJob(job); });
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ jobId: job.id, demo: !process.env.ANTHROPIC_API_KEY })); return;
+    res.end(JSON.stringify({ jobId: job.id, demo: !brainReady() })); return;
   }
   if (req.method === 'GET' && u.startsWith('/events')) {
     const id = new URLSearchParams(u.split('?')[1] || '').get('job');

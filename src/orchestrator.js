@@ -1,14 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk';
 import path from 'node:path';
 import { CONFIG } from './config.js';
-import { DEPARTMENTS, getDepartment } from './departments/index.js';
+import { DEPARTMENTS } from './departments/index.js';
 import { saveText } from './output.js';
-
-const client = new Anthropic(); // อ่าน ANTHROPIC_API_KEY จาก environment
+import { agent } from './brain.js';
 
 // ----------------------------------------------------------------------------
-//  รันแผนกเดียว (อาจมี inner loop ถ้าแผนกนั้นเรียก tool สร้างไฟล์)
-//  คืน { text, assets } — assets = ไฟล์ที่แผนกนี้สร้างระหว่างทำงาน
+//  รันแผนกเดียว (อาจมี tool สร้างไฟล์) — คืน { text, assets }
 // ----------------------------------------------------------------------------
 async function runDepartment(dept, task, brief, ctx) {
   const assetStart = (ctx.assets || []).length;
@@ -16,74 +13,17 @@ async function runDepartment(dept, task, brief, ctx) {
   const tools = (dept.tools || []).map((t) => ({
     name: t.name,
     description: t.description,
-    input_schema: t.input_schema,
+    parameters: t.input_schema,
+    run: (args) => t.run(args, ctx),
   }));
 
-  const messages = [
-    {
-      role: 'user',
-      content:
-        `โจทย์รวมของแคมเปญ (บริบท):\n${brief}\n\n` +
-        `งานที่ผู้จัดการมอบหมายให้แผนก "${dept.name}":\n${task}`,
-    },
-  ];
+  const userText =
+    `โจทย์รวมของแคมเปญ (บริบท):\n${brief}\n\n` +
+    `งานที่ผู้จัดการมอบหมายให้แผนก "${dept.name}":\n${task}`;
 
-  let lastText = '';
-  for (let turn = 0; turn < CONFIG.maxDeptTurns; turn++) {
-    const response = await client.messages.create({
-      model: CONFIG.departmentModel,
-      max_tokens: CONFIG.maxTokens,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: CONFIG.effort },
-      system: dept.systemPrompt,
-      ...(tools.length ? { tools } : {}),
-      messages,
-    });
-
-    const text = response.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n');
-    if (text) lastText = text;
-
-    if (response.stop_reason !== 'tool_use') break;
-
-    messages.push({ role: 'assistant', content: response.content });
-    const toolResults = [];
-    for (const block of response.content) {
-      if (block.type !== 'tool_use') continue;
-      const def = (dept.tools || []).find((t) => t.name === block.name);
-      let result;
-      try {
-        result = def ? await def.run(block.input, ctx) : `ไม่พบ tool: ${block.name}`;
-      } catch (e) {
-        result = `เกิดข้อผิดพลาดในการรัน tool: ${e.message}`;
-      }
-      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result });
-    }
-    messages.push({ role: 'user', content: toolResults });
-  }
-
+  const text = await agent({ system: dept.systemPrompt, userText, tools, maxTurns: CONFIG.maxDeptTurns });
   const assets = (ctx.assets || []).slice(assetStart);
-  return { text: lastText, assets };
-}
-
-// สร้าง tool 1 ตัวต่อ 1 แผนก ให้ผู้จัดการเรียกใช้
-function buildTools() {
-  return DEPARTMENTS.map((dept) => ({
-    name: `delegate_to_${dept.key}`,
-    description: `มอบหมายงานให้ "${dept.name}" — ${dept.description}`,
-    input_schema: {
-      type: 'object',
-      properties: {
-        task: {
-          type: 'string',
-          description: 'คำสั่งงานย่อยที่ชัดเจน (ระบุสิ่งที่ต้องการ, แพลตฟอร์ม, จำนวนชิ้น ฯลฯ)',
-        },
-      },
-      required: ['task'],
-    },
-  }));
+  return { text, assets };
 }
 
 const ORCHESTRATOR_SYSTEM = `คุณคือ "ผู้จัดการฝ่ายผลิตคอนเทนต์" (Content Production Manager)
@@ -99,66 +39,42 @@ const ORCHESTRATOR_SYSTEM = `คุณคือ "ผู้จัดการฝ�
 ตอบภาษาไทย กระชับ เป็นระบบ`;
 
 // ----------------------------------------------------------------------------
-//  รันทั้งแคมเปญ (agentic loop ของผู้จัดการ)
-//  ctx: { dir, assetsDir, assets }  — เลเยอร์ output/สื่อ
+//  รันทั้งแคมเปญ — ผู้จัดการมอบหมายแต่ละแผนกผ่าน tool (delegate_to_<แผนก>)
 //  คืน { finalReport, timeline }
 // ----------------------------------------------------------------------------
 export async function runCampaign(brief, ctx, onEvent = () => {}) {
   ctx.assets = ctx.assets || [];
-  const tools = buildTools();
-  const messages = [{ role: 'user', content: brief }];
   const timeline = [];
   let step = 0;
 
-  for (let turn = 0; turn < CONFIG.maxTurns; turn++) {
-    const response = await client.messages.create({
-      model: CONFIG.orchestratorModel,
-      max_tokens: CONFIG.maxTokens,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: CONFIG.effort },
-      system: ORCHESTRATOR_SYSTEM,
-      tools,
-      messages,
-    });
-
-    messages.push({ role: 'assistant', content: response.content });
-
-    if (response.stop_reason !== 'tool_use') {
-      const finalText = response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n');
-      saveText(ctx.dir, '99-final-summary.md', finalText);
-      onEvent({ type: 'done' });
-      return { finalReport: finalText, timeline };
-    }
-
-    const toolResults = [];
-    for (const block of response.content) {
-      if (block.type !== 'tool_use') continue;
-      const key = block.name.replace('delegate_to_', '');
-      const dept = getDepartment(key);
-      if (!dept) {
-        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `ไม่พบแผนก: ${key}`, is_error: true });
-        continue;
-      }
-
-      onEvent({ type: 'delegate', key: dept.key, dept: dept.name, task: block.input.task });
-      const { text, assets } = await runDepartment(dept, block.input.task, brief, ctx);
+  const tools = DEPARTMENTS.map((dept) => ({
+    name: `delegate_to_${dept.key}`,
+    description: `มอบหมายงานให้ "${dept.name}" — ${dept.description}`,
+    parameters: {
+      type: 'object',
+      properties: {
+        task: { type: 'string', description: 'คำสั่งงานย่อยที่ชัดเจน (ระบุสิ่งที่ต้องการ, แพลตฟอร์ม, จำนวนชิ้น ฯลฯ)' },
+      },
+      required: ['task'],
+    },
+    run: async ({ task }) => {
+      onEvent({ type: 'delegate', key: dept.key, dept: dept.name, task });
+      const { text, assets } = await runDepartment(dept, task, brief, ctx);
       onEvent({ type: 'result', key: dept.key, dept: dept.name, result: text, assets });
 
       step += 1;
       saveText(ctx.dir, `${String(step).padStart(2, '0')}-${dept.key}.md`, text);
-      timeline.push({ key: dept.key, dept: dept.name, task: block.input.task, result: text, assets });
+      timeline.push({ key: dept.key, dept: dept.name, task, result: text, assets });
 
       const assetNote = assets.length
         ? `\n\n[ไฟล์ที่สร้าง: ${assets.map((a) => path.relative(ctx.dir, a.path)).join(', ')}]`
         : '';
-      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: text + assetNote });
-    }
+      return text + assetNote;
+    },
+  }));
 
-    messages.push({ role: 'user', content: toolResults });
-  }
-
-  return { finalReport: 'ถึงจำนวนรอบสูงสุดแล้ว งานยังไม่สรุป — เพิ่ม CONFIG.maxTurns หรือแบ่งโจทย์ให้เล็กลง', timeline };
+  const finalReport = await agent({ system: ORCHESTRATOR_SYSTEM, userText: brief, tools, maxTurns: CONFIG.maxTurns });
+  saveText(ctx.dir, '99-final-summary.md', finalReport);
+  onEvent({ type: 'done' });
+  return { finalReport, timeline };
 }
