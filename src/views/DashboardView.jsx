@@ -111,19 +111,6 @@ export default function DashboardView({ recon, store }) {
         <KpiCard title="อัตรากำไรสุทธิ" value={formatPercent(recon.netMargin)} subtext="Net Margin" icon={Percent} accent="purple" />
       </div>
 
-      {/* Company bottom line after general expenses */}
-      {recon.opexTotal > 0 && (
-        <div className={`rounded-2xl p-4 border flex flex-wrap items-center justify-between gap-x-4 gap-y-1 ${recon.companyNetProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <span className="text-sm text-slate-600">
-            กำไรสุทธิ <b>{formatCurrency(recon.netProfit)}</b> − รายจ่ายทั่วไป <b className="text-orange-600">{formatCurrency(recon.opexTotal)}</b> =
-          </span>
-          <span className={`text-lg font-bold flex items-center gap-2 ${recon.companyNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-            {recon.companyNetProfit >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
-            กำไร/ขาดทุนบริษัท {formatCurrency(recon.companyNetProfit)}
-          </span>
-        </div>
-      )}
-
       {/* Settlement-based P&L (authoritative platform figures) */}
       {recon.settlement.hasData && (() => {
         // Coverage = how much of the settlement revenue the imported order file
