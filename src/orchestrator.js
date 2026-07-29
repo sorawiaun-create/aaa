@@ -149,7 +149,7 @@ export async function runCampaign(brief, ctx, onEvent = () => {}) {
 
       step += 1;
       saveText(ctx.dir, `${String(step).padStart(2, '0')}-${dept.key}.md`, text);
-      timeline.push({ dept: dept.name, task: block.input.task, result: text, assets });
+      timeline.push({ key: dept.key, dept: dept.name, task: block.input.task, result: text, assets });
 
       const assetNote = assets.length
         ? `\n\n[ไฟล์ที่สร้าง: ${assets.map((a) => path.relative(ctx.dir, a.path)).join(', ')}]`
