@@ -10,7 +10,36 @@ import { buildSheetCsvUrl, detectExpenseMapping, mapExpenseRows, csvToRows } fro
 const SHEET_SOURCES_KEY = 'ptr_gsheet_sources';
 const SHEET_URL_KEY = 'ptr_gsheet_url'; // legacy single-url (migrated)
 const SHEET_AUTO_KEY = 'ptr_gsheet_auto';
+const SHEET_MAP_KEY = 'ptr_gsheet_mapping'; // manual column overrides
 const AUTO_INTERVAL_MS = 3 * 60 * 1000; // poll every 3 minutes when auto-sync is on
+
+// Fields the user can map, in display order.
+const MAP_FIELDS = [
+  { key: 'month', label: 'วันที่/เดือน' },
+  { key: 'category', label: 'หมวด/รายการ' },
+  { key: 'amount', label: 'จำนวนเงิน' },
+  { key: 'note', label: 'หมายเหตุ' },
+];
+
+const loadManualMap = () => {
+  try {
+    const raw = localStorage.getItem(SHEET_MAP_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return {};
+};
+
+// Combine auto-detected mapping with the user's manual overrides. A manual
+// override only applies if that header actually exists in this tab's headers.
+const resolveMapping = (headers, manual) => {
+  const mapping = detectExpenseMapping(headers);
+  for (const f of MAP_FIELDS) {
+    const chosen = manual?.[f.key];
+    if (chosen && headers.includes(chosen)) mapping[f.key] = chosen;
+    else if (chosen === '') delete mapping[f.key]; // explicit "ไม่ใช้"
+  }
+  return mapping;
+};
 
 const uid = () =>
   (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -45,14 +74,22 @@ export default function ExpensesView({ store, recon }) {
   const [sources, setSources] = useState(loadSources);
   const [auto, setAuto] = useState(() => localStorage.getItem(SHEET_AUTO_KEY) === '1');
   const [sync, setSync] = useState({ busy: false, lastAt: null, count: 0, errors: [] });
+  const [manualMap, setManualMap] = useState(loadManualMap);
+  const [sheetHeaders, setSheetHeaders] = useState([]); // union of headers seen in last sync
   const syncSheetRef = useRef(syncSheetExpenses);
   syncSheetRef.current = syncSheetExpenses;
   const sourcesRef = useRef(sources);
   sourcesRef.current = sources;
+  const manualMapRef = useRef(manualMap);
+  manualMapRef.current = manualMap;
 
   useEffect(() => {
     try { localStorage.setItem(SHEET_SOURCES_KEY, JSON.stringify(sources)); } catch { /* ignore */ }
   }, [sources]);
+
+  useEffect(() => {
+    try { localStorage.setItem(SHEET_MAP_KEY, JSON.stringify(manualMap)); } catch { /* ignore */ }
+  }, [manualMap]);
 
   const addSource = () => setSources((s) => [...s, { id: uid(), url: '', label: '' }]);
   const updateSource = (id, patch) => setSources((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -69,6 +106,7 @@ export default function ExpensesView({ store, recon }) {
     setSync((s) => ({ ...s, busy: true }));
     const combined = [];
     const errors = [];
+    const headerSet = new Set();
     for (const src of active) {
       try {
         const res = await fetch(buildSheetCsvUrl(src.url.trim()), { redirect: 'follow' });
@@ -76,17 +114,23 @@ export default function ExpensesView({ store, recon }) {
         const text = await res.text();
         if (/<html/i.test(text.slice(0, 200))) throw new Error('ยังไม่เปิดสาธารณะ');
         const rows = csvToRows(text);
-        const mapping = detectExpenseMapping(rows.length ? Object.keys(rows[0]) : []);
-        if (!mapping.amount) throw new Error('ไม่พบคอลัมน์จำนวนเงิน');
+        const headers = rows.length ? Object.keys(rows[0]) : [];
+        headers.forEach((h) => headerSet.add(h));
+        const mapping = resolveMapping(headers, manualMapRef.current);
+        if (!mapping.amount) throw new Error('ไม่พบคอลัมน์จำนวนเงิน (เลือกเองได้ด้านล่าง)');
         const mapped = mapExpenseRows(rows, mapping).map((e, idx) => ({ ...e, id: `gsheet:${src.id}:${idx}` }));
         combined.push(...mapped);
       } catch (err) {
         errors.push(`${src.label || src.url.slice(0, 28) || 'แท็บ'}: ${friendly(err)}`);
       }
     }
+    if (headerSet.size) setSheetHeaders([...headerSet]);
     syncSheetRef.current(combined);
     setSync({ busy: false, lastAt: new Date(), count: combined.length, errors });
   }, []);
+
+  const setFieldMap = (field, header) =>
+    setManualMap((m) => ({ ...m, [field]: header }));
 
   const toggleAuto = () => {
     const next = !auto;
@@ -210,6 +254,37 @@ export default function ExpensesView({ store, recon }) {
               <CheckCircle size={16} className="mt-0.5 shrink-0" />
               ซิงก์แล้ว {formatNumber(sync.count)} รายการ · ล่าสุด {sync.lastAt.toLocaleTimeString('th-TH')}
             </Banner>
+          )}
+
+          {/* Manual column mapping — appears after the first sync reads the headers.
+              Use it if the app picked the wrong column (e.g. amount vs. a ratio). */}
+          {sheetHeaders.length > 0 && (
+            <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/60">
+              <p className="text-sm text-slate-600">
+                <b>จับคู่คอลัมน์เอง</b> — ถ้าระบบเลือกคอลัมน์ผิด (เช่น จำนวนเงินไปดึงคอลัมน์อื่น)
+                เลือกให้ถูกแล้วกด “ซิงก์ทั้งหมด” อีกครั้ง
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {MAP_FIELDS.map((f) => (
+                  <label key={f.key} className="flex flex-col gap-1 text-xs text-slate-500">
+                    {f.label}
+                    <select
+                      value={manualMap[f.key] ?? '__auto__'}
+                      onChange={(e) =>
+                        setFieldMap(f.key, e.target.value === '__auto__' ? undefined : e.target.value)
+                      }
+                      className="border border-slate-200 rounded-lg px-2 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                    >
+                      <option value="__auto__">อัตโนมัติ</option>
+                      {f.key !== 'amount' && f.key !== 'category' && <option value="">— ไม่ใช้ —</option>}
+                      {sheetHeaders.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
 
           <div className="text-xs text-slate-500 bg-slate-50 rounded-xl p-3 space-y-1">

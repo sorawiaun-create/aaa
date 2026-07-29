@@ -6,6 +6,7 @@ import { autoDetectMapping, applyMapping, distinctStatuses } from '../src/lib/sa
 import { parseSettlementWorkbook } from '../src/lib/settlementParser.js';
 import { parseOrderFees } from '../src/lib/orderFeeParser.js';
 import { parseMoney, normalizeDate, monthKeyOf } from '../src/lib/format.js';
+import { parseFlexDate, normYear, toMonthKey, mapExpenseRows, detectExpenseMapping } from '../src/lib/sheetSync.js';
 
 test('parseMoney handles messy formats', () => {
   assert.equal(parseMoney('฿1,234.50'), 1234.5);
@@ -327,6 +328,49 @@ test('expenses respect the month-range filter', () => {
   ];
   const r = computeReconciliation({ sales: [], products: [], expenses, filters: { platform: 'all', from: '2026-06', to: '2026-06' } });
   assert.equal(r.opexTotal, 100); // only June counted
+});
+
+test('normYear converts Buddhist / 2-digit years to Gregorian', () => {
+  assert.equal(normYear('69'), 2026);   // BE short year 2569
+  assert.equal(normYear('68'), 2025);   // BE short year 2568
+  assert.equal(normYear('2569'), 2026); // full BE
+  assert.equal(normYear('2025'), 2025); // already Gregorian, untouched
+});
+
+test('parseFlexDate handles Buddhist day-first dates ("1/7/69")', () => {
+  assert.deepEqual(parseFlexDate('1/7/69'), { date: '01/07/2026', month: '2026-07' });
+  assert.deepEqual(parseFlexDate('05/06/2569'), { date: '05/06/2026', month: '2026-06' });
+  assert.deepEqual(parseFlexDate('2026-07'), { date: '', month: '2026-07' });
+  assert.deepEqual(parseFlexDate('7/2569'), { date: '', month: '2026-07' });
+  assert.equal(parseFlexDate('15/01/2025').month, '2025-01'); // Gregorian untouched
+  assert.equal(toMonthKey('1/7/69'), '2026-07');
+});
+
+test('mapExpenseRows: real amount column + Buddhist date (user bug repro)', () => {
+  // Reproduces the user's sheet: a "สัดส่วน" ratio column auto-detect must not
+  // steal, the real amount is "จำนวนเงิน", dates are Buddhist 2-digit.
+  const rows = [
+    { 'วันที่': '1/7/69', 'รายการ': 'ค่าเช่า', 'จำนวนเงิน': '1,600', 'สัดส่วน': '3.25' },
+    { 'วันที่': '2/7/69', 'รายการ': 'เงินเดือน', 'จำนวนเงิน': '1,800', 'สัดส่วน': '3.69' },
+    { 'วันที่': '', 'รายการ': 'รวม', 'จำนวนเงิน': '3,400', 'สัดส่วน': '' }, // total row skipped
+  ];
+  const mapping = detectExpenseMapping(Object.keys(rows[0]));
+  assert.equal(mapping.amount, 'จำนวนเงิน');
+  const out = mapExpenseRows(rows, mapping);
+  assert.equal(out.length, 2); // total row skipped
+  assert.equal(out[0].amount, 1600);
+  assert.equal(out[0].month, '2026-07');
+  assert.equal(out[0].date, '01/07/2026');
+  assert.equal(out[1].amount, 1800);
+});
+
+test('mapExpenseRows honors a manual amount override', () => {
+  const rows = [{ 'A': '1/7/69', 'B': 'ค่าเช่า', 'C': '1600' }];
+  // Headers are opaque so auto-detect finds no amount; caller overrides.
+  const out = mapExpenseRows(rows, { month: 'A', category: 'B', amount: 'C' });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].amount, 1600);
+  assert.equal(out[0].month, '2026-07');
 });
 
 test('settlement feeds engine net profit (payout - COGS)', () => {

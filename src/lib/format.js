@@ -53,14 +53,23 @@ export const parseMoney = (value) => {
   if (!s) return 0;
   const negative = /^\(.*\)$/.test(s) || s.includes('-');
   s = s.replace(/[฿$€£B\s]/gi, '').replace(/[()]/g, '');
-  // Remove thousand separators, keep last dot/comma as decimal
-  const lastDot = s.lastIndexOf('.');
-  const lastComma = s.lastIndexOf(',');
-  if (lastComma > lastDot) {
-    // comma is the decimal separator
-    s = s.replace(/\./g, '').replace(',', '.');
-  } else {
-    s = s.replace(/,/g, '');
+  // Decide whether "." or "," is the decimal separator, then strip the other as
+  // a thousands separator. A single comma with exactly 3 trailing digits (and no
+  // dot) is a thousands separator ("1,600" → 1600), NOT a decimal comma.
+  const dots = (s.match(/\./g) || []).length;
+  const commas = (s.match(/,/g) || []).length;
+  if (commas > 0 && dots > 0) {
+    // Both present: the right-most one is the decimal separator.
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(/,/g, '.');
+    else s = s.replace(/,/g, '');
+  } else if (commas > 0) {
+    // Only commas: decimal if a single comma with 1–2 trailing digits.
+    const decimals = s.length - s.lastIndexOf(',') - 1;
+    if (commas === 1 && decimals > 0 && decimals < 3) s = s.replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (dots > 1) {
+    // Multiple dots are thousands separators ("1.234.567").
+    s = s.replace(/\./g, '');
   }
   s = s.replace(/[^0-9.]/g, '');
   const num = parseFloat(s);

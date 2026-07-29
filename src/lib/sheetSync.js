@@ -87,17 +87,65 @@ export function detectExpenseMapping(headers) {
   return mapping;
 }
 
+// Normalize a year to a Gregorian 4-digit year, tolerating Thai Buddhist years
+// and 2-digit years. Thai sellers commonly write พ.ศ. (BE): "69" = 2569 = 2026,
+// "2568" = 2025. So: 2-digit → treat as BE short year; any year > 2400 → −543.
+export function normYear(y) {
+  let n = parseInt(y, 10);
+  if (!Number.isFinite(n)) return NaN;
+  if (n < 100) n += 2500;   // 2-digit → Buddhist short year (69 → 2569)
+  if (n > 2400) n -= 543;   // Buddhist → Gregorian (2569 → 2026)
+  return n;
+}
+
+// Parse a messy date cell → { date: "DD/MM/YYYY" (Gregorian), month: "YYYY-MM" }.
+// Handles month-only (YYYY-MM, MM/YYYY), ISO, and day-first TH dates whose year
+// may be Buddhist and/or 2-digit ("1/7/69" → 2026-07).
+export function parseFlexDate(v) {
+  if (v == null || v === '') return { date: '', month: '' };
+  if (typeof v === 'number') {
+    const d = normalizeDate(v); // Excel serial → DD/MM/YYYY
+    return { date: d, month: monthKeyOf(d) };
+  }
+  const s = String(v).trim();
+  if (!s) return { date: '', month: '' };
+
+  // Month-only: YYYY-MM
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})$/);
+  if (m) { const y = normYear(m[1]); return { date: '', month: `${y}-${m[2].padStart(2, '0')}` }; }
+  // Month-only: MM/YYYY
+  m = s.match(/^(\d{1,2})[-/.](\d{4})$/);
+  if (m) { const y = normYear(m[2]); return { date: '', month: `${y}-${m[1].padStart(2, '0')}` }; }
+
+  // ISO full date: YYYY-MM-DD
+  m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) {
+    const y = normYear(m[1]);
+    const mm = m[2].padStart(2, '0');
+    return { date: `${m[3].padStart(2, '0')}/${mm}/${y}`, month: `${y}-${mm}` };
+  }
+
+  // Day-first: D/M/YY or D/M/YYYY (TH exports). Year may be 2-digit/Buddhist.
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+  if (m) {
+    const y = normYear(m[3]);
+    const mm = m[2].padStart(2, '0');
+    return { date: `${m[1].padStart(2, '0')}/${mm}/${y}`, month: `${y}-${mm}` };
+  }
+
+  // Fallback: named months etc. via normalizeDate, then normalize the year.
+  const d = normalizeDate(s);
+  if (d) {
+    const [dd, mm, yy] = d.split('/');
+    const y = normYear(yy);
+    return { date: `${dd}/${mm}/${y}`, month: `${y}-${mm}` };
+  }
+  return { date: '', month: '' };
+}
+
 // Normalize a cell to a "YYYY-MM" month key (handles YYYY-MM, MM/YYYY, full dates).
 export function toMonthKey(v) {
-  if (v == null || v === '') return '';
-  if (typeof v === 'number') return monthKeyOf(normalizeDate(v)); // Excel serial
-  const s = String(v).trim();
-  if (!s) return '';
-  const ym = s.match(/^(\d{4})[-/.](\d{1,2})$/);
-  if (ym) return `${ym[1]}-${ym[2].padStart(2, '0')}`;
-  const my = s.match(/^(\d{1,2})[-/.](\d{4})$/);
-  if (my) return `${my[2]}-${my[1].padStart(2, '0')}`;
-  return monthKeyOf(normalizeDate(s)) || '';
+  return parseFlexDate(v).month;
 }
 
 // Rows that are totals/summaries in the sheet — skipped (the app sums itself).
@@ -115,12 +163,12 @@ export function mapExpenseRows(rows, mapping) {
     const note = String(get('note') ?? '').trim();
     // Skip total / summary rows (already summed by the app)
     if (TOTAL_RE.test(category) || TOTAL_RE.test(String(rawDate)) || TOTAL_RE.test(note)) return;
-    const month = toMonthKey(rawDate);
+    const { date, month } = parseFlexDate(rawDate);
     if (!month && !category) return; // bare total-style row
     out.push({
       id: `gsheet:${i}`,
       source: 'gsheet',
-      date: normalizeDate(rawDate) || String(rawDate ?? '').trim(),
+      date: date || String(rawDate ?? '').trim(),
       month,
       category: category || 'ไม่ระบุหมวด',
       amount,
