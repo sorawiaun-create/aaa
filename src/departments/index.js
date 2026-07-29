@@ -3,6 +3,27 @@ import path from 'node:path';
 import { generateImage, generateVideo } from '../providers/media.js';
 import { slugify } from '../util.js';
 
+// จับคู่ข้อความอ้างอิงสื่อ (media_refs) กับไฟล์จริงในโฟลเดอร์ assets
+function resolveMediaRefs(refs, assetsDir) {
+  if (!refs || !assetsDir) return [];
+  let files = [];
+  try {
+    files = fs.readdirSync(assetsDir);
+  } catch {
+    return [];
+  }
+  const tokens = String(refs).split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+  const hits = new Set();
+  for (const t of tokens) {
+    const base = t.split('/').pop();
+    if (!base) continue;
+    for (const f of files) {
+      if (f === base || f.includes(base) || base.includes(f)) hits.add(path.join(assetsDir, f));
+    }
+  }
+  return [...hits];
+}
+
 // ============================================================================
 //  ทะเบียนแผนก (Department Registry)
 //  แต่ละแผนก = AI agent เฉพาะทาง 1 ตัว มี "หน้าที่" + "system prompt" ของตัวเอง
@@ -217,6 +238,17 @@ export const DEPARTMENTS = [
           fs.writeFileSync(p, body);
           ctx.assets = ctx.assets || [];
           ctx.assets.push({ type: 'post', path: p, platform: input.platform });
+
+          // บันทึกข้อมูลโพสต์แบบมีโครงสร้าง ให้เลเยอร์เผยแพร่นำไปโพสต์จริง
+          ctx.posts = ctx.posts || [];
+          ctx.posts.push({
+            platform: input.platform,
+            postType: input.post_type || '',
+            caption: input.caption,
+            hashtags: input.hashtags || '',
+            scheduleTime: input.schedule_time || '',
+            media: resolveMediaRefs(input.media_refs, ctx.assetsDir), // absolute paths
+          });
           return `บันทึกโพสต์ ${input.platform} แล้ว: ${name}`;
         },
       },

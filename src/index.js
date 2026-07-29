@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONFIG } from './config.js';
 import { runCampaign } from './orchestrator.js';
 import { createCampaignDir, buildHtmlPreview } from './output.js';
+import { savePostsManifest, publishCampaign } from './publisher/index.js';
 
 // โหลด .env แบบง่าย (ไม่ต้องพึ่ง dependency)
 function loadDotenv() {
@@ -46,6 +48,7 @@ const { finalReport, timeline } = await runCampaign(brief, ctx, (ev) => {
 });
 
 const previewPath = buildHtmlPreview({ dir: ctx.dir, brief, timeline, finalReport });
+const manifest = savePostsManifest(ctx, brief);
 
 console.log('\n\n══════════════════════════════════════════');
 console.log('📦  สรุปแพ็กเกจคอนเทนต์ (จากผู้จัดการ)');
@@ -53,3 +56,15 @@ console.log('══════════════════════�
 console.log(finalReport);
 console.log('\n🌐  เปิดพรีวิวรวมงานทั้งหมดได้ที่:', previewPath);
 console.log('📂  ไฟล์งานทั้งหมดอยู่ใน:', ctx.dir);
+console.log(`📤  โพสต์ที่พร้อมเผยแพร่: ${manifest.posts.length} โพสต์ (posts.json)`);
+
+// เผยแพร่ต่อ: อัตโนมัติถ้า AUTO_PUBLISH=true, ไม่งั้นแนะนำคำสั่งให้รีวิวก่อน
+if (CONFIG.publish.autoAfterRun && manifest.posts.length) {
+  console.log('\n🚀  AUTO_PUBLISH เปิดอยู่ — กำลังเผยแพร่...\n');
+  const results = await publishCampaign(ctx.dir);
+  for (const r of results) console.log(`   [${r.platform}] ${r.status}${r.reason ? ' — ' + r.reason : ''}${r.error ? ' — ' + r.error : ''}`);
+} else if (manifest.posts.length) {
+  console.log('\n👉  ตรวจงานแล้วสั่งเผยแพร่ด้วย:');
+  console.log(`      node src/publish.js "${ctx.dir}"`);
+  console.log('   (ค่าเริ่มต้นเป็นโหมดซ้อม — ตั้ง PUBLISH_LIVE=true + ใส่ token เพื่อโพสต์จริง)');
+}

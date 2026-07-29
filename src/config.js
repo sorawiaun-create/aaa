@@ -29,4 +29,28 @@ export const CONFIG = {
     imageModel: process.env.IMAGE_MODEL || 'black-forest-labs/flux-schnell', // ภาพเร็ว/ถูก
     videoModel: process.env.VIDEO_MODEL || 'minimax/video-01', // วิดีโอ (ใช้เวลาสร้างนานกว่า)
   },
+
+  // เลเยอร์เผยแพร่ (โพสต์ขึ้นแพลตฟอร์มจริง)
+  publish: {
+    // ค่าเริ่มต้น = ซ้อมโพสต์ (dry-run) ไม่โพสต์จริง; ตั้ง PUBLISH_LIVE=true เพื่อโพสต์จริง
+    live: process.env.PUBLISH_LIVE === 'true',
+    // โพสต์อัตโนมัติหลังรันแคมเปญเสร็จ (ค่าเริ่มต้น = ไม่ ให้รีวิวก่อนสั่งโพสต์เอง)
+    autoAfterRun: process.env.AUTO_PUBLISH === 'true',
+
+    facebook: {
+      pageId: process.env.FB_PAGE_ID || '',
+      token: process.env.FB_PAGE_TOKEN || '',
+      apiVersion: process.env.FB_API_VERSION || 'v21.0',
+    },
+    instagram: {
+      userId: process.env.IG_USER_ID || '',
+      token: process.env.IG_TOKEN || '',
+      // URL สาธารณะที่ชี้ไปยังโฟลเดอร์ assets ของแคมเปญ (IG ต้องดึงสื่อจาก URL)
+      mediaBaseUrl: process.env.MEDIA_BASE_URL || '',
+      apiVersion: process.env.FB_API_VERSION || 'v21.0',
+    },
+    tiktok: {
+      token: process.env.TIKTOK_TOKEN || '',
+    },
+  },
 };

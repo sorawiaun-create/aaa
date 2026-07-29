@@ -79,6 +79,29 @@ brief ──▶ orchestrator(loop)
       99-final-summary.md + index.html
 ```
 
+## เลเยอร์เผยแพร่ (Publisher) — ต้นทาง→ปลายทาง
+
+หลังผลิตคอนเทนต์เสร็จ ระบบเผยแพร่ขึ้นแพลตฟอร์มจริงได้:
+
+```
+แผนกจัดโพสต์ ─save_post─▶ ctx.posts ─▶ posts.json
+                                          │
+                              node src/publish.js <dir>
+                                          ▼
+                    ┌──────────── src/publisher/ ────────────┐
+                    │  index.js  (เลือก adapter ตามแพลตฟอร์ม)  │
+                    ├──────────┬──────────────┬──────────────┤
+                    ▼          ▼              ▼
+              facebook.js  instagram.js   tiktok.js
+              Graph API    Graph API      Content Posting API
+              (อัปไฟล์ตรง)  (ต้อง URL สาธารณะ) (ต้อง app review)
+```
+
+- **โหมดซ้อม (dry-run)** เป็นค่าเริ่มต้น — แสดงว่าจะโพสต์อะไร โดยไม่โพสต์จริง (ปลอดภัย)
+- ตั้ง `PUBLISH_LIVE=true` + token = โพสต์จริง; `AUTO_PUBLISH=true` = โพสต์ทันทีหลังรันแคมเปญ
+- `posts.json` เก็บโพสต์แบบมีโครงสร้าง (แพลตฟอร์ม, แคปชั่น, แฮชแท็ก, สื่อ, เวลาโพสต์)
+- เพิ่มแพลตฟอร์มใหม่ (เช่น YouTube, X) = เพิ่ม adapter ใน `src/publisher/` แล้วผูกใน `pickAdapter`
+
 ## การต่อยอด
 
 - **สร้างภาพ/วิดีโอจริง**: เติมโค้ดเรียก API ที่จุด `TODO` ใน `src/providers/media.js`
