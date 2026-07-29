@@ -5,7 +5,9 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
+    "setup": "node src/server.js",
     "start": "node src/index.js",
+    "publish": "node src/publish.js",
     "demo": "node src/index.js \"อยากได้แคมเปญเปิดตัวครีมกันแดดตัวใหม่ ทำคอนเทนต์ลง TikTok, Instagram และ Facebook กลุ่มเป้าหมายผู้หญิง 18-30 โทนสนุกสดใส\""
   },
   "dependencies": {
