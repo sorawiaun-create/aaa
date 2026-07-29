@@ -38,7 +38,7 @@ const FIELDS = [
 
 const ALL_KEYS = FIELDS.flatMap((g) => g.items.flatMap((i) => (i.pair ? [i.key, i.pair] : [i.key])));
 
-function parseEnv() {
+export function parseEnv() {
   const env = {};
   try {
     for (const line of fs.readFileSync(ENV_FILE, 'utf8').split('\n')) {
@@ -85,7 +85,7 @@ function renderField(item, env) {
   </div>`;
 }
 
-function renderPage(env, saved) {
+export function renderPage(env, saved) {
   const groups = FIELDS.map((g) => `<section class="card"><h2>${g.group}</h2>${g.items.map((i) => renderField(i, env)).join('')}</section>`).join('');
   return `<!doctype html><html lang="th"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/><title>ตั้งค่า API · ศูนย์บัญชาการ AI</title>
@@ -154,6 +154,13 @@ ${saved ? '<div class="toast" id="toast">✅ บันทึกแล้ว</div
 </body></html>`;
 }
 
+export const DEMO_ENV = {
+  ANTHROPIC_API_KEY: 'sk-ant-api03-demo-xxxxxxxxxxxx',
+  IMAGE_PROVIDER: 'replicate', VIDEO_PROVIDER: 'replicate',
+  REPLICATE_API_TOKEN: 'r8_demo_xxxxxxxxxxxx',
+  FB_PAGE_ID: '104857623901', FB_PAGE_TOKEN: 'EAAGm0demoxxxxxxxx',
+};
+
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url.startsWith('/')) {
     const saved = req.url.includes('saved=1');
@@ -178,8 +185,12 @@ const server = http.createServer((req, res) => {
   res.end('not found');
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n⚙️  หน้าตั้งค่า API เปิดแล้ว — เปิดเบราว์เซอร์ไปที่:\n`);
-  console.log(`      http://localhost:${PORT}\n`);
-  console.log('   กรอก key แล้วกดบันทึก · เสร็จแล้วปิดหน้านี้ (Ctrl+C) แล้วรัน node src/index.js\n');
-});
+// เริ่ม server เฉพาะเมื่อรันไฟล์นี้ตรง ๆ (ไม่ใช่ตอน import)
+const isMain = process.argv[1] && process.argv[1].endsWith('server.js');
+if (isMain) {
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`\n⚙️  หน้าตั้งค่า API เปิดแล้ว — เปิดเบราว์เซอร์ไปที่:\n`);
+    console.log(`      http://localhost:${PORT}\n`);
+    console.log('   กรอก key แล้วกดบันทึก · เสร็จแล้วปิดหน้านี้ (Ctrl+C) แล้วรัน node src/index.js\n');
+  });
+}
