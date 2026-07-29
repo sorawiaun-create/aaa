@@ -73,17 +73,31 @@ docs/
 └── ARCHITECTURE.md       # แผนผังและรายละเอียดระบบ
 ```
 
-## ต่อ API สร้างภาพ/วิดีโอจริง
+## เปิดโหมดเจนภาพ/วิดีโอจริง 🖼️🎥
 
 ค่าเริ่มต้นใช้โหมด `placeholder` (สร้างไฟล์ตัวอย่าง SVG/บรีฟ ให้ pipeline ครบวงจรทันทีโดยไม่ต้องมี key)
-เมื่อต้องการภาพ/วิดีโอจริง เปิดไฟล์ [`src/providers/media.js`](src/providers/media.js)
-แล้วเติมโค้ดเรียก API ของเครื่องมือที่คุณใช้ ตรงจุด `TODO` — แค่จุดเดียว ที่เหลือทำงานเหมือนเดิม
 
-```js
-// ตัวอย่างในฟังก์ชัน generateImage:
-//   const bytes = await callImageAPI({ prompt, aspectRatio });
-//   fs.writeFileSync(outPath.replace(/\.svg$/, '.png'), bytes);
+> **ทำไมค่าเริ่มต้นถึงยังไม่เจนจริง?** ตัว Claude เองสร้างภาพ/วิดีโอไม่ได้ — มันทำหน้าที่ "คิด + เขียน prompt"
+> แล้วส่ง prompt ไปให้บริการ text-to-image / text-to-video เจนออกมาเป็นไฟล์อีกที
+> ระบบมีตัวต่อ **Replicate** ให้พร้อมแล้ว (key เดียวใช้ได้ทั้งภาพและวิดีโอ)
+
+**วิธีเปิด (3 ขั้น):**
+
+```bash
+# 1. สมัคร Replicate แล้วเอา token — https://replicate.com/account/api-tokens
+# 2. ตั้งค่า environment (หรือใส่ใน .env)
+export REPLICATE_API_TOKEN=r8_xxxx
+export IMAGE_PROVIDER=replicate
+export VIDEO_PROVIDER=replicate
+# 3. รันตามปกติ — แผนกภาพจะได้ไฟล์ .png / แผนกวิดีโอจะได้ .mp4 จริง
+node src/index.js "โจทย์ของคุณ"
 ```
+
+- ภาพใช้โมเดล `black-forest-labs/flux-schnell` (เร็ว/ถูก), วิดีโอ `minimax/video-01`
+  เปลี่ยนได้ที่ `IMAGE_MODEL` / `VIDEO_MODEL` หรือ `src/config.js`
+- อยากใช้ผู้ให้บริการอื่น (fal.ai / OpenAI / Google Imagen+Veo)? เพิ่ม branch ใหม่ใน
+  [`src/providers/media.js`](src/providers/media.js) ได้เลย โครงสร้างเตรียมไว้แล้ว
+- **หมายเหตุค่าใช้จ่าย:** การเจนภาพ/วิดีโอจริงมีค่าใช้จ่ายตามผู้ให้บริการ (วิดีโอแพงกว่าภาพมาก)
 
 ## หมายเหตุ
 

@@ -19,10 +19,14 @@ export const CONFIG = {
   outputRoot: 'output',
 
   // เลเยอร์สร้างสื่อ (ภาพ/วิดีโอ)
-  // provider = 'placeholder' : สร้างไฟล์ตัวอย่าง (SVG/มานิเฟสต์) ให้ระบบทำงานครบวงจรได้ทันทีโดยไม่ต้องมี key
-  // ต่อ API จริง (text-to-image / text-to-video) ได้ที่ src/providers/media.js
+  // provider = 'placeholder' : สร้างไฟล์ตัวอย่าง (SVG/มานิเฟสต์) โดยไม่ต้องมี key
+  // provider = 'replicate'   : เจนภาพ/วิดีโอจริง (ตั้ง REPLICATE_API_TOKEN ด้วย)
   media: {
-    imageProvider: process.env.IMAGE_PROVIDER || 'placeholder',
-    videoProvider: process.env.VIDEO_PROVIDER || 'placeholder',
+    imageProvider: process.env.IMAGE_PROVIDER || 'placeholder', // 'placeholder' | 'replicate'
+    videoProvider: process.env.VIDEO_PROVIDER || 'placeholder', // 'placeholder' | 'replicate'
+
+    // โมเดลบน Replicate (เปลี่ยนได้ตามต้องการ)
+    imageModel: process.env.IMAGE_MODEL || 'black-forest-labs/flux-schnell', // ภาพเร็ว/ถูก
+    videoModel: process.env.VIDEO_MODEL || 'minimax/video-01', // วิดีโอ (ใช้เวลาสร้างนานกว่า)
   },
 };

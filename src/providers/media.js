@@ -5,58 +5,120 @@ import { escapeHtml, wrapLines, aspectToSize, slugify } from '../util.js';
 
 // ============================================================================
 //  เลเยอร์ผลิตสื่อ (Media Provider)
-//  - โหมด 'placeholder' : สร้างไฟล์ตัวอย่างจริง (SVG/มานิเฟสต์) ให้ pipeline ครบวงจร
-//  - ต่อ API จริงได้โดยเพิ่ม provider ใหม่ในฟังก์ชันด้านล่าง (มีจุด TODO ระบุไว้)
+//  - โหมด 'placeholder' : สร้างไฟล์ตัวอย่างจริง (SVG/มานิเฟสต์) โดยไม่ต้องมี key
+//  - โหมด 'replicate'   : เจนภาพ/วิดีโอจริง ผ่าน Replicate API (ตั้ง REPLICATE_API_TOKEN)
+//  เพิ่ม provider อื่น (fal.ai / OpenAI / Google) ได้โดยเพิ่ม branch ในฟังก์ชันด้านล่าง
 // ============================================================================
 
 const PALETTE = ['#FF5722', '#2196F3', '#00C853', '#9C27B0', '#FE2C55', '#FFC107'];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // -------------------- ภาพ --------------------
 export async function generateImage({ prompt, description = '', aspectRatio = '1:1', filename }, ctx) {
-  const name = ensureExt(filename || slugify(description || prompt), '.svg', 'placeholder');
-  const outPath = path.join(ctx.assetsDir, name);
+  const base = filename || slugify(description || prompt) || 'image';
 
-  if (CONFIG.media.imageProvider === 'placeholder') {
-    fs.writeFileSync(outPath, placeholderImageSVG({ prompt, description, aspectRatio }));
-    return record(ctx, { type: 'image', path: outPath, provider: 'placeholder', prompt, aspectRatio });
+  if (CONFIG.media.imageProvider === 'replicate') {
+    const output = await replicatePredict(CONFIG.media.imageModel, {
+      prompt,
+      aspect_ratio: aspectRatio,
+    });
+    const url = firstUrl(output);
+    const outPath = path.join(ctx.assetsDir, ensureExt(base, extFromUrl(url, '.png')));
+    await download(url, outPath);
+    return record(ctx, { type: 'image', path: outPath, provider: 'replicate', prompt, aspectRatio });
   }
 
-  // TODO: ต่อ API จริง เช่น text-to-image
-  //   const bytes = await callImageAPI({ prompt, aspectRatio });
-  //   fs.writeFileSync(outPath.replace(/\.svg$/, '.png'), bytes);
-  throw new Error(`ยังไม่ได้ตั้งค่า image provider: ${CONFIG.media.imageProvider}`);
+  // placeholder (ค่าเริ่มต้น)
+  const outPath = path.join(ctx.assetsDir, ensureExt(base, '.svg'));
+  fs.writeFileSync(outPath, placeholderImageSVG({ prompt, description, aspectRatio }));
+  return record(ctx, { type: 'image', path: outPath, provider: 'placeholder', prompt, aspectRatio });
 }
 
 // -------------------- วิดีโอ --------------------
 export async function generateVideo({ title, storyboard = '', aspectRatio = '9:16', filename }, ctx) {
-  const name = ensureExt(filename || slugify(title), '.md', 'video-brief');
-  const outPath = path.join(ctx.assetsDir, name);
+  const base = filename || slugify(title) || 'video';
 
-  if (CONFIG.media.videoProvider === 'placeholder') {
-    const manifest =
-      `# 🎬 Render Brief: ${title}\n\n` +
-      `- อัตราส่วน: ${aspectRatio}\n` +
-      `- provider: placeholder (ยังไม่ได้ต่อ text-to-video จริง)\n\n` +
-      `## Storyboard / คำสั่งเรนเดอร์\n\n${storyboard}\n\n` +
-      `> เมื่อต่อ API จริงแล้ว ระบบจะเรนเดอร์ไฟล์วิดีโอไว้ที่โฟลเดอร์นี้แทนไฟล์บรีฟนี้\n`;
-    fs.writeFileSync(outPath, manifest);
-    return record(ctx, { type: 'video', path: outPath, provider: 'placeholder', title, aspectRatio });
+  if (CONFIG.media.videoProvider === 'replicate') {
+    const prompt = `${title}. ${storyboard}`.slice(0, 1500);
+    const output = await replicatePredict(CONFIG.media.videoModel, { prompt });
+    const url = firstUrl(output);
+    const outPath = path.join(ctx.assetsDir, ensureExt(base, extFromUrl(url, '.mp4')));
+    await download(url, outPath);
+    return record(ctx, { type: 'video', path: outPath, provider: 'replicate', title, aspectRatio });
   }
 
-  // TODO: ต่อ API จริง text-to-video
-  throw new Error(`ยังไม่ได้ตั้งค่า video provider: ${CONFIG.media.videoProvider}`);
+  // placeholder: บันทึกบรีฟเรนเดอร์เป็นไฟล์
+  const outPath = path.join(ctx.assetsDir, ensureExt(base, '.md'));
+  const manifest =
+    `# 🎬 Render Brief: ${title}\n\n` +
+    `- อัตราส่วน: ${aspectRatio}\n` +
+    `- provider: placeholder (ยังไม่ได้ต่อ text-to-video จริง)\n\n` +
+    `## Storyboard / คำสั่งเรนเดอร์\n\n${storyboard}\n\n` +
+    `> ตั้ง VIDEO_PROVIDER=replicate + REPLICATE_API_TOKEN เพื่อเรนเดอร์วิดีโอจริง\n`;
+  fs.writeFileSync(outPath, manifest);
+  return record(ctx, { type: 'video', path: outPath, provider: 'placeholder', title, aspectRatio });
+}
+
+// -------------------- Replicate API --------------------
+// สร้าง prediction แล้ว poll จน succeeded (รองรับทั้งภาพเร็ว และวิดีโอที่ใช้เวลานาน)
+async function replicatePredict(model, input) {
+  const token = process.env.REPLICATE_API_TOKEN;
+  if (!token) throw new Error('ยังไม่ได้ตั้งค่า REPLICATE_API_TOKEN');
+  if (!model) throw new Error('ยังไม่ได้ระบุ model (CONFIG.media.imageModel / videoModel)');
+
+  const res = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'wait', // รอผลในคำขอเดียวถ้าเสร็จเร็ว (ภาพ) มิฉะนั้นค่อย poll ต่อ
+    },
+    body: JSON.stringify({ input }),
+  });
+  let pred = await res.json();
+  if (!res.ok) throw new Error(`Replicate error: ${pred.detail || JSON.stringify(pred)}`);
+
+  const terminal = ['succeeded', 'failed', 'canceled'];
+  let tries = 0;
+  while (pred.status && !terminal.includes(pred.status) && tries < 150) {
+    await sleep(3000);
+    const p = await fetch(pred.urls.get, { headers: { Authorization: `Bearer ${token}` } });
+    pred = await p.json();
+    tries++;
+  }
+  if (pred.status !== 'succeeded') {
+    throw new Error(`สร้างสื่อไม่สำเร็จ (status: ${pred.status}) ${pred.error || ''}`);
+  }
+  return pred.output;
 }
 
 // -------------------- helpers --------------------
+function firstUrl(output) {
+  const url = Array.isArray(output) ? output[0] : output;
+  if (typeof url !== 'string') throw new Error('รูปแบบผลลัพธ์จาก provider ไม่ใช่ URL');
+  return url;
+}
+
+async function download(url, outPath) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`ดาวน์โหลดไฟล์ไม่สำเร็จ: ${res.status}`);
+  fs.writeFileSync(outPath, Buffer.from(await res.arrayBuffer()));
+}
+
+function extFromUrl(url, fallback) {
+  const m = String(url).split('?')[0].match(/\.([a-z0-9]{2,4})$/i);
+  return m ? '.' + m[1].toLowerCase() : fallback;
+}
+
 function record(ctx, asset) {
   ctx.assets = ctx.assets || [];
   ctx.assets.push(asset);
   return asset;
 }
 
-function ensureExt(base, ext, fallback) {
-  let b = slugify(base) || fallback;
-  if (!b.endsWith(ext)) b += ext;
+function ensureExt(base, ext) {
+  let b = slugify(base) || 'file';
+  if (!b.toLowerCase().endsWith(ext.toLowerCase())) b += ext;
   return b;
 }
 
