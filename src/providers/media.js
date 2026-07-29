@@ -16,8 +16,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // -------------------- ภาพ --------------------
 export async function generateImage({ prompt, description = '', aspectRatio = '1:1', filename }, ctx) {
   const base = filename || slugify(description || prompt) || 'image';
+  const provider = process.env.IMAGE_PROVIDER || CONFIG.media.imageProvider;
 
-  if (CONFIG.media.imageProvider === 'replicate') {
+  // OpenAI (ChatGPT / gpt-image-1)
+  if (provider === 'openai') {
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) throw new Error('ยังไม่ได้ตั้งค่า OPENAI_API_KEY');
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1', prompt, size: openaiSize(aspectRatio), n: 1 }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(`OpenAI error: ${json.error?.message || JSON.stringify(json)}`);
+    const b64 = json.data?.[0]?.b64_json;
+    if (!b64) throw new Error('OpenAI ไม่ส่งภาพกลับมา');
+    const outPath = path.join(ctx.assetsDir, ensureExt(base, '.png'));
+    fs.writeFileSync(outPath, Buffer.from(b64, 'base64'));
+    return record(ctx, { type: 'image', path: outPath, provider: 'openai', prompt, aspectRatio });
+  }
+
+  if (provider === 'replicate') {
     const output = await replicatePredict(CONFIG.media.imageModel, {
       prompt,
       aspect_ratio: aspectRatio,
@@ -38,7 +57,7 @@ export async function generateImage({ prompt, description = '', aspectRatio = '1
 export async function generateVideo({ title, storyboard = '', aspectRatio = '9:16', filename }, ctx) {
   const base = filename || slugify(title) || 'video';
 
-  if (CONFIG.media.videoProvider === 'replicate') {
+  if ((process.env.VIDEO_PROVIDER || CONFIG.media.videoProvider) === 'replicate') {
     const prompt = `${title}. ${storyboard}`.slice(0, 1500);
     const output = await replicatePredict(CONFIG.media.videoModel, { prompt });
     const url = firstUrl(output);
@@ -103,6 +122,14 @@ async function download(url, outPath) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`ดาวน์โหลดไฟล์ไม่สำเร็จ: ${res.status}`);
   fs.writeFileSync(outPath, Buffer.from(await res.arrayBuffer()));
+}
+
+// อัตราส่วนภาพ -> ขนาดที่ gpt-image-1 รองรับ
+function openaiSize(aspectRatio = '1:1') {
+  const [w, h] = String(aspectRatio).split(':').map(Number);
+  if (w && h && h > w) return '1024x1536'; // แนวตั้ง (4:5, 9:16)
+  if (w && h && w > h) return '1536x1024'; // แนวนอน (16:9)
+  return '1024x1024'; // จตุรัส
 }
 
 function extFromUrl(url, fallback) {

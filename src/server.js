@@ -48,8 +48,10 @@ const FIELDS = [
     { key: 'ANTHROPIC_API_KEY', label: 'Anthropic API Key', hint: 'สมองที่คิด/เขียนคอนเทนต์ (Claude)', link: 'https://console.anthropic.com/settings/keys', secret: true, required: true },
   ]},
   { group: '🎨 สร้างภาพ / วิดีโอ (ไม่ใส่ก็ได้ — จะใช้ไฟล์ตัวอย่างแทน)', items: [
-    { key: 'IMAGE_PROVIDER', label: 'เปิดใช้เจนภาพ/วิดีโอจริง (Replicate)', type: 'toggle', on: 'replicate', off: 'placeholder', pair: 'VIDEO_PROVIDER' },
-    { key: 'REPLICATE_API_TOKEN', label: 'Replicate API Token', hint: 'ใช้เจนภาพ (FLUX) และวิดีโอ', link: 'https://replicate.com/account/api-tokens', secret: true },
+    { key: 'IMAGE_PROVIDER', label: 'ใช้อะไรสร้างภาพ', type: 'select', options: [['placeholder', 'ไฟล์ตัวอย่าง (ฟรี ไม่ต้องมี key)'], ['openai', 'OpenAI / ChatGPT (gpt-image-1)'], ['replicate', 'Replicate (FLUX)']] },
+    { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', hint: 'สำหรับสร้างภาพด้วย gpt-image-1 (เลือก OpenAI ด้านบน)', link: 'https://platform.openai.com/api-keys', secret: true },
+    { key: 'VIDEO_PROVIDER', label: 'ใช้อะไรสร้างวิดีโอ', type: 'select', options: [['placeholder', 'บรีฟตัวอย่าง (ฟรี)'], ['replicate', 'Replicate']] },
+    { key: 'REPLICATE_API_TOKEN', label: 'Replicate API Token', hint: 'สำหรับ FLUX (ภาพ) และวิดีโอ (เลือก Replicate ด้านบน)', link: 'https://replicate.com/account/api-tokens', secret: true },
   ]},
   { group: '📤 เผยแพร่อัตโนมัติ (โพสต์ขึ้นแพลตฟอร์ม)', items: [
     { key: 'PUBLISH_LIVE', label: 'โพสต์จริง (ปิด = โหมดซ้อม ไม่โพสต์จริง)', type: 'toggle', on: 'true', off: '' },
@@ -289,6 +291,12 @@ document.getElementById('pub').addEventListener('click',function(){
 // ============================================================================
 function renderField(item, env) {
   const val = env[item.key] || '';
+  if (item.type === 'select') {
+    const cur = val || (item.options[0] && item.options[0][0]);
+    const opts = item.options.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('');
+    return `<div class="row"><div class="lab">${item.label}</div><select class="sel" name="${item.key}">${opts}</select>
+      ${item.hint ? `<div class="hint">${item.hint}</div>` : ''}</div>`;
+  }
   if (item.type === 'toggle') {
     const checked = val && val === item.on ? 'checked' : '';
     return `<label class="row toggle"><span class="lab">${item.label}</span>
@@ -313,6 +321,8 @@ export function renderSettings(env, saved) {
 .inp{display:flex;gap:6px;}input[type=text],input[type=password]{flex:1;background:#0b1220;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px 12px;font-family:var(--mono);font-size:.82rem;}
 input:focus{outline:2px solid var(--blue);border-color:var(--blue);}
 .eye{background:#182238;border:1px solid var(--line);border-radius:9px;color:var(--ink);cursor:pointer;padding:0 12px;}
+.sel{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px 12px;font-family:var(--font);font-size:.86rem;}
+.sel:focus{outline:2px solid var(--blue);border-color:var(--blue);}
 .hint{font-size:.72rem;color:var(--faint);margin-top:5px;}.hint a{color:var(--blue);}
 .toggle{display:flex;align-items:center;gap:12px;cursor:pointer;}.toggle .lab{flex:1;margin:0;font-weight:500;}
 .toggle input{display:none;}.switch{width:44px;height:24px;border-radius:99px;background:#2a3346;position:relative;transition:.2s;flex:none;}
