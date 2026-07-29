@@ -23,6 +23,41 @@ export function buildSheetCsvUrl(input) {
   return s;
 }
 
+// Parse CSV text into rows of string fields (handles quotes, commas, newlines).
+// We parse ourselves rather than via SheetJS so dates like "05/06/2026" are
+// NOT coerced to US-format serial numbers (which corrupts DD/MM/YYYY dates).
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false;
+      } else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// CSV text -> array of objects keyed by the header row.
+export function csvToRows(text) {
+  const rows = parseCsv(text).filter((r) => r.some((c) => String(c).trim() !== ''));
+  if (rows.length < 2) return [];
+  const headers = rows[0].map((h) => String(h).trim());
+  return rows.slice(1).map((r) => {
+    const o = {};
+    headers.forEach((h, i) => { o[h] = r[i] ?? ''; });
+    return o;
+  });
+}
+
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
 const CAND = {
@@ -54,7 +89,9 @@ export function detectExpenseMapping(headers) {
 
 // Normalize a cell to a "YYYY-MM" month key (handles YYYY-MM, MM/YYYY, full dates).
 export function toMonthKey(v) {
-  const s = String(v ?? '').trim();
+  if (v == null || v === '') return '';
+  if (typeof v === 'number') return monthKeyOf(normalizeDate(v)); // Excel serial
+  const s = String(v).trim();
   if (!s) return '';
   const ym = s.match(/^(\d{4})[-/.](\d{1,2})$/);
   if (ym) return `${ym[1]}-${ym[2].padStart(2, '0')}`;

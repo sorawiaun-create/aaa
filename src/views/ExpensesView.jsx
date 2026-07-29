@@ -5,11 +5,27 @@ import {
 } from 'lucide-react';
 import { SectionCard, Button, EmptyState, Banner, KpiCard, Badge } from '../components/ui.jsx';
 import { formatCurrency, formatNumber, parseMoney, monthLabel } from '../lib/format.js';
-import { buildSheetCsvUrl, detectExpenseMapping, mapExpenseRows } from '../lib/sheetSync.js';
+import { buildSheetCsvUrl, detectExpenseMapping, mapExpenseRows, csvToRows } from '../lib/sheetSync.js';
 
-const SHEET_URL_KEY = 'ptr_gsheet_url';
+const SHEET_SOURCES_KEY = 'ptr_gsheet_sources';
+const SHEET_URL_KEY = 'ptr_gsheet_url'; // legacy single-url (migrated)
 const SHEET_AUTO_KEY = 'ptr_gsheet_auto';
 const AUTO_INTERVAL_MS = 3 * 60 * 1000; // poll every 3 minutes when auto-sync is on
+
+const uid = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 8)
+    : `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+const loadSources = () => {
+  try {
+    const raw = localStorage.getItem(SHEET_SOURCES_KEY);
+    if (raw) return JSON.parse(raw);
+    const legacy = localStorage.getItem(SHEET_URL_KEY);
+    if (legacy) return [{ id: uid(), url: legacy, label: '' }];
+  } catch { /* ignore */ }
+  return [];
+};
 
 const COMMON_CATEGORIES = [
   'เงินเดือนพนักงาน', 'ค่าเช่า', 'ค่าน้ำ/ค่าไฟ', 'ค่าการตลาด/โฆษณา',
@@ -25,58 +41,65 @@ export default function ExpensesView({ store, recon }) {
   const { expenses, addExpense, updateExpense, removeExpense, syncSheetExpenses } = store;
   const [draft, setDraft] = useState({ month: thisMonth(), category: '', amount: '', note: '' });
 
-  // --- Google Sheet sync ---
-  const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem(SHEET_URL_KEY) || '');
+  // --- Google Sheet sync (multiple tabs/links) ---
+  const [sources, setSources] = useState(loadSources);
   const [auto, setAuto] = useState(() => localStorage.getItem(SHEET_AUTO_KEY) === '1');
-  const [sync, setSync] = useState({ busy: false, error: '', lastAt: null, count: 0 });
+  const [sync, setSync] = useState({ busy: false, lastAt: null, count: 0, errors: [] });
   const syncSheetRef = useRef(syncSheetExpenses);
   syncSheetRef.current = syncSheetExpenses;
+  const sourcesRef = useRef(sources);
+  sourcesRef.current = sources;
 
-  const doSync = useCallback(async (url) => {
-    const target = (url ?? sheetUrl).trim();
-    if (!target) return;
-    setSync((s) => ({ ...s, busy: true, error: '' }));
-    try {
-      const csvUrl = buildSheetCsvUrl(target);
-      const res = await fetch(csvUrl, { redirect: 'follow' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      if (/<html/i.test(text.slice(0, 200))) {
-        throw new Error('ชีทยังไม่เปิดสาธารณะ (ได้หน้า HTML แทน CSV)');
+  useEffect(() => {
+    try { localStorage.setItem(SHEET_SOURCES_KEY, JSON.stringify(sources)); } catch { /* ignore */ }
+  }, [sources]);
+
+  const addSource = () => setSources((s) => [...s, { id: uid(), url: '', label: '' }]);
+  const updateSource = (id, patch) => setSources((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const removeSource = (id) => setSources((s) => s.filter((x) => x.id !== id));
+
+  const friendly = (err) =>
+    /Failed to fetch|NetworkError|CORS/i.test(String(err))
+      ? 'ดึงไม่ได้ (ยังไม่เผยแพร่/ปิดสาธารณะ)'
+      : err.message;
+
+  const doSyncAll = useCallback(async () => {
+    const active = (sourcesRef.current || []).filter((s) => s.url.trim());
+    if (!active.length) return;
+    setSync((s) => ({ ...s, busy: true }));
+    const combined = [];
+    const errors = [];
+    for (const src of active) {
+      try {
+        const res = await fetch(buildSheetCsvUrl(src.url.trim()), { redirect: 'follow' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (/<html/i.test(text.slice(0, 200))) throw new Error('ยังไม่เปิดสาธารณะ');
+        const rows = csvToRows(text);
+        const mapping = detectExpenseMapping(rows.length ? Object.keys(rows[0]) : []);
+        if (!mapping.amount) throw new Error('ไม่พบคอลัมน์จำนวนเงิน');
+        const mapped = mapExpenseRows(rows, mapping).map((e, idx) => ({ ...e, id: `gsheet:${src.id}:${idx}` }));
+        combined.push(...mapped);
+      } catch (err) {
+        errors.push(`${src.label || src.url.slice(0, 28) || 'แท็บ'}: ${friendly(err)}`);
       }
-      const XLSX = await import('xlsx');
-      const wb = XLSX.read(text, { type: 'string' });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: true });
-      const headers = rows.length ? Object.keys(rows[0]) : [];
-      const mapping = detectExpenseMapping(headers);
-      if (!mapping.amount) throw new Error(`ไม่พบคอลัมน์จำนวนเงิน (หัวตาราง: ${headers.join(', ')})`);
-      const mapped = mapExpenseRows(rows, mapping);
-      syncSheetRef.current(mapped);
-      setSync({ busy: false, error: '', lastAt: new Date(), count: mapped.length });
-    } catch (err) {
-      const msg = /Failed to fetch|NetworkError|CORS/i.test(String(err))
-        ? 'ดึงข้อมูลไม่ได้ (ต้อง “เผยแพร่ไปยังเว็บ” เป็น CSV ก่อน — ดูวิธีด้านล่าง)'
-        : err.message;
-      setSync({ busy: false, error: msg, lastAt: null, count: 0 });
     }
-  }, [sheetUrl]);
+    syncSheetRef.current(combined);
+    setSync({ busy: false, lastAt: new Date(), count: combined.length, errors });
+  }, []);
 
-  const connect = () => {
-    localStorage.setItem(SHEET_URL_KEY, sheetUrl.trim());
-    doSync(sheetUrl);
-  };
   const toggleAuto = () => {
     const next = !auto;
     setAuto(next);
     localStorage.setItem(SHEET_AUTO_KEY, next ? '1' : '0');
-    if (next) doSync();
+    if (next) doSyncAll();
   };
 
   // Auto-sync: on mount (if enabled) and on an interval.
   useEffect(() => {
-    if (!auto || !sheetUrl.trim()) return;
-    doSync();
-    const id = setInterval(() => doSync(), AUTO_INTERVAL_MS);
+    if (!auto) return;
+    doSyncAll();
+    const id = setInterval(() => doSyncAll(), AUTO_INTERVAL_MS);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto]);
@@ -129,9 +152,9 @@ export default function ExpensesView({ store, recon }) {
         />
       </div>
 
-      {/* Google Sheet sync */}
+      {/* Google Sheet sync (multiple tabs) */}
       <SectionCard
-        title="เชื่อม Google Sheet (ซิงก์รายจ่ายอัตโนมัติ)"
+        title="เชื่อม Google Sheet (หลายแท็บ/เดือน)"
         icon={Sheet}
         action={
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
@@ -141,24 +164,48 @@ export default function ExpensesView({ store, recon }) {
         }
       >
         <div className="p-5 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              value={sheetUrl}
-              onChange={(e) => setSheetUrl(e.target.value)}
-              placeholder="วางลิงก์ Google Sheet (CSV ที่เผยแพร่ไปยังเว็บ)"
-              className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-            <Button icon={RefreshCw} onClick={connect} disabled={sync.busy || !sheetUrl.trim()}>
-              {sync.busy ? 'กำลังซิงก์…' : 'เชื่อม & ซิงก์'}
+          <p className="text-sm text-slate-500">
+            ชีทมีหลายแท็บ (แต่ละเดือน) — เพิ่มลิงก์ของ <b>แต่ละแท็บที่ต้องการดึง</b> (1 บรรทัด = 1 แท็บ)
+            เปิดแท็บนั้นในชีท แล้วคัดลอก URL (ลิงก์จะมี <code>gid</code> ของแท็บนั้น)
+          </p>
+
+          {sources.length === 0 && (
+            <p className="text-sm text-slate-400 border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">ยังไม่มีลิงก์ — กด “เพิ่มแท็บ” เพื่อเริ่ม</p>
+          )}
+          {sources.map((src) => (
+            <div key={src.id} className="flex flex-col sm:flex-row gap-2 items-stretch">
+              <input
+                value={src.label}
+                onChange={(e) => updateSource(src.id, { label: e.target.value })}
+                placeholder="ชื่อ (เช่น ก.ค.)"
+                className="sm:w-32 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none"
+              />
+              <input
+                value={src.url}
+                onChange={(e) => updateSource(src.id, { url: e.target.value })}
+                placeholder="วางลิงก์แท็บ Google Sheet"
+                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:outline-none"
+              />
+              <button onClick={() => removeSource(src.id)} className="text-slate-400 hover:text-red-500 px-3 rounded-lg hover:bg-red-50" title="ลบลิงก์นี้">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" icon={Plus} onClick={addSource}>เพิ่มแท็บ</Button>
+            <Button icon={RefreshCw} onClick={doSyncAll} disabled={sync.busy || !sources.some((s) => s.url.trim())}>
+              {sync.busy ? 'กำลังซิงก์…' : 'ซิงก์ทั้งหมด'}
             </Button>
           </div>
 
-          {sync.error && (
+          {sync.errors?.length > 0 && (
             <Banner tone="error">
-              <XCircle size={16} className="mt-0.5 shrink-0" /> {sync.error}
+              <XCircle size={16} className="mt-0.5 shrink-0" />
+              <span className="whitespace-pre-line">ดึงบางแท็บไม่ได้:{'\n'}{sync.errors.join('\n')}</span>
             </Banner>
           )}
-          {sync.lastAt && !sync.error && (
+          {sync.lastAt && (sync.errors?.length ?? 0) === 0 && (
             <Banner tone="success">
               <CheckCircle size={16} className="mt-0.5 shrink-0" />
               ซิงก์แล้ว {formatNumber(sync.count)} รายการ · ล่าสุด {sync.lastAt.toLocaleTimeString('th-TH')}
@@ -166,10 +213,9 @@ export default function ExpensesView({ store, recon }) {
           )}
 
           <div className="text-xs text-slate-500 bg-slate-50 rounded-xl p-3 space-y-1">
-            <p className="font-semibold text-slate-600">วิธีเปิดชีทให้ดึงได้ (ทำครั้งเดียว):</p>
-            <p>1. ในชีท → เมนู <b>ไฟล์ (File)</b> → <b>แชร์ (Share)</b> → <b>เผยแพร่ไปยังเว็บ (Publish to web)</b></p>
-            <p>2. เลือก <b>แท็บที่ลงรายจ่าย</b> และรูปแบบ <b>CSV</b> → กด <b>เผยแพร่</b> → คัดลอกลิงก์มาวาง</p>
-            <p>3. หัวตารางควรมีคอลัมน์: <b>เดือน/วันที่</b>, <b>หมวด/รายการ</b>, <b>จำนวนเงิน</b> (และ <b>หมายเหตุ</b> ถ้ามี)</p>
+            <p className="font-semibold text-slate-600">เปิดชีทให้ดึงได้ (ทำครั้งเดียว):</p>
+            <p>ในชีท → <b>ไฟล์</b> → <b>แชร์</b> → <b>เผยแพร่ไปยังเว็บ</b> → เลือก <b>ทั้งเอกสาร</b> (หรือแต่ละแท็บ) รูปแบบ <b>CSV</b> → เผยแพร่</p>
+            <p>หัวตารางควรมี: <b>วันที่/เดือน</b> · <b>หมวด/รายการ</b> · <b>จำนวนเงิน</b> (+ <b>หมายเหตุ</b> ถ้ามี) — แถว “รวม/total” จะถูกข้ามให้อัตโนมัติ</p>
           </div>
         </div>
       </SectionCard>
