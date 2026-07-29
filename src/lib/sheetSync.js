@@ -63,22 +63,31 @@ export function toMonthKey(v) {
   return monthKeyOf(normalizeDate(s)) || '';
 }
 
+// Rows that are totals/summaries in the sheet — skipped (the app sums itself).
+const TOTAL_RE = /(^|[\s(])(รวม|ผลรวม|ยอดรวม|รวมทั้ง|total|sum|grand\s*total)/i;
+
 // Map raw sheet rows (objects keyed by header) → expense records tagged gsheet.
 export function mapExpenseRows(rows, mapping) {
   const out = [];
   rows.forEach((row, i) => {
     const get = (f) => (mapping[f] ? row[mapping[f]] : '');
     const amount = parseMoney(get('amount'));
-    const category = String(get('category') ?? '').trim();
-    if (!amount && !category) return; // skip blank/total rows
     if (!amount) return;
+    const rawDate = get('month');
+    const category = String(get('category') ?? '').trim();
+    const note = String(get('note') ?? '').trim();
+    // Skip total / summary rows (already summed by the app)
+    if (TOTAL_RE.test(category) || TOTAL_RE.test(String(rawDate)) || TOTAL_RE.test(note)) return;
+    const month = toMonthKey(rawDate);
+    if (!month && !category) return; // bare total-style row
     out.push({
       id: `gsheet:${i}`,
       source: 'gsheet',
-      month: toMonthKey(get('month')),
+      date: normalizeDate(rawDate) || String(rawDate ?? '').trim(),
+      month,
       category: category || 'ไม่ระบุหมวด',
       amount,
-      note: String(get('note') ?? '').trim(),
+      note,
     });
   });
   return out;

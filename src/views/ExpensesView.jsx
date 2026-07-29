@@ -212,7 +212,8 @@ export default function ExpensesView({ store, recon }) {
                       const fromSheet = e.source === 'gsheet';
                       return (
                       <tr key={e.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-2.5 w-1/3">
+                        <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap w-28">{e.date || monthLabel(e.month)}</td>
+                        <td className="px-4 py-2.5">
                           <span className="flex items-center gap-1.5">
                             <Badge color="slate">{e.category}</Badge>
                             {fromSheet && <Badge color="blue">Sheet</Badge>}
@@ -232,11 +233,9 @@ export default function ExpensesView({ store, recon }) {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right w-12">
-                          {!fromSheet && (
-                            <button onClick={() => removeExpense(e.id)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50" title="ลบ">
-                              <Trash2 size={15} />
-                            </button>
-                          )}
+                          <button onClick={() => removeExpense(e.id)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50" title="ลบ">
+                            <Trash2 size={15} />
+                          </button>
                         </td>
                       </tr>
                     );})}
