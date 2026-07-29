@@ -187,6 +187,14 @@ export function useStore() {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // Replace all Google-Sheet-sourced expenses with a fresh sync (keeps manual ones).
+  const syncSheetExpenses = useCallback((sheetExpenses) => {
+    setExpenses((prev) => [
+      ...prev.filter((e) => e.source !== 'gsheet'),
+      ...sheetExpenses.map((e) => ({ ...e, source: 'gsheet' })),
+    ]);
+  }, []);
+
   const clearAll = useCallback(() => {
     setProducts([]);
     setSales([]);
@@ -212,6 +220,6 @@ export function useStore() {
     setProducts, setSales, setFees, setOrderFees, setExpenses, setMappings,
     upsertProduct, removeProduct, removeProducts, mergeProducts,
     addSales, addSalesBatch, removeSalesBatch, addFees, upsertFees, addOrderFees, clearOrderFees,
-    addExpense, updateExpense, removeExpense, clearAll, importAll,
+    addExpense, updateExpense, removeExpense, syncSheetExpenses, clearAll, importAll,
   };
 }
