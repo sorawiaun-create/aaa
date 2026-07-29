@@ -19,6 +19,10 @@ function loadDotenv() {
 }
 loadDotenv();
 
+// โหมดส่ง event แบบ JSON (ให้หน้าเว็บอ่าน progress) เปิดด้วย WEB_EVENTS=1
+const EMIT = process.env.WEB_EVENTS === '1';
+const emit = (o) => { if (EMIT) process.stdout.write('@@EV@@' + JSON.stringify(o) + '\n'); };
+
 const brief =
   process.argv.slice(2).join(' ').trim() ||
   'อยากได้แคมเปญเปิดตัวครีมกันแดดตัวใหม่ ทำคอนเทนต์ลง TikTok, Instagram และ Facebook ' +
@@ -35,20 +39,24 @@ if (!process.env.ANTHROPIC_API_KEY) {
 const ctx = createCampaignDir(brief);
 console.log('📁  โฟลเดอร์ผลงาน:', ctx.dir, '\n');
 
+emit({ type: 'start', dir: ctx.dir });
 const { finalReport, timeline } = await runCampaign(brief, ctx, (ev) => {
   if (ev.type === 'delegate') {
     console.log(`\n➡️  มอบหมายให้ [${ev.dept}]`);
     console.log(`   งาน: ${ev.task}`);
+    emit({ type: 'delegate', key: ev.key, dept: ev.dept, task: ev.task });
   } else if (ev.type === 'result') {
     const files = (ev.assets || []).map((a) => path.relative(ctx.dir, a.path));
     console.log(`\n✅  [${ev.dept}] ส่งงานแล้ว${files.length ? ` (สร้างไฟล์: ${files.join(', ')})` : ''}`);
     console.log(ev.result);
     console.log('\n' + '─'.repeat(60));
+    emit({ type: 'result', key: ev.key, dept: ev.dept, files });
   }
 });
 
 const previewPath = buildHtmlPreview({ dir: ctx.dir, brief, timeline, finalReport });
 const manifest = savePostsManifest(ctx, brief);
+emit({ type: 'done', dir: ctx.dir, preview: previewPath, posts: manifest.posts.length, finalReport });
 
 console.log('\n\n══════════════════════════════════════════');
 console.log('📦  สรุปแพ็กเกจคอนเทนต์ (จากผู้จัดการ)');

@@ -143,9 +143,9 @@ export async function runCampaign(brief, ctx, onEvent = () => {}) {
         continue;
       }
 
-      onEvent({ type: 'delegate', dept: dept.name, task: block.input.task });
+      onEvent({ type: 'delegate', key: dept.key, dept: dept.name, task: block.input.task });
       const { text, assets } = await runDepartment(dept, block.input.task, brief, ctx);
-      onEvent({ type: 'result', dept: dept.name, result: text, assets });
+      onEvent({ type: 'result', key: dept.key, dept: dept.name, result: text, assets });
 
       step += 1;
       saveText(ctx.dir, `${String(step).padStart(2, '0')}-${dept.key}.md`, text);

@@ -35,3 +35,8 @@ for (const r of results) {
   console.log(`${icon[r.status] || '•'}  [${r.platform}] ${r.status}` + (r.id ? ` id=${r.id}` : '') + (r.reason ? ` — ${r.reason}` : '') + (r.error ? ` — ${r.error}` : '') + (r.note ? ` — ${r.note}` : ''));
 }
 console.log('\nเสร็จสิ้น', results.length, 'โพสต์');
+
+// ส่งผลแบบ JSON ให้หน้าเว็บ (WEB_EVENTS=1)
+if (process.env.WEB_EVENTS === '1') {
+  process.stdout.write('@@EV@@' + JSON.stringify({ type: 'published', live: CONFIG.publish.live, results }) + '\n');
+}
