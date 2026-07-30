@@ -4,6 +4,7 @@ import {
   CalendarCheck, Settings, LogOut, Menu, X, Loader2,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
+import { isConfigured, cloudInitError } from './lib/supabase.js';
 import { monthOptionsFrom } from './lib/payroll.js';
 import { monthLabel } from './lib/format.js';
 import { cn } from './components/ui.jsx';
@@ -43,6 +44,9 @@ export default function App() {
   );
 
   const current = NAV.find((n) => n.id === view) || NAV[0];
+
+  // Cloud configured but failed to initialise (bad URL/key) — show why.
+  if (isConfigured && cloudInitError) return <ConfigError message={cloudInitError} />;
 
   // Cloud mode: wait for auth, then gate on sign-in.
   if (store.mode === 'cloud') {
@@ -174,6 +178,24 @@ function FullscreenSpinner({ label }) {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-300">
       <Loader2 size={28} className="animate-spin text-pink-500" />
       <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
+function ConfigError({ message }) {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-6 space-y-3">
+        <div className="flex items-center gap-2 text-rose-600 font-bold">
+          <span className="text-xl">⚠️</span> ตั้งค่าคลาวด์ไม่ถูกต้อง
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+        <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 space-y-1">
+          <p>ตรวจ Environment Variables ใน Vercel ให้มีครบ 2 ตัว แล้ว Redeploy:</p>
+          <p><code>VITE_SUPABASE_URL</code> = https://xxxx.supabase.co</p>
+          <p><code>VITE_SUPABASE_ANON_KEY</code> = eyJ… (anon public)</p>
+        </div>
+      </div>
     </div>
   );
 }
