@@ -55,13 +55,42 @@ npm test         # รันชุดทดสอบตรรกะการค�
 
 > เปิดครั้งแรกให้ไปที่ **ตั้งค่าระบบ → โหลดข้อมูลตัวอย่าง** เพื่อดูภาพรวมการทำงานทั้งหมด
 
+## โหมดข้อมูล: เก็บในเครื่อง vs. ฐานข้อมูลกลาง (หลายคน/หลายเครื่อง)
+
+แอปทำงานได้ **2 โหมด** โดยอัตโนมัติ ขึ้นกับว่าตั้งค่า Supabase ไว้หรือไม่:
+
+| | **โหมดเครื่อง** (ค่าเริ่มต้น) | **โหมดคลาวด์** (ตั้งค่า Supabase) |
+|---|---|---|
+| ที่เก็บข้อมูล | `localStorage` ในเบราว์เซอร์ | ฐานข้อมูลกลาง (Supabase Postgres) |
+| ใช้หลายเครื่อง/หลายคน | ❌ ต่างเครื่องเห็นคนละชุด | ✅ ทุกเครื่องเห็นชุดเดียวกัน sync ทันที |
+| ล็อกอิน | ไม่มี | มี (อีเมล/รหัสผ่าน) |
+| ต้องตั้งค่าเพิ่ม | ไม่ต้อง | ตั้งค่า Supabase (ดูด้านล่าง) |
+
+> ถ้า **ไม่ใส่** ค่า env ของ Supabase แอปจะเป็นโหมดเครื่องเหมือนเดิมทุกประการ
+
+### ตั้งค่าโหมดคลาวด์ด้วย Supabase (ฟรี)
+
+1. สมัคร **[supabase.com](https://supabase.com)** → **New project** (ตั้งรหัสผ่าน DB, เลือก region ใกล้ไทย เช่น Singapore)
+2. เปิด **SQL Editor** → วางไฟล์ [`supabase/schema.sql`](supabase/schema.sql) ทั้งไฟล์ → **Run**
+   (สร้างตาราง + เปิดสิทธิ์เฉพาะผู้ล็อกอิน + เปิด realtime)
+3. ไป **Project Settings → API** คัดลอก **Project URL** และ **anon public key**
+4. ตั้งเป็น environment variables:
+   - ตอนพัฒนา: คัดลอก `.env.example` เป็น `.env` แล้วใส่ค่า
+   - ตอน deploy บน **Vercel**: **Settings → Environment Variables** เพิ่ม
+     `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY` แล้ว **Redeploy**
+5. สร้างบัญชีผู้ใช้: เปิดเว็บ → หน้า **เข้าสู่ระบบ** → "สร้างบัญชีพนักงานใหม่"
+   (หรือสร้างในหน้า Supabase → Authentication → Users)
+   - แนะนำ: Supabase → Authentication → Providers → ปิด "Confirm email" เพื่อให้ล็อกอินได้ทันที
+
+เสร็จแล้วทุกคนที่ล็อกอินจะเห็น/แก้ข้อมูลชุดกลางร่วมกัน และอัปเดตสด ๆ ข้ามเครื่อง
+
 ## Deploy ออนไลน์ (ฟรี)
 
-แอปเป็นเว็บ static (ข้อมูลอยู่ใน browser) จึง deploy ฟรีได้ทันที มีไฟล์ config ให้แล้ว
-(`vercel.json`, `netlify.toml`)
+แอปเป็นเว็บ static จึง deploy ฟรีได้ทันที มีไฟล์ config ให้แล้ว (`vercel.json`, `netlify.toml`)
 
 - **Vercel / Netlify / Cloudflare Pages:** เชื่อม repo → Framework = Vite,
   Build = `npm run build`, Output = `dist`
+- ถ้าต้องการโหมดคลาวด์ อย่าลืมใส่ env `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
 
 ## เทคโนโลยี
 
@@ -71,13 +100,17 @@ React + Vite · Tailwind CSS · Recharts · lucide-react · localStorage
 
 ```
 src/
-  App.jsx                # layout + แถบเมนู + ตัวเลือกเดือน
-  components/ui.jsx       # UI kit (การ์ด, ปุ่ม, ฟอร์ม, modal, badge)
+  App.jsx                # layout + แถบเมนู + ตัวเลือกเดือน + auth gate
+  components/
+    ui.jsx               # UI kit (การ์ด, ปุ่ม, ฟอร์ม, modal, badge)
+    Login.jsx            # หน้าเข้าสู่ระบบ (โหมดคลาวด์)
   lib/
     format.js            # ฟอร์แมตเงิน/วันที่ + ตัวช่วยแปลงวันที่
     payroll.js           # เอนจินคำนวณ: คอมมิชชั่น, ค่าจ้าง, KPI, สถิติช่อง/ทีม
-    store.js             # state + persistence (localStorage)
+    store.js             # state + sync (localStorage หรือ Supabase)
+    supabase.js          # เชื่อม Supabase (เปิดโหมดคลาวด์เมื่อมี env)
     sampleData.js        # ชุดข้อมูลตัวอย่าง
   views/                 # หน้าจอแต่ละเมนู
+supabase/schema.sql      # SQL สร้างตาราง + สิทธิ์ + realtime
 test/logic.test.js       # ทดสอบตรรกะการคำนวณ
 ```

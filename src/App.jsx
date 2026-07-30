@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
   BarChart3, Radio, Video, ClipboardList, Trophy, Target,
-  CalendarCheck, Settings, LogOut, Menu, X,
+  CalendarCheck, Settings, LogOut, Menu, X, Loader2,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { monthOptionsFrom } from './lib/payroll.js';
 import { monthLabel } from './lib/format.js';
 import { cn } from './components/ui.jsx';
+import Login from './components/Login.jsx';
 import OverviewView from './views/OverviewView.jsx';
 import RealtimeView from './views/RealtimeView.jsx';
 import ChannelsView from './views/ChannelsView.jsx';
@@ -43,6 +44,12 @@ export default function App() {
 
   const current = NAV.find((n) => n.id === view) || NAV[0];
 
+  // Cloud mode: wait for auth, then gate on sign-in.
+  if (store.mode === 'cloud') {
+    if (!store.authReady) return <FullscreenSpinner label="กำลังเชื่อมต่อ…" />;
+    if (!store.user) return <Login store={store} />;
+  }
+
   const NavList = ({ onPick }) => (
     <nav className="space-y-1">
       {NAV.map((item) => (
@@ -69,7 +76,7 @@ export default function App() {
       <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-slate-950 p-4 sticky top-0 h-screen">
         <Brand name={store.settings.companyName} />
         <div className="mt-4 flex-1"><NavList /></div>
-        <OwnerBox />
+        <OwnerBox store={store} />
       </aside>
 
       {/* Mobile drawer */}
@@ -82,7 +89,7 @@ export default function App() {
               <button onClick={() => setMobileNav(false)} className="text-slate-400"><X size={20} /></button>
             </div>
             <div className="mt-4 flex-1"><NavList onPick={() => setMobileNav(false)} /></div>
-            <OwnerBox />
+            <OwnerBox store={store} />
           </aside>
         </div>
       )}
@@ -96,6 +103,11 @@ export default function App() {
             {current.label}
           </h1>
           <div className="ml-auto flex items-center gap-2">
+            {store.mode === 'cloud' && store.loading && (
+              <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400">
+                <Loader2 size={13} className="animate-spin" /> กำลังโหลด…
+              </span>
+            )}
             {MONTH_VIEWS.has(view) && (
               <select
                 value={month}
@@ -138,14 +150,30 @@ function Brand({ name }) {
   );
 }
 
-function OwnerBox() {
+function OwnerBox({ store }) {
+  const cloud = store.mode === 'cloud';
+  const label = cloud ? (store.user?.email || 'ผู้ใช้') : 'เจ้าของ';
   return (
     <div className="mt-auto pt-4 border-t border-white/10">
-      <div className="text-[11px] text-slate-400 px-2">เจ้าของกิจการ</div>
-      <div className="text-sm text-slate-200 px-2 mb-2">เจ้าของ</div>
-      <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-white/5">
-        <LogOut size={16} /> ออกจากระบบ
-      </button>
+      <div className="text-[11px] text-slate-400 px-2 flex items-center gap-1.5">
+        <span className={cn('inline-block w-1.5 h-1.5 rounded-full', cloud ? 'bg-emerald-400' : 'bg-slate-500')} />
+        {cloud ? 'ฐานข้อมูลกลาง (ออนไลน์)' : 'เก็บในเครื่องนี้'}
+      </div>
+      <div className="text-sm text-slate-200 px-2 mb-2 truncate" title={label}>{label}</div>
+      {cloud && (
+        <button onClick={() => store.signOut()} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-white/5">
+          <LogOut size={16} /> ออกจากระบบ
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FullscreenSpinner({ label }) {
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-300">
+      <Loader2 size={28} className="animate-spin text-pink-500" />
+      <span className="text-sm">{label}</span>
     </div>
   );
 }
