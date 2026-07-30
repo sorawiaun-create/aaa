@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 
+// localStorage keys — versioned so a schema bump can migrate cleanly.
 const KEYS = {
-  products: 'ptr_products_v1',
-  sales: 'ptr_sales_v1',
-  salesBatches: 'ptr_salesbatches_v1',
-  fees: 'ptr_fees_v1',
-  orderFees: 'ptr_orderfees_v1',
-  expenses: 'ptr_expenses_v1',
-  mappings: 'ptr_mappings_v1',
+  channels: 'tla_channels_v1',
+  employees: 'tla_employees_v1',
+  teams: 'tla_teams_v1',
+  sales: 'tla_sales_v1',
+  workLogs: 'tla_worklogs_v1',
+  settings: 'tla_settings_v1',
 };
 
-const uid = () =>
-  (typeof crypto !== 'undefined' && crypto.randomUUID)
+export const uid = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -32,194 +32,130 @@ const save = (key, value) => {
   }
 };
 
+export const DEFAULT_SETTINGS = {
+  companyName: 'TikTok Live Aff',
+  currency: 'THB',
+  // Fallback commission plan applied to employees with no own plan.
+  defaultCommission: { type: 'flat', rate: 3, tiers: [] },
+  // Default working days per month, used when a monthly-base employee has no
+  // explicit day count (base is paid in full regardless; this is for reference).
+  workDaysPerMonth: 26,
+};
+
 // Central data store, persisted to localStorage. Every mutation auto-saves.
 export function useStore() {
-  const [products, setProducts] = useState(() => load(KEYS.products, []));
+  const [channels, setChannels] = useState(() => load(KEYS.channels, []));
+  const [employees, setEmployees] = useState(() => load(KEYS.employees, []));
+  const [teams, setTeams] = useState(() => load(KEYS.teams, []));
   const [sales, setSales] = useState(() => load(KEYS.sales, []));
-  const [salesBatches, setSalesBatches] = useState(() => load(KEYS.salesBatches, []));
-  const [fees, setFees] = useState(() => load(KEYS.fees, []));
-  const [orderFees, setOrderFees] = useState(() => load(KEYS.orderFees, []));
-  const [expenses, setExpenses] = useState(() => load(KEYS.expenses, []));
-  const [mappings, setMappings] = useState(() => load(KEYS.mappings, {}));
+  const [workLogs, setWorkLogs] = useState(() => load(KEYS.workLogs, []));
+  const [settings, setSettings] = useState(() => ({
+    ...DEFAULT_SETTINGS,
+    ...load(KEYS.settings, {}),
+  }));
 
-  useEffect(() => save(KEYS.products, products), [products]);
+  useEffect(() => save(KEYS.channels, channels), [channels]);
+  useEffect(() => save(KEYS.employees, employees), [employees]);
+  useEffect(() => save(KEYS.teams, teams), [teams]);
   useEffect(() => save(KEYS.sales, sales), [sales]);
-  useEffect(() => save(KEYS.salesBatches, salesBatches), [salesBatches]);
-  useEffect(() => save(KEYS.fees, fees), [fees]);
-  useEffect(() => save(KEYS.orderFees, orderFees), [orderFees]);
-  useEffect(() => save(KEYS.expenses, expenses), [expenses]);
-  useEffect(() => save(KEYS.mappings, mappings), [mappings]);
+  useEffect(() => save(KEYS.workLogs, workLogs), [workLogs]);
+  useEffect(() => save(KEYS.settings, settings), [settings]);
 
-  // --- Products (SKU cost master) ---
-  const upsertProduct = useCallback((product) => {
-    setProducts((prev) => {
-      const key = String(product.sku).trim().toLowerCase();
-      const idx = prev.findIndex((p) => String(p.sku).trim().toLowerCase() === key);
-      if (idx === -1) return [...prev, product];
-      const next = [...prev];
-      next[idx] = { ...next[idx], ...product };
-      return next;
-    });
+  // --- Channels ---
+  const addChannel = useCallback((channel) => {
+    setChannels((prev) => [...prev, { id: uid(), status: 'active', createdAt: new Date().toISOString(), ...channel }]);
+  }, []);
+  const updateChannel = useCallback((id, patch) => {
+    setChannels((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }, []);
+  const removeChannel = useCallback((id) => {
+    setChannels((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
-  const removeProduct = useCallback((sku) => {
-    const key = String(sku).trim().toLowerCase();
-    setProducts((prev) => prev.filter((p) => String(p.sku).trim().toLowerCase() !== key));
+  // --- Employees ---
+  const addEmployee = useCallback((emp) => {
+    setEmployees((prev) => [...prev, { id: uid(), active: true, ...emp }]);
+  }, []);
+  const updateEmployee = useCallback((id, patch) => {
+    setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+  const removeEmployee = useCallback((id) => {
+    setEmployees((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
-  // Bulk delete products by a set/array of SKUs.
-  const removeProducts = useCallback((skus) => {
-    const keys = new Set([...skus].map((s) => String(s).trim().toLowerCase()));
-    setProducts((prev) => prev.filter((p) => !keys.has(String(p.sku).trim().toLowerCase())));
+  // --- Teams ---
+  const addTeam = useCallback((team) => {
+    setTeams((prev) => [...prev, { id: uid(), ...team }]);
+  }, []);
+  const updateTeam = useCallback((id, patch) => {
+    setTeams((prev) => prev.map((tm) => (tm.id === id ? { ...tm, ...patch } : tm)));
+  }, []);
+  const removeTeam = useCallback((id) => {
+    setTeams((prev) => prev.filter((tm) => tm.id !== id));
   }, []);
 
-  // Merge products by SKU (used by CSV cost import). Returns count added/updated.
-  const mergeProducts = useCallback((incoming) => {
-    let added = 0;
-    let updated = 0;
-    setProducts((prev) => {
-      const map = new Map(prev.map((p) => [String(p.sku).trim().toLowerCase(), p]));
-      incoming.forEach((p) => {
-        const key = String(p.sku).trim().toLowerCase();
-        if (!key) return;
-        if (map.has(key)) {
-          map.set(key, { ...map.get(key), ...p });
-          updated += 1;
-        } else {
-          map.set(key, p);
-          added += 1;
-        }
-      });
-      return [...map.values()];
-    });
-    return { added, updated };
+  // --- Sales (daily per-channel records) ---
+  const addSale = useCallback((sale) => {
+    setSales((prev) => [{ id: uid(), ...sale }, ...prev]);
+  }, []);
+  const updateSale = useCallback((id, patch) => {
+    setSales((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  }, []);
+  const removeSale = useCallback((id) => {
+    setSales((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
-  // --- Sales (dedupe by record id) ---
-  const addSales = useCallback((records) => {
-    let added = 0;
-    setSales((prev) => {
-      const seen = new Set(prev.map((r) => r.id));
-      const fresh = records.filter((r) => !seen.has(r.id));
-      added = fresh.length;
-      return [...prev, ...fresh];
-    });
-    return added;
+  // --- Daily work logs (attendance / shifts) ---
+  const addWorkLog = useCallback((log) => {
+    setWorkLogs((prev) => [{ id: uid(), ...log }, ...prev]);
+  }, []);
+  const updateWorkLog = useCallback((id, patch) => {
+    setWorkLogs((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch } : w)));
+  }, []);
+  const removeWorkLog = useCallback((id) => {
+    setWorkLogs((prev) => prev.filter((w) => w.id !== id));
   }, []);
 
-  // Import as a tracked batch so a single upload can be deleted later.
-  const addSalesBatch = useCallback(
-    (meta, records) => {
-      const batchId = uid();
-      const existing = new Set(sales.map((r) => r.id));
-      const fresh = records
-        .filter((r) => !existing.has(r.id))
-        .map((r) => ({ ...r, batchId }));
-      setSales((prev) => {
-        const seen = new Set(prev.map((r) => r.id));
-        return [...prev, ...fresh.filter((r) => !seen.has(r.id))];
-      });
-      setSalesBatches((prev) => [
-        {
-          id: batchId,
-          fileName: meta.fileName || 'ไฟล์',
-          platform: meta.platform,
-          date: new Date().toISOString(),
-          count: fresh.length,
-          total: records.length,
-        },
-        ...prev,
-      ]);
-      return { added: fresh.length, batchId };
-    },
-    [sales]
-  );
-
-  // Delete one import batch: its sales rows + the batch entry.
-  const removeSalesBatch = useCallback((batchId) => {
-    setSales((prev) => prev.filter((r) => r.batchId !== batchId));
-    setSalesBatches((prev) => prev.filter((b) => b.id !== batchId));
+  // --- Settings ---
+  const updateSettings = useCallback((patch) => {
+    setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // --- Fees (dedupe by document id) ---
-  const addFees = useCallback((records) => {
-    let added = 0;
-    setFees((prev) => {
-      const seen = new Set(prev.map((r) => r.id));
-      const fresh = records.filter((r) => r.id && !seen.has(r.id));
-      added = fresh.length;
-      return [...prev, ...fresh];
-    });
-    return added;
-  }, []);
-
-  // Insert-or-replace fee records by id (used by settlement re-imports, so
-  // re-uploading the same month's report overwrites rather than skips).
-  const upsertFees = useCallback((records) => {
-    setFees((prev) => {
-      const ids = new Set(records.map((r) => r.id));
-      const kept = prev.filter((r) => !ids.has(r.id));
-      return [...kept, ...records];
-    });
-    return records.length;
-  }, []);
-
-  // Per-order fees: insert-or-replace by id so re-imports overwrite.
-  const addOrderFees = useCallback((records) => {
-    setOrderFees((prev) => {
-      const ids = new Set(records.map((r) => r.id));
-      const kept = prev.filter((r) => !ids.has(r.id));
-      return [...kept, ...records];
-    });
-    return records.length;
-  }, []);
-
-  const clearOrderFees = useCallback(() => setOrderFees([]), []);
-
-  // --- General (operating) expenses ---
-  const addExpense = useCallback((exp) => {
-    setExpenses((prev) => [...prev, { id: uid(), ...exp }]);
-  }, []);
-  const updateExpense = useCallback((id, patch) => {
-    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  }, []);
-  const removeExpense = useCallback((id) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-  }, []);
-
-  // Replace all Google-Sheet-sourced expenses with a fresh sync (keeps manual ones).
-  const syncSheetExpenses = useCallback((sheetExpenses) => {
-    setExpenses((prev) => [
-      ...prev.filter((e) => e.source !== 'gsheet'),
-      ...sheetExpenses.map((e) => ({ ...e, source: 'gsheet' })),
-    ]);
-  }, []);
-
+  // --- Data management ---
   const clearAll = useCallback(() => {
-    setProducts([]);
+    setChannels([]);
+    setEmployees([]);
+    setTeams([]);
     setSales([]);
-    setSalesBatches([]);
-    setFees([]);
-    setOrderFees([]);
-    setExpenses([]);
-    setMappings({});
+    setWorkLogs([]);
+    setSettings(DEFAULT_SETTINGS);
   }, []);
 
   const importAll = useCallback((snapshot) => {
-    if (snapshot.products) setProducts(snapshot.products);
+    if (snapshot.channels) setChannels(snapshot.channels);
+    if (snapshot.employees) setEmployees(snapshot.employees);
+    if (snapshot.teams) setTeams(snapshot.teams);
     if (snapshot.sales) setSales(snapshot.sales);
-    setSalesBatches(snapshot.salesBatches || []);
-    if (snapshot.fees) setFees(snapshot.fees);
-    if (snapshot.orderFees) setOrderFees(snapshot.orderFees);
-    if (snapshot.expenses) setExpenses(snapshot.expenses);
-    if (snapshot.mappings) setMappings(snapshot.mappings);
+    if (snapshot.workLogs) setWorkLogs(snapshot.workLogs);
+    if (snapshot.settings) setSettings({ ...DEFAULT_SETTINGS, ...snapshot.settings });
+  }, []);
+
+  const loadSample = useCallback((sample) => {
+    setChannels(sample.channels);
+    setEmployees(sample.employees);
+    setTeams(sample.teams);
+    setSales(sample.sales);
+    setWorkLogs(sample.workLogs);
+    setSettings({ ...DEFAULT_SETTINGS, ...(sample.settings || {}) });
   }, []);
 
   return {
-    products, sales, salesBatches, fees, orderFees, expenses, mappings,
-    setProducts, setSales, setFees, setOrderFees, setExpenses, setMappings,
-    upsertProduct, removeProduct, removeProducts, mergeProducts,
-    addSales, addSalesBatch, removeSalesBatch, addFees, upsertFees, addOrderFees, clearOrderFees,
-    addExpense, updateExpense, removeExpense, syncSheetExpenses, clearAll, importAll,
+    channels, employees, teams, sales, workLogs, settings,
+    addChannel, updateChannel, removeChannel,
+    addEmployee, updateEmployee, removeEmployee,
+    addTeam, updateTeam, removeTeam,
+    addSale, updateSale, removeSale,
+    addWorkLog, updateWorkLog, removeWorkLog,
+    updateSettings, clearAll, importAll, loadSample,
   };
 }

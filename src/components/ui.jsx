@@ -125,3 +125,58 @@ export const Banner = ({ tone = 'info', children }) => {
     </div>
   );
 };
+
+// --- Form controls ---
+const fieldCls =
+  'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-pink-200 focus:border-pink-300 focus:outline-none';
+
+export const Field = ({ label, hint, children, className }) => (
+  <label className={cn('block', className)}>
+    {label && <span className="block text-xs font-medium text-slate-500 mb-1">{label}</span>}
+    {children}
+    {hint && <span className="block text-[11px] text-slate-400 mt-1">{hint}</span>}
+  </label>
+);
+
+export const Input = ({ className, ...props }) => (
+  <input className={cn(fieldCls, className)} {...props} />
+);
+
+export const Select = ({ className, children, ...props }) => (
+  <select className={cn(fieldCls, 'pr-8', className)} {...props}>
+    {children}
+  </select>
+);
+
+export const Textarea = ({ className, ...props }) => (
+  <textarea className={cn(fieldCls, 'resize-y', className)} {...props} />
+);
+
+// Channel/status pill.
+export const StatusPill = ({ status }) => {
+  const map = {
+    active: { label: 'กำลังใช้งาน', cls: 'bg-emerald-100 text-emerald-700' },
+    paused: { label: 'พักชั่วคราว', cls: 'bg-amber-100 text-amber-700' },
+    closed: { label: 'ปิดใช้งาน', cls: 'bg-slate-200 text-slate-500' },
+  };
+  const s = map[status] || map.closed;
+  return <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap', s.cls)}>{s.label}</span>;
+};
+
+// Centered modal dialog.
+export const Modal = ({ open, onClose, title, children, footer, wide }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className={cn('relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full my-6', wide ? 'max-w-3xl' : 'max-w-lg')}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none px-1">×</button>
+        </div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto custom-scrollbar">{children}</div>
+        {footer && <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2">{footer}</div>}
+      </div>
+    </div>
+  );
+};

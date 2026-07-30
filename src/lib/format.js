@@ -145,3 +145,24 @@ export const monthLabel = (key) => {
   const [y, m] = key.split('-');
   return `${m}/${y}`;
 };
+
+// --- <input type="date"> (ISO "YYYY-MM-DD") <-> stored "DD/MM/YYYY" ---
+export const dmyToISO = (dmy) => {
+  if (!dmy) return '';
+  const [d, m, y] = dmy.split('/');
+  if (!d || !m || !y) return '';
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+};
+
+export const isoToDMY = (iso) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return '';
+  return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+};
+
+// Today as "DD/MM/YYYY" (uses local device date; only for UI, never in tests).
+export const todayDMY = () => {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};

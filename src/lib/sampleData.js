@@ -1,101 +1,84 @@
-import { monthKeyOf } from './format.js';
+// Demo dataset — realistic Thai TikTok Live affiliate operation.
+// Loaded from Settings → "โหลดข้อมูลตัวอย่าง".
 
-// Generates a small but realistic demo dataset so the app is usable
-// immediately, before the user imports their own files.
-export function makeSampleData() {
-  const products = [
-    { sku: 'TSHIRT-BLK-M', name: 'เสื้อยืดสีดำ ไซส์ M', unitCost: 85, category: 'เสื้อผ้า' },
-    { sku: 'TSHIRT-WHT-L', name: 'เสื้อยืดสีขาว ไซส์ L', unitCost: 85, category: 'เสื้อผ้า' },
-    { sku: 'MUG-CERAMIC', name: 'แก้วเซรามิก 350ml', unitCost: 45, category: 'ของใช้' },
-    { sku: 'BOTTLE-500', name: 'ขวดน้ำสแตนเลส 500ml', unitCost: 120, category: 'ของใช้' },
-    { sku: 'CAP-CANVAS', name: 'หมวกแก๊ปผ้าแคนวาส', unitCost: 60, category: 'แฟชั่น' },
-    // NOTE: SKU "TOTE-BAG" is intentionally sold but missing here to demo unmatched-cost warnings.
+export function buildSampleData() {
+  const teams = [
+    { id: 'team-a', name: 'ทีม A — บิวตี้', targetSales: 5000000, leaderId: 'emp-1', note: 'ครีม/สกินแคร์' },
+    { id: 'team-b', name: 'ทีม B — แฟชั่น', targetSales: 3000000, leaderId: 'emp-3', note: 'เสื้อผ้า/กระเป๋า' },
   ];
 
-  const catalog = [
-    { sku: 'TSHIRT-BLK-M', name: 'เสื้อยืดสีดำ ไซส์ M', price: 199 },
-    { sku: 'TSHIRT-WHT-L', name: 'เสื้อยืดสีขาว ไซส์ L', price: 199 },
-    { sku: 'MUG-CERAMIC', name: 'แก้วเซรามิก 350ml', price: 129 },
-    { sku: 'BOTTLE-500', name: 'ขวดน้ำสแตนเลส 500ml', price: 259 },
-    { sku: 'CAP-CANVAS', name: 'หมวกแก๊ปผ้าแคนวาส', price: 159 },
-    { sku: 'TOTE-BAG', name: 'กระเป๋าผ้า Tote', price: 149 },
+  const employees = [
+    {
+      id: 'emp-1', name: 'สมชาย ใจดี', nickname: 'ชาย', role: 'หัวหน้าไลฟ์', teamId: 'team-a', active: true,
+      kpiTarget: 2000000,
+      pay: { baseType: 'monthly', baseAmount: 18000, commission: { type: 'tiered', tiers: [{ from: 0, rate: 3 }, { from: 1000000, rate: 5 }] }, kpiBonus: 5000, adjust: 0 },
+    },
+    {
+      id: 'emp-2', name: 'สุดา แสงทอง', nickname: 'ดา', role: 'แม่ค้าไลฟ์', teamId: 'team-a', active: true,
+      kpiTarget: 1500000,
+      pay: { baseType: 'daily', baseAmount: 500, commission: { type: 'flat', rate: 4 }, kpiBonus: 3000, adjust: 0 },
+    },
+    {
+      id: 'emp-3', name: 'อนุชา พรหมมา', nickname: 'ต้น', role: 'หัวหน้าไลฟ์', teamId: 'team-b', active: true,
+      kpiTarget: 1200000,
+      pay: { baseType: 'monthly', baseAmount: 16000, commission: { type: 'flat', rate: 3.5 }, kpiBonus: 4000, adjust: 0 },
+    },
+    {
+      id: 'emp-4', name: 'ปนัดดา ศรีสุข', nickname: 'ปุ๊ก', role: 'แม่ค้าไลฟ์', teamId: 'team-b', active: true,
+      kpiTarget: 800000,
+      pay: { baseType: 'daily', baseAmount: 450, commission: { type: 'flat', rate: 4 }, kpiBonus: 2000, adjust: 0 },
+    },
+    {
+      id: 'emp-5', name: 'กิตติ วงศ์ทอง', nickname: 'กิต', role: 'แอดมิน/ยิงแอด', teamId: 'team-a', active: true,
+      kpiTarget: 0,
+      pay: { baseType: 'monthly', baseAmount: 15000, commission: { type: 'none' }, kpiBonus: 0, adjust: 0 },
+    },
   ];
 
-  const months = ['2025-10', '2025-11', '2025-12'];
-  const platforms = ['shopee', 'tiktok'];
-  const statuses = ['สำเร็จ', 'สำเร็จ', 'สำเร็จ', 'ยกเลิก']; // ~75% completed
-  const sales = [];
-  let seq = 0;
+  const channels = [
+    { id: 'ch-1', name: '@beautyglow.official', status: 'active', ownerId: 'emp-1', teamId: 'team-a', note: 'ช่องหลัก' },
+    { id: 'ch-2', name: '@sudabeauty', status: 'active', ownerId: 'emp-2', teamId: 'team-a', note: '' },
+    { id: 'ch-3', name: '@fashionista.th', status: 'active', ownerId: 'emp-3', teamId: 'team-b', note: '' },
+    { id: 'ch-4', name: '@pukshop', status: 'active', ownerId: 'emp-4', teamId: 'team-b', note: '' },
+    { id: 'ch-5', name: '@glow.backup', status: 'active', ownerId: 'emp-1', teamId: 'team-a', note: 'ช่องสำรอง' },
+    { id: 'ch-6', name: '@dealsdaily.th', status: 'paused', ownerId: 'emp-5', teamId: 'team-a', note: 'พักปรับกลยุทธ์' },
+  ];
 
-  const rand = (n) => Math.floor(Math.random() * n);
+  // A few days of daily sales entries in July 2026.
+  const raw = [
+    ['ch-1', 'emp-1', '01/07/2026', 320000, 14000, 9600, 305000],
+    ['ch-1', 'emp-1', '02/07/2026', 410000, 16000, 14300, 392000],
+    ['ch-1', 'emp-1', '03/07/2026', 528000, 18500, 21400, 505000],
+    ['ch-2', 'emp-2', '01/07/2026', 145000, 6200, 5800, 139000],
+    ['ch-2', 'emp-2', '02/07/2026', 168000, 7100, 6720, 160000],
+    ['ch-2', 'emp-2', '03/07/2026', 132000, 5800, 5280, 126000],
+    ['ch-3', 'emp-3', '01/07/2026', 210000, 9800, 7350, 200000],
+    ['ch-3', 'emp-3', '02/07/2026', 188000, 8600, 6580, 179000],
+    ['ch-4', 'emp-4', '01/07/2026', 96000, 4200, 3840, 91000],
+    ['ch-4', 'emp-4', '02/07/2026', 112000, 4900, 4480, 107000],
+    ['ch-5', 'emp-1', '02/07/2026', 78000, 3600, 2340, 74000],
+    ['ch-5', 'emp-1', '03/07/2026', 88000, 4100, 2640, 84000],
+  ];
+  const sales = raw.map(([channelId, employeeId, date, s, ad, comm, recv], i) => ({
+    id: `sale-${i + 1}`,
+    channelId,
+    employeeId,
+    date,
+    sales: s,
+    adCost: ad,
+    baseCommission: comm,
+    actualReceived: recv,
+    note: '',
+  }));
 
-  months.forEach((mk) => {
-    const [y, m] = mk.split('-');
-    platforms.forEach((platform) => {
-      const orders = 18 + rand(10);
-      for (let o = 0; o < orders; o++) {
-        const day = String(1 + rand(27)).padStart(2, '0');
-        const date = `${day}/${m}/${y}`;
-        const orderId = `${platform.toUpperCase()}-${mk.replace('-', '')}-${1000 + seq}`;
-        const lines = 1 + rand(2);
-        for (let l = 0; l < lines; l++) {
-          const item = catalog[rand(catalog.length)];
-          const qty = 1 + rand(3);
-          sales.push({
-            id: `${platform}:${orderId}:${item.sku}:${seq}-${l}`,
-            platform,
-            orderId,
-            date,
-            monthKey: monthKeyOf(date),
-            sku: item.sku,
-            productName: item.name,
-            qty,
-            unitPrice: item.price,
-            revenue: item.price * qty,
-            status: statuses[rand(statuses.length)],
-          });
-        }
-        seq += 1;
-      }
+  // Attendance for the same three days (drives daily-rate base pay).
+  const workLogs = [];
+  let wid = 1;
+  ['01/07/2026', '02/07/2026', '03/07/2026'].forEach((date) => {
+    employees.forEach((emp) => {
+      workLogs.push({ id: `wl-${wid++}`, employeeId: emp.id, channelId: '', date, shift: 'บ่าย-ค่ำ', status: 'present', note: '' });
     });
   });
 
-  // Fee documents (one per platform per month) derived roughly from revenue.
-  const fees = [];
-  months.forEach((mk) => {
-    const [y, m] = mk.split('-');
-    const date = `15/${m}/${y}`;
-    const shopeeRev = sales
-      .filter((s) => s.platform === 'shopee' && s.monthKey === mk && s.status === 'สำเร็จ')
-      .reduce((a, s) => a + s.revenue, 0);
-    const tiktokRev = sales
-      .filter((s) => s.platform === 'tiktok' && s.monthKey === mk && s.status === 'สำเร็จ')
-      .reduce((a, s) => a + s.revenue, 0);
-
-    const shComm = shopeeRev * 0.08;
-    const shAds = shopeeRev * 0.05;
-    fees.push({
-      id: `sample-shopee-${mk}`, date, monthKey: mk, platform: 'shopee',
-      ads: round(shAds), comm: round(shComm), trans: round(shopeeRev * 0.02),
-      service: 0, ams: 0, infra: 0, growth: 0, affiliate: 0, logistics: 0,
-      vat: round((shComm + shAds) * 0.07), wht: round(shComm * 0.03),
-      total: round((shComm + shAds + shopeeRev * 0.02) * 1.07),
-    });
-
-    const ttComm = tiktokRev * 0.06;
-    const ttAds = tiktokRev * 0.07;
-    const ttAff = tiktokRev * 0.04;
-    fees.push({
-      id: `sample-tiktok-${mk}`, date, monthKey: mk, platform: 'tiktok',
-      ads: round(ttAds), comm: round(ttComm), trans: round(tiktokRev * 0.015),
-      service: 0, ams: 0, infra: 0, growth: round(tiktokRev * 0.01),
-      affiliate: round(ttAff), logistics: 0,
-      vat: round((ttComm + ttAds + ttAff) * 0.07), wht: round(ttComm * 0.03),
-      total: round((ttComm + ttAds + ttAff + tiktokRev * 0.025) * 1.07),
-    });
-  });
-
-  return { products, sales, fees };
+  return { teams, employees, channels, sales, workLogs, settings: {} };
 }
-
-const round = (n) => Math.round(n * 100) / 100;

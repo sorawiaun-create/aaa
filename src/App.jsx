@@ -1,299 +1,151 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  LayoutDashboard, Upload, Package, Scale, Receipt, Database,
-  Filter, ShoppingBag, Video, TrendingUp, Link2, BarChart3, Banknote, ChevronDown,
+  BarChart3, Radio, Video, ClipboardList, Trophy, Target,
+  CalendarCheck, Settings, LogOut, Menu, X,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
-import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from './lib/reconcile.js';
-import { distinctStatuses } from './lib/salesParser.js';
-import { monthKeyOf, monthLabel } from './lib/format.js';
-import { useI18n } from './lib/i18n.jsx';
-import { cn, Badge } from './components/ui.jsx';
-import DashboardView from './views/DashboardView.jsx';
-import SalesImportView from './views/SalesImportView.jsx';
-import ProductsView from './views/ProductsView.jsx';
-import FeesImportView from './views/FeesImportView.jsx';
-import ReconcileView from './views/ReconcileView.jsx';
-import OrderProfitView from './views/OrderProfitView.jsx';
-import ProductAnalyticsView from './views/ProductAnalyticsView.jsx';
-import ExpensesView from './views/ExpensesView.jsx';
-import DataView from './views/DataView.jsx';
+import { monthOptionsFrom } from './lib/payroll.js';
+import { monthLabel } from './lib/format.js';
+import { cn } from './components/ui.jsx';
+import OverviewView from './views/OverviewView.jsx';
+import RealtimeView from './views/RealtimeView.jsx';
+import ChannelsView from './views/ChannelsView.jsx';
+import SalesView from './views/SalesView.jsx';
+import EmployeesView from './views/EmployeesView.jsx';
+import TeamsView from './views/TeamsView.jsx';
+import WorkLogView from './views/WorkLogView.jsx';
+import SettingsView from './views/SettingsView.jsx';
 
 const NAV = [
-  { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
-  { id: 'orders', label: 'กำไรจริง (รายออเดอร์)', icon: Link2 },
-  { id: 'reconcile', label: 'กำไรราย SKU', icon: Scale },
-  { id: 'analytics', label: 'วิเคราะห์สินค้า', icon: BarChart3 },
-  { id: 'expenses', label: 'รายจ่ายทั่วไป', icon: Banknote },
-  { id: 'products', label: 'สินค้า & ต้นทุน', icon: Package },
-  { id: 'sales', label: 'นำเข้ายอดขาย', icon: Upload },
-  { id: 'fees', label: 'นำเข้าค่าธรรมเนียม', icon: Receipt },
-  { id: 'data', label: 'จัดการข้อมูล', icon: Database },
+  { id: 'overview', label: 'ภาพรวม', icon: BarChart3 },
+  { id: 'realtime', label: 'Realtime Live', icon: Radio },
+  { id: 'channels', label: 'ช่อง TikTok', icon: Video },
+  { id: 'sales', label: 'บันทึกยอดขาย', icon: ClipboardList },
+  { id: 'employees', label: 'พนักงาน & KPI', icon: Trophy },
+  { id: 'teams', label: 'ทีม & เป้าหมาย', icon: Target },
+  { id: 'worklog', label: 'บันทึกงานรายวัน', icon: CalendarCheck },
+  { id: 'settings', label: 'ตั้งค่าระบบ', icon: Settings },
 ];
+
+// Views that show the month selector in the top bar.
+const MONTH_VIEWS = new Set(['overview', 'employees', 'teams', 'worklog']);
 
 export default function App() {
   const store = useStore();
-  const { t, lang, setLang } = useI18n();
-  const [view, setView] = useState('dashboard');
-  const [filters, setFilters] = useState({ platform: 'all', from: '', to: '', statuses: [] });
+  const [view, setView] = useState('overview');
+  const [month, setMonth] = useState(''); // '' = all months
+  const [mobileNav, setMobileNav] = useState(false);
 
-  // Load pdf.js from CDN once (used by the fee importer).
-  useEffect(() => {
-    if (window.pdfjsLib) return;
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.async = true;
-    script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  const statusOptions = useMemo(() => distinctStatuses(store.sales), [store.sales]);
-
-  // Months that actually have data — powers the single-month filter dropdown.
-  const monthOptions = useMemo(() => {
-    const set = new Set();
-    store.sales.forEach((s) => s.monthKey && set.add(s.monthKey));
-    store.fees.forEach((f) => { const mk = f.monthKey || monthKeyOf(f.date); if (mk) set.add(mk); });
-    store.expenses.forEach((e) => e.month && set.add(e.month));
-    return [...set].filter(Boolean).sort().reverse();
-  }, [store.sales, store.fees, store.expenses]);
-
-  const recon = useMemo(
-    () =>
-      computeReconciliation({
-        sales: store.sales,
-        products: store.products,
-        fees: store.fees,
-        orderFees: store.orderFees,
-        expenses: store.expenses,
-        filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
-      }),
-    [store.sales, store.products, store.fees, store.orderFees, store.expenses, filters]
+  const monthOptions = useMemo(
+    () => monthOptionsFrom(store.sales, store.workLogs),
+    [store.sales, store.workLogs]
   );
 
-  const orderRecon = useMemo(
-    () =>
-      computeOrderReconciliation({
-        sales: store.sales,
-        products: store.products,
-        orderFees: store.orderFees,
-        filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
-      }),
-    [store.sales, store.products, store.orderFees, filters]
-  );
+  const current = NAV.find((n) => n.id === view) || NAV[0];
 
-  const analytics = useMemo(
-    () =>
-      computeProductMonthly({
-        sales: store.sales,
-        products: store.products,
-        filters: { ...filters, statuses: filters.statuses.length ? filters.statuses : null },
-      }),
-    [store.sales, store.products, filters]
+  const NavList = ({ onPick }) => (
+    <nav className="space-y-1">
+      {NAV.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => { setView(item.id); onPick?.(); }}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+            view === item.id
+              ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg shadow-pink-900/30'
+              : 'text-slate-300 hover:bg-white/5 hover:text-white'
+          )}
+        >
+          <item.icon size={18} />
+          {item.label}
+        </button>
+      ))}
+    </nav>
   );
-
-  const showFilters =
-    view === 'dashboard' || view === 'reconcile' || view === 'orders' || view === 'analytics';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-      {/* Sidebar */}
-      <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-white border-r border-slate-200 p-4 sticky top-0 h-screen">
-        <div className="flex items-center gap-2 px-2 py-3 mb-4">
-          <span className="bg-gradient-to-br from-pink-500 to-slate-900 text-white p-2 rounded-xl">
-            <TrendingUp size={20} />
-          </span>
-          <div>
-            <div className="font-bold text-slate-800 leading-tight">{t('app.title')}</div>
-            <div className="text-[11px] text-slate-400">{t('app.subtitle')}</div>
-          </div>
-        </div>
-        <nav className="space-y-1">
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                view === item.id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-100'
-              )}
-            >
-              <item.icon size={18} />
-              {t(`nav.${item.id}`)}
-            </button>
-          ))}
-        </nav>
-        <div className="mt-auto pt-4 border-t border-slate-100 space-y-3">
-          <LangToggle lang={lang} setLang={setLang} t={t} />
-          <div className="text-[11px] text-slate-400 px-2 space-y-1">
-            <div className="flex justify-between"><span>{t('side.products')}</span><b>{store.products.length}</b></div>
-            <div className="flex justify-between"><span>{t('side.sales')}</span><b>{store.sales.length}</b></div>
-            <div className="flex justify-between"><span>{t('side.fees')}</span><b>{store.fees.length}</b></div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex">
+      {/* Desktop sidebar (dark) */}
+      <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-slate-950 p-4 sticky top-0 h-screen">
+        <Brand name={store.settings.companyName} />
+        <div className="mt-4 flex-1"><NavList /></div>
+        <OwnerBox />
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Mobile nav */}
-        <div className="md:hidden bg-white border-b border-slate-200 p-2 flex gap-1 overflow-x-auto items-center">
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap',
-                view === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'
-              )}
-            >
-              <item.icon size={15} />
-              {t(`nav.${item.id}`)}
-            </button>
-          ))}
-          <div className="ml-auto shrink-0"><LangToggle lang={lang} setLang={setLang} compact /></div>
+      {/* Mobile drawer */}
+      {mobileNav && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileNav(false)} />
+          <aside className="relative w-64 bg-slate-950 p-4 flex flex-col h-full">
+            <div className="flex items-center justify-between">
+              <Brand name={store.settings.companyName} />
+              <button onClick={() => setMobileNav(false)} className="text-slate-400"><X size={20} /></button>
+            </div>
+            <div className="mt-4 flex-1"><NavList onPick={() => setMobileNav(false)} /></div>
+            <OwnerBox />
+          </aside>
         </div>
+      )}
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Top bar */}
+        <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-3 flex items-center gap-3 sticky top-0 z-30">
+          <button className="md:hidden text-slate-500" onClick={() => setMobileNav(true)}><Menu size={22} /></button>
+          <h1 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+            <current.icon size={20} className="text-pink-500" />
+            {current.label}
+          </h1>
+          <div className="ml-auto flex items-center gap-2">
+            {MONTH_VIEWS.has(view) && (
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white text-slate-700 focus:ring-2 focus:ring-pink-200 focus:outline-none"
+              >
+                <option value="">ทุกเดือน</option>
+                {monthOptions.map((m) => (
+                  <option key={m} value={m}>{monthLabel(m)}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </header>
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {showFilters && (
-            <FilterBar
-              filters={filters}
-              setFilters={setFilters}
-              statusOptions={statusOptions}
-              monthOptions={monthOptions}
-            />
-          )}
-
-          {view === 'dashboard' && <DashboardView recon={recon} store={store} />}
-          {view === 'orders' && <OrderProfitView orderRecon={orderRecon} store={store} />}
-          {view === 'reconcile' && <ReconcileView recon={recon} store={store} />}
-          {view === 'analytics' && <ProductAnalyticsView analytics={analytics} recon={recon} />}
-          {view === 'expenses' && <ExpensesView store={store} recon={recon} />}
-          {view === 'products' && <ProductsView store={store} recon={recon} />}
-          {view === 'sales' && <SalesImportView store={store} />}
-          {view === 'fees' && <FeesImportView store={store} />}
-          {view === 'data' && <DataView store={store} />}
+          {view === 'overview' && <OverviewView store={store} month={month} />}
+          {view === 'realtime' && <RealtimeView store={store} />}
+          {view === 'channels' && <ChannelsView store={store} />}
+          {view === 'sales' && <SalesView store={store} />}
+          {view === 'employees' && <EmployeesView store={store} month={month} />}
+          {view === 'teams' && <TeamsView store={store} month={month} />}
+          {view === 'worklog' && <WorkLogView store={store} month={month} />}
+          {view === 'settings' && <SettingsView store={store} />}
         </main>
       </div>
     </div>
   );
 }
 
-function FilterBar({ filters, setFilters, statusOptions, monthOptions }) {
-  const { t } = useI18n();
-  const [statusOpen, setStatusOpen] = useState(false);
-  // statuses = list of INCLUDED statuses; empty = all. Toggling a checkbox from
-  // the "all" state starts excluding; re-selecting everything normalizes to all.
-  const toggleStatus = (s) =>
-    setFilters((f) => {
-      let next;
-      if (f.statuses.length === 0) next = statusOptions.filter((x) => x !== s);
-      else if (f.statuses.includes(s)) next = f.statuses.filter((x) => x !== s);
-      else next = [...f.statuses, s];
-      if (next.length === statusOptions.length) next = [];
-      return { ...f, statuses: next };
-    });
-  const statusChecked = (s) => filters.statuses.length === 0 || filters.statuses.includes(s);
-  const activeStatusCount = filters.statuses.length === 0 ? statusOptions.length : filters.statuses.length;
-
-  const platformBtn = (id, label, Icon) => (
-    <button
-      onClick={() => setFilters((f) => ({ ...f, platform: id }))}
-      className={cn(
-        'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border transition-all',
-        filters.platform === id
-          ? id === 'shopee'
-            ? 'bg-orange-500 text-white border-orange-500'
-            : id === 'tiktok'
-            ? 'bg-slate-900 text-white border-slate-900'
-            : 'bg-slate-800 text-white border-slate-800'
-          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-      )}
-    >
-      <Icon size={15} /> {label}
-    </button>
-  );
-
+function Brand({ name }) {
   return (
-    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2">
-        {platformBtn('all', t('filter.all'), Filter)}
-        {platformBtn('shopee', 'Shopee', ShoppingBag)}
-        {platformBtn('tiktok', 'TikTok', Video)}
-      </div>
-      <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-slate-500">{t('filter.month')}</span>
-        <select
-          value={filters.from && filters.from === filters.to ? filters.from : ''}
-          onChange={(e) => {
-            const m = e.target.value;
-            setFilters((f) => ({ ...f, from: m, to: m }));
-          }}
-          className="border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-        >
-          <option value="">ทุกเดือน</option>
-          {monthOptions.map((m) => (
-            <option key={m} value={m}>{monthLabel(m)}</option>
-          ))}
-        </select>
-      </div>
-      {statusOptions.length > 0 && (
-        <>
-          <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-          <div className="relative">
-            <button
-              onClick={() => setStatusOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            >
-              {t('filter.status')}
-              <Badge color={filters.statuses.length ? 'blue' : 'slate'}>{activeStatusCount}/{statusOptions.length}</Badge>
-              <ChevronDown size={14} className={statusOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-            </button>
-            {statusOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
-                <div className="absolute z-20 mt-1 right-0 sm:left-0 w-80 max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-lg p-2 max-h-72 overflow-auto custom-scrollbar">
-                  <div className="flex justify-between items-center px-2 py-1 mb-1 border-b border-slate-100">
-                    <span className="text-xs text-slate-400">เลือกสถานะที่จะนับ</span>
-                    <button onClick={() => setFilters((f) => ({ ...f, statuses: [] }))} className="text-xs text-blue-600 hover:underline">
-                      เลือกทั้งหมด
-                    </button>
-                  </div>
-                  {statusOptions.map((s) => (
-                    <label key={s} className="flex items-start gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-sm">
-                      <input type="checkbox" checked={statusChecked(s)} onChange={() => toggleStatus(s)} className="mt-0.5 shrink-0" />
-                      <span className="text-slate-600 leading-snug">{s}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </>
-      )}
+    <div className="flex items-center gap-2 px-2">
+      <span className="relative flex h-3 w-3">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-60" />
+        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
+      </span>
+      <div className="font-bold text-white leading-tight">{name || 'TikTok Live Aff'}</div>
     </div>
   );
 }
 
-function LangToggle({ lang, setLang, compact = false }) {
+function OwnerBox() {
   return (
-    <div className={cn('flex bg-slate-100 p-1 rounded-lg', compact ? 'text-[11px]' : 'w-full')}>
-      {['th', 'en'].map((code) => (
-        <button
-          key={code}
-          onClick={() => setLang(code)}
-          className={cn(
-            'flex-1 px-2.5 py-1 rounded-md text-xs font-semibold uppercase transition-colors',
-            lang === code ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-          )}
-        >
-          {code}
-        </button>
-      ))}
+    <div className="mt-auto pt-4 border-t border-white/10">
+      <div className="text-[11px] text-slate-400 px-2">เจ้าของกิจการ</div>
+      <div className="text-sm text-slate-200 px-2 mb-2">เจ้าของ</div>
+      <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-white/5">
+        <LogOut size={16} /> ออกจากระบบ
+      </button>
     </div>
   );
 }

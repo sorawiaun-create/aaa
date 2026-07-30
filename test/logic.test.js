@@ -1,391 +1,160 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import * as XLSX from 'xlsx';
-import { computeReconciliation, computeOrderReconciliation, computeProductMonthly } from '../src/lib/reconcile.js';
-import { autoDetectMapping, applyMapping, distinctStatuses } from '../src/lib/salesParser.js';
-import { parseSettlementWorkbook } from '../src/lib/settlementParser.js';
-import { parseOrderFees } from '../src/lib/orderFeeParser.js';
-import { parseMoney, normalizeDate, monthKeyOf } from '../src/lib/format.js';
-import { parseFlexDate, normYear, toMonthKey, mapExpenseRows, detectExpenseMapping } from '../src/lib/sheetSync.js';
+import {
+  commissionFor, planFor, basePayFor, daysWorkedFor,
+  computePayroll, computeChannelStats, computeOverview, computeTeamStats,
+} from '../src/lib/payroll.js';
 
-test('parseMoney handles messy formats', () => {
-  assert.equal(parseMoney('฿1,234.50'), 1234.5);
-  assert.equal(parseMoney('(120.00)'), -120);
-  assert.equal(parseMoney('1.234,50'), 1234.5); // comma decimal
-  assert.equal(parseMoney(''), 0);
-  assert.equal(parseMoney(42), 42);
+// --- commissionFor ---
+test('flat commission = rate% of amount', () => {
+  assert.equal(commissionFor(100000, { type: 'flat', rate: 3 }), 3000);
 });
 
-test('normalizeDate + monthKeyOf normalize varied inputs', () => {
-  assert.equal(normalizeDate('2025-01-15'), '15/01/2025');
-  assert.equal(normalizeDate('Dec 12, 2025'), '12/12/2025');
-  assert.equal(normalizeDate('01, December, 2025'), '01/12/2025');
-  assert.equal(normalizeDate('5/3/2025'), '05/03/2025');
-  assert.equal(monthKeyOf('15/01/2025'), '2025-01');
+test('none / zero / missing plan → 0', () => {
+  assert.equal(commissionFor(100000, { type: 'none' }), 0);
+  assert.equal(commissionFor(0, { type: 'flat', rate: 5 }), 0);
+  assert.equal(commissionFor(100000, null), 0);
 });
 
-test('autoDetectMapping prefers specific headers', () => {
-  const headers = ['Order ID', 'Seller SKU', 'SKU', 'Quantity', 'Unit Price', 'ชื่อสินค้า', 'สถานะ'];
-  const m = autoDetectMapping(headers);
-  assert.equal(m.sku, 'Seller SKU'); // "seller sku" beats bare "sku"
-  assert.equal(m.qty, 'Quantity');
-  assert.equal(m.unitPrice, 'Unit Price');
-  assert.equal(m.productName, 'ชื่อสินค้า');
-  assert.equal(m.status, 'สถานะ');
-  assert.equal(m.orderId, 'Order ID');
+test('tiered commission is progressive (marginal)', () => {
+  const plan = { type: 'tiered', tiers: [{ from: 0, rate: 3 }, { from: 100000, rate: 5 }] };
+  // 100,000 * 3% + 50,000 * 5% = 3000 + 2500 = 5500
+  assert.equal(commissionFor(150000, plan), 5500);
+  // exactly at threshold → only first bracket
+  assert.equal(commissionFor(100000, plan), 3000);
+  // below first meaningful bracket
+  assert.equal(commissionFor(40000, plan), 1200);
 });
 
-test('applyMapping derives revenue from qty * price when revenue missing', () => {
-  const rows = [
-    { SKU: 'A1', Qty: '2', Price: '100', ชื่อ: 'ของ A' },
-    { SKU: '', Qty: '0' }, // skipped
+test('tiered handles unsorted tiers and a non-zero first threshold', () => {
+  const plan = { type: 'tiered', tiers: [{ from: 100000, rate: 5 }, { from: 0, rate: 3 }] };
+  assert.equal(commissionFor(150000, plan), 5500);
+  // first threshold above 0: portion below earns nothing
+  const plan2 = { type: 'tiered', tiers: [{ from: 50000, rate: 10 }] };
+  assert.equal(commissionFor(80000, plan2), 3000); // (80000-50000)*10%
+  assert.equal(commissionFor(30000, plan2), 0);
+});
+
+// --- planFor ---
+test('planFor uses own plan, falls back to settings default', () => {
+  const settings = { defaultCommission: { type: 'flat', rate: 2 } };
+  assert.deepEqual(planFor({ pay: { commission: { type: 'flat', rate: 7 } } }, settings), { type: 'flat', rate: 7 });
+  assert.deepEqual(planFor({ pay: {} }, settings), { type: 'flat', rate: 2 });
+  assert.deepEqual(planFor({}, {}), { type: 'none' });
+});
+
+// --- basePayFor ---
+test('base pay: monthly is flat, daily scales with days', () => {
+  assert.equal(basePayFor({ pay: { baseType: 'monthly', baseAmount: 18000 } }, 20), 18000);
+  assert.equal(basePayFor({ pay: { baseType: 'daily', baseAmount: 500 } }, 12), 6000);
+  assert.equal(basePayFor({ pay: { baseType: 'none' } }, 30), 0);
+});
+
+// --- daysWorkedFor ---
+test('daysWorked counts distinct dates, excludes absent', () => {
+  const logs = [
+    { employeeId: 'e1', date: '01/07/2026', status: 'present' },
+    { employeeId: 'e1', date: '01/07/2026', status: 'present' }, // dup date
+    { employeeId: 'e1', date: '02/07/2026', status: 'present' },
+    { employeeId: 'e1', date: '03/07/2026', status: 'absent' },
+    { employeeId: 'e2', date: '02/07/2026', status: 'present' },
   ];
-  const mapping = { sku: 'SKU', qty: 'Qty', unitPrice: 'Price', productName: 'ชื่อ' };
-  const recs = applyMapping(rows, mapping, 'shopee', 'f.csv');
-  assert.equal(recs.length, 1);
-  assert.equal(recs[0].revenue, 200);
-  assert.equal(recs[0].platform, 'shopee');
+  assert.equal(daysWorkedFor('e1', logs, '2026-07'), 2);
+  assert.equal(daysWorkedFor('e1', logs, null), 2);
 });
 
-test('revenue maps to per-line column, not order-level totals (TikTok shape)', () => {
-  const headers = [
-    'Order ID', 'Seller SKU', 'Quantity', 'SKU Unit Original Price',
-    'SKU Subtotal After Discount', 'Order Amount', 'Order Status',
+// --- computePayroll (integration) ---
+test('payroll: base + commission + KPI bonus, sorted by total', () => {
+  const employees = [
+    { id: 'e1', name: 'A', teamId: 't1', kpiTarget: 200000, pay: { baseType: 'monthly', baseAmount: 18000, commission: { type: 'flat', rate: 5 }, kpiBonus: 5000, adjust: 0 } },
+    { id: 'e2', name: 'B', teamId: 't1', kpiTarget: 0, pay: { baseType: 'daily', baseAmount: 500, commission: { type: 'none' }, kpiBonus: 0, adjust: -200 } },
   ];
-  const m = autoDetectMapping(headers);
-  // "Order Amount" repeats per line -> must NOT be chosen; per-line subtotal wins
-  assert.equal(m.revenue, 'SKU Subtotal After Discount');
-});
-
-test('revenue maps to net line column (Shopee shape)', () => {
-  const headers = ['หมายเลขคำสั่งซื้อ', 'เลขอ้างอิง SKU (SKU Reference No.)', 'จำนวน', 'ราคาขาย', 'ราคาขายสุทธิ', 'จำนวนเงินทั้งหมด'];
-  const m = autoDetectMapping(headers);
-  assert.equal(m.sku, 'เลขอ้างอิง SKU (SKU Reference No.)');
-  assert.equal(m.unitPrice, 'ราคาขาย');
-  assert.equal(m.revenue, 'ราคาขายสุทธิ');
-});
-
-test('applyMapping drops zero-qty zero-revenue description rows', () => {
-  const rows = [
-    { SKU: 'Seller sku input by the seller.', Qty: 0, Rev: '' }, // junk header-desc row
-    { SKU: 'REAL-1', Qty: 2, Rev: 178 },
-  ];
-  const recs = applyMapping(rows, { sku: 'SKU', qty: 'Qty', revenue: 'Rev' }, 'tiktok', 'f');
-  assert.equal(recs.length, 1);
-  assert.equal(recs[0].sku, 'REAL-1');
-  assert.equal(recs[0].revenue, 178);
-});
-
-test('computeReconciliation core math', () => {
   const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', date: '01/01/2025', monthKey: '2025-01', sku: 'A', qty: 2, unitPrice: 100, revenue: 200, status: 'สำเร็จ' },
-    { id: '2', platform: 'tiktok', orderId: 'O2', date: '02/01/2025', monthKey: '2025-01', sku: 'B', qty: 1, unitPrice: 300, revenue: 300, status: 'สำเร็จ' },
-    { id: '3', platform: 'tiktok', orderId: 'O3', date: '03/01/2025', monthKey: '2025-01', sku: 'NOCOST', qty: 1, unitPrice: 50, revenue: 50, status: 'ยกเลิก' },
+    { employeeId: 'e1', date: '01/07/2026', sales: 150000 },
+    { employeeId: 'e1', date: '02/07/2026', sales: 100000 }, // total 250k → beats 200k KPI
+    { employeeId: 'e2', date: '01/07/2026', sales: 999999 },
   ];
-  const products = [
-    { sku: 'A', name: 'A', unitCost: 40 },
-    { sku: 'B', name: 'B', unitCost: 120 },
+  const workLogs = [
+    { employeeId: 'e2', date: '01/07/2026', status: 'present' },
+    { employeeId: 'e2', date: '02/07/2026', status: 'present' },
   ];
-  const fees = [
-    { id: 'f1', platform: 'shopee', date: '15/01/2025', monthKey: '2025-01', total: 30, ads: 10, comm: 20 },
-    { id: 'f2', platform: 'tiktok', date: '15/01/2025', monthKey: '2025-01', total: 40, ads: 25, affiliate: 15 },
-  ];
+  const rows = computePayroll({ employees, sales, workLogs, settings: {}, monthKey: '2026-07' });
 
-  const r = computeReconciliation({ sales, products, fees, filters: { platform: 'all', statuses: ['สำเร็จ'] } });
-  // revenue = 200 + 300 (cancelled excluded) = 500
-  assert.equal(r.revenue, 500);
-  // cogs = 2*40 + 1*120 = 200
-  assert.equal(r.cogs, 200);
-  assert.equal(r.grossProfit, 300);
-  // fees total = 70; net = 300 - 70 = 230
-  assert.equal(r.fees.total, 70);
-  assert.equal(r.netProfit, 230);
-  assert.equal(r.unitsSold, 3);
-  assert.equal(r.orderCount, 2);
-  // NOCOST is cancelled so excluded -> not unmatched
-  assert.equal(r.missingCostCount, 0);
+  const e1 = rows.find((r) => r.employee.id === 'e1');
+  assert.equal(e1.salesTotal, 250000);
+  assert.equal(e1.base, 18000);
+  assert.equal(e1.commission, 12500); // 250000 * 5%
+  assert.equal(e1.kpiHit, true);
+  assert.equal(e1.kpiBonus, 5000);
+  assert.equal(e1.total, 35500);
+
+  const e2 = rows.find((r) => r.employee.id === 'e2');
+  assert.equal(e2.base, 1000); // 500 * 2 days
+  assert.equal(e2.commission, 0);
+  assert.equal(e2.adjust, -200);
+  assert.equal(e2.total, 800);
+
+  // sorted by total desc
+  assert.equal(rows[0].employee.id, 'e1');
 });
 
-test('computeReconciliation flags unmatched SKUs and filters platform', () => {
+test('payroll month filter isolates a month', () => {
+  const employees = [{ id: 'e1', name: 'A', pay: { baseType: 'none', commission: { type: 'flat', rate: 10 } } }];
   const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', date: '01/01/2025', monthKey: '2025-01', sku: 'A', qty: 1, unitPrice: 100, revenue: 100, status: 'สำเร็จ' },
-    { id: '2', platform: 'tiktok', orderId: 'O2', date: '01/01/2025', monthKey: '2025-01', sku: 'GHOST', qty: 1, unitPrice: 100, revenue: 100, status: 'สำเร็จ' },
+    { employeeId: 'e1', date: '15/06/2026', sales: 100000 },
+    { employeeId: 'e1', date: '15/07/2026', sales: 50000 },
   ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 30 }];
-  const rAll = computeReconciliation({ sales, products, fees: [], filters: { platform: 'all' } });
-  assert.equal(rAll.missingCostCount, 1);
-  assert.deepEqual(rAll.unmatchedSkus, ['GHOST']);
-
-  const rShopee = computeReconciliation({ sales, products, fees: [], filters: { platform: 'shopee' } });
-  assert.equal(rShopee.revenue, 100);
-  assert.equal(rShopee.missingCostCount, 0); // GHOST filtered out
+  const jul = computePayroll({ employees, sales, workLogs: [], settings: {}, monthKey: '2026-07' });
+  assert.equal(jul[0].salesTotal, 50000);
+  assert.equal(jul[0].commission, 5000);
+  const all = computePayroll({ employees, sales, workLogs: [], settings: {}, monthKey: null });
+  assert.equal(all[0].salesTotal, 150000);
 });
 
-test('computeProductMonthly aggregates units/revenue per SKU per month', () => {
+// --- computeChannelStats ---
+test('channel stats aggregate and compute ROAS, sorted by sales', () => {
+  const channels = [{ id: 'c1', name: 'C1', status: 'active' }, { id: 'c2', name: 'C2', status: 'paused' }];
   const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 2, revenue: 200, status: 'ok' },
-    { id: '2', platform: 'shopee', orderId: 'O2', monthKey: '2026-06', date: '10/06/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
-    { id: '3', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '11/05/2026', sku: 'B', qty: 5, revenue: 50, status: 'ok' },
+    { channelId: 'c1', date: '01/07/2026', sales: 300000, adCost: 15000, baseCommission: 9000, actualReceived: 290000 },
+    { channelId: 'c1', date: '02/07/2026', sales: 100000, adCost: 5000, baseCommission: 3000, actualReceived: 95000 },
+    { channelId: 'c2', date: '01/07/2026', sales: 50000, adCost: 0, baseCommission: 1500, actualReceived: 48000 },
   ];
-  const { months, products } = computeProductMonthly({ sales, products: [{ sku: 'A', name: 'Product A' }], filters: { platform: 'all' } });
-  assert.deepEqual(months, ['2026-05', '2026-06']);
-  const A = products.find((p) => p.sku === 'A');
-  assert.equal(A.name, 'Product A'); // name resolved from product master
-  assert.equal(A.qty, 3);
-  assert.equal(A.revenue, 300);
-  assert.equal(A.months['2026-05'].revenue, 200);
-  assert.equal(A.months['2026-06'].qty, 1);
-  assert.equal(products[0].sku, 'A'); // sorted by revenue desc
+  const stats = computeChannelStats({ channels, sales, monthKey: '2026-07' });
+  assert.equal(stats[0].channel.id, 'c1');
+  assert.equal(stats[0].salesTotal, 400000);
+  assert.equal(stats[0].adCost, 20000);
+  assert.equal(stats[0].roas, 20); // 400000 / 20000
+  // zero ad → null ROAS (avoid divide-by-zero)
+  assert.equal(stats[1].roas, null);
 });
 
-test('distinctStatuses returns sorted unique', () => {
-  const recs = [{ status: 'b' }, { status: 'a' }, { status: 'b' }, { status: '' }];
-  assert.deepEqual(distinctStatuses(recs), ['a', 'b']);
-});
-
-const wbFrom = (name, aoa) => {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), name);
-  return wb;
-};
-
-test('settlement parser reads Shopee income report', () => {
-  const wb = wbFrom('Summary', [
-    ['รายงานรายรับของฉัน'],
-    ['จาก', '2026-05-01'],
-    ['1. รายได้ทั้งหมด', '', '', 1000],
-    ['ค่าคอมมิชชั่น AMS', '', -50, ''],
-    ['ค่าคอมมิชชั่น', '', -200, ''],
-    ['ค่าธุรกรรมการชำระเงิน', '', -100, ''],
-    ['3. จำนวนเงินทั้งหมดที่โอนแล้ว', '', '', 700],
-  ]);
-  const res = parseSettlementWorkbook(XLSX, wb, 'shopee.xlsx');
-  assert.equal(res.status, 'success');
-  assert.equal(res.data.platform, 'shopee');
-  assert.equal(res.data.revenue, 1000);
-  assert.equal(res.data.payout, 700);
-  assert.equal(res.data.total, 300); // revenue - payout
-  assert.equal(res.data.comm, 200); // exact match, not stolen by "AMS" row
-  assert.equal(res.data.ams, 50);
-  assert.equal(res.data.trans, 100);
-  assert.equal(res.data.monthKey, '2026-05');
-});
-
-test('settlement parser reads TikTok report', () => {
-  const wb = wbFrom('รายงาน', [
-    ['', 'ช่วงเวลา', '', '', '', '2026/05/01-2026/05/31'],
-    ['', '', 'รายได้รวม', '', '', '2000'],
-    ['', '', 'ค่าธรรมเนียมทั้งหมด', '', '', '-500'],
-    ['', '', 'ค่าคอมมิชชั่น TikTok Shop', '', '', '-300'],
-    ['', 'จำนวนเงินที่ชำระทั้งหมด', '', '', '', '1500'],
-  ]);
-  const res = parseSettlementWorkbook(XLSX, wb, 'tiktok.xlsx');
-  assert.equal(res.status, 'success');
-  assert.equal(res.data.platform, 'tiktok');
-  assert.equal(res.data.revenue, 2000);
-  assert.equal(res.data.payout, 1500);
-  assert.equal(res.data.total, 500);
-  assert.equal(res.data.comm, 300);
-  assert.equal(res.data.monthKey, '2026-05');
-});
-
-test('inline line fees drive per-SKU net profit and override settlement (no double count)', () => {
+// --- computeOverview ---
+test('overview totals + active channel count', () => {
+  const channels = [{ id: 'c1', status: 'active' }, { id: 'c2', status: 'active' }, { id: 'c3', status: 'closed' }];
   const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 2, revenue: 200, status: 'ok', fee: 30, feeComm: 20, feeTrans: 6, feeService: 4 },
+    { channelId: 'c1', date: '01/07/2026', sales: 100000, adCost: 5000, baseCommission: 3000, actualReceived: 96000 },
+    { channelId: 'c2', date: '01/06/2026', sales: 999, adCost: 1, baseCommission: 1, actualReceived: 1 },
   ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
-  // A settlement aggregate that must be IGNORED because inline fees exist for shopee.
-  const fees = [{ id: 'f', platform: 'shopee', monthKey: '2026-05', total: 999 }];
-  const r = computeReconciliation({ sales, products, fees, filters: { platform: 'all' } });
-  assert.equal(r.fees.total, 30); // inline wins, 999 ignored
-  assert.equal(r.fees.commission, 20);
-  assert.equal(r.netProfit, 90); // 200 - 80 - 30
-  assert.equal(r.bySku[0].fees, 30);
-  assert.equal(r.bySku[0].netProfit, 90);
+  const o = computeOverview({ channels, sales, monthKey: '2026-07' });
+  assert.equal(o.totalSales, 100000);
+  assert.equal(o.activeChannels, 2);
+  assert.equal(o.totalChannels, 3);
+  assert.equal(o.roas, 20);
 });
 
-test('Shopee order-level inline fees are counted once, not per line', () => {
-  // Shopee repeats the SAME order-level fee on every SKU line of an order.
+// --- computeTeamStats ---
+test('team stats sum member channels vs target', () => {
+  const teams = [{ id: 't1', name: 'T1', targetSales: 200000 }];
+  const channels = [{ id: 'c1', teamId: 't1' }, { id: 'c2', teamId: 't1' }, { id: 'c3', teamId: 't2' }];
+  const employees = [{ id: 'e1', teamId: 't1' }, { id: 'e2', teamId: 't1' }];
   const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 30, feeComm: 30, feeTrans: 0, feeService: 0 },
-    { id: '2', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'B', qty: 1, revenue: 300, status: 'ok', fee: 30, feeComm: 30, feeTrans: 0, feeService: 0 },
+    { channelId: 'c1', date: '01/07/2026', sales: 120000 },
+    { channelId: 'c2', date: '01/07/2026', sales: 30000 },
+    { channelId: 'c3', date: '01/07/2026', sales: 500000 }, // other team, excluded
   ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 0 }, { sku: 'B', name: 'B', unitCost: 0 }];
-  const r = computeReconciliation({ sales, products, fees: [], filters: { platform: 'all' } });
-  assert.equal(r.fees.total, 30); // once for the order, NOT 60
-  assert.equal(r.fees.commission, 30);
-  assert.equal(r.netProfit, 370); // 400 - 0 cogs - 30 fee
-  const A = r.bySku.find((x) => x.sku === 'A');
-  const B = r.bySku.find((x) => x.sku === 'B');
-  assert.equal(A.fees, 7.5); // 30 * 100/400
-  assert.equal(B.fees, 22.5); // 30 * 300/400
-});
-
-test('joined order fees are allocated to SKU lines by revenue share', () => {
-  const sales = [
-    { id: '1', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 0 },
-    { id: '2', platform: 'tiktok', orderId: 'T1', monthKey: '2026-05', date: '10/05/2026', sku: 'B', qty: 1, revenue: 300, status: 'ok', fee: 0 },
-  ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 10 }, { sku: 'B', name: 'B', unitCost: 30 }];
-  const orderFees = [{ id: 'tiktok:T1', platform: 'tiktok', orderId: 'T1', total: 40 }];
-  const r = computeReconciliation({ sales, products, fees: [], orderFees, filters: { platform: 'all' } });
-  assert.equal(r.fees.total, 40);
-  const A = r.bySku.find((x) => x.sku === 'A');
-  const B = r.bySku.find((x) => x.sku === 'B');
-  assert.equal(A.fees, 10); // 40 * 100/400
-  assert.equal(B.fees, 30); // 40 * 300/400
-  assert.equal(r.netProfit, 320); // 400 - 40 cogs - 40 fees
-});
-
-test('order profit view matches Shopee via inline fees without a settlement file', () => {
-  const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: 'A', qty: 1, revenue: 100, status: 'ok', fee: 20 },
-  ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
-  const { rows, totals } = computeOrderReconciliation({ sales, products, orderFees: [], filters: { platform: 'all' } });
-  assert.equal(totals.matchedCount, 1); // matched via inline fee, no settlement needed
-  assert.equal(rows[0].feeSource, 'inline');
-  assert.equal(rows[0].netProfit, 40); // 100 - 40 - 20
-});
-
-test('order-fee parser reads Shopee Income sheet by Order ID', () => {
-  const wb = XLSX.utils.book_new();
-  // Income sheet: junk rows, then a header row, then per-order rows.
-  const aoa = [
-    ['ชื่อผู้ใช้ (ผู้ขาย)', 'จาก', 'ถึง'],
-    ['sorawitata', '2026-05-01', '2026-05-31'],
-    [], [], ['ยอดรวม (฿)'],
-    ['ลำดับที่', 'หมายเลขคำสั่งซื้อ', 'วันที่ทำการสั่งซื้อ', 'ค่าคอมมิชชั่น AMS', 'ค่าคอมมิชชั่น', 'ค่าบริการ', 'ค่าธรรมเนียมโครงสร้างพื้นฐานแพลตฟอร์ม', 'ค่าธุรกรรมการชำระเงิน', 'จำนวนเงินทั้งหมดที่โอนแล้ว (฿)'],
-    [1, 'ORD-1', '2026-05-10', -4, -30, -1, -1, -10, 100],
-    [2, 'ORD-2', '2026-05-11', 0, -20, 0, 0, -5, 60],
-  ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Income');
-  const { platform, records } = parseOrderFees(XLSX, wb);
-  assert.equal(platform, 'shopee');
-  assert.equal(records.length, 2);
-  const o1 = records.find((r) => r.orderId === 'ORD-1');
-  assert.equal(o1.total, 46); // 4+30+1+1+10
-  assert.equal(o1.monthKey, '2026-05');
-});
-
-test('computeOrderReconciliation joins sales to per-order fees by Order ID', () => {
-  const sales = [
-    // ORD-1: two SKU lines
-    { id: 'a', platform: 'shopee', orderId: 'ORD-1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 2, revenue: 200, status: 'ok' },
-    { id: 'b', platform: 'shopee', orderId: 'ORD-1', date: '10/05/2026', monthKey: '2026-05', sku: 'B', qty: 1, revenue: 100, status: 'ok' },
-    // ORD-2: settled
-    { id: 'c', platform: 'shopee', orderId: 'ORD-2', date: '11/05/2026', monthKey: '2026-05', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
-    // ORD-3: no settlement fee yet (pending)
-    { id: 'd', platform: 'shopee', orderId: 'ORD-3', date: '12/05/2026', monthKey: '2026-05', sku: 'A', qty: 1, revenue: 100, status: 'ok' },
-  ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 40 }, { sku: 'B', name: 'B', unitCost: 30 }];
-  const orderFees = [
-    { id: 'shopee:ORD-1', platform: 'shopee', orderId: 'ORD-1', total: 46 },
-    { id: 'shopee:ORD-2', platform: 'shopee', orderId: 'ORD-2', total: 15 },
-  ];
-  const { rows, totals } = computeOrderReconciliation({ sales, products, orderFees, filters: { platform: 'all' } });
-  assert.equal(totals.orderCount, 3);
-  assert.equal(totals.matchedCount, 2);
-  assert.equal(totals.pendingCount, 1);
-  const ord1 = rows.find((r) => r.orderId === 'ORD-1');
-  assert.equal(ord1.revenue, 300);
-  assert.equal(ord1.cogs, 110); // 2*40 + 1*30
-  assert.equal(ord1.fee, 46);
-  assert.equal(ord1.netProfit, 144); // 300 - 110 - 46
-  // matched totals: rev 400, cogs 150, fees 61 -> net 189
-  assert.equal(totals.matchedRevenue, 400);
-  assert.equal(totals.fees, 61);
-  assert.equal(totals.netProfit, 189);
-});
-
-test('general expenses reduce company net profit and month totals', () => {
-  const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 10, unitPrice: 100, revenue: 1000, status: 'ok', fee: 100, feeComm: 100 },
-    { id: '2', platform: 'shopee', orderId: 'O2', date: '10/06/2026', monthKey: '2026-06', sku: 'A', qty: 5, unitPrice: 100, revenue: 500, status: 'ok', fee: 50, feeComm: 50 },
-  ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
-  const expenses = [
-    { id: 'e1', month: '2026-05', category: 'เงินเดือน', amount: 300 },
-    { id: 'e2', month: '2026-05', category: 'ค่าเช่า', amount: 200 },
-    { id: 'e3', month: '2026-06', category: 'เงินเดือน', amount: 100 },
-  ];
-  const r = computeReconciliation({ sales, products, fees: [], expenses, filters: { platform: 'all' } });
-  // sales net profit = (1000+500) - (600) cogs - (150) fees = 750
-  assert.equal(r.netProfit, 750);
-  assert.equal(r.opexTotal, 600);
-  assert.equal(r.companyNetProfit, 150); // 750 - 600
-  const may = r.byMonth.find((m) => m.monthKey === '2026-05');
-  assert.equal(may.opex, 500);
-  // may sales profit = 1000 - 400 - 100 = 500; company = 500 - 500 = 0
-  assert.equal(may.profit, 500);
-  assert.equal(may.companyProfit, 0);
-});
-
-test('expenses respect the month-range filter', () => {
-  const expenses = [
-    { id: 'e1', month: '2026-05', category: 'x', amount: 300 },
-    { id: 'e2', month: '2026-06', category: 'y', amount: 100 },
-  ];
-  const r = computeReconciliation({ sales: [], products: [], expenses, filters: { platform: 'all', from: '2026-06', to: '2026-06' } });
-  assert.equal(r.opexTotal, 100); // only June counted
-});
-
-test('normYear converts Buddhist / 2-digit years to Gregorian', () => {
-  assert.equal(normYear('69'), 2026);   // BE short year 2569
-  assert.equal(normYear('68'), 2025);   // BE short year 2568
-  assert.equal(normYear('2569'), 2026); // full BE
-  assert.equal(normYear('2025'), 2025); // already Gregorian, untouched
-});
-
-test('parseFlexDate handles Buddhist day-first dates ("1/7/69")', () => {
-  assert.deepEqual(parseFlexDate('1/7/69'), { date: '01/07/2026', month: '2026-07' });
-  assert.deepEqual(parseFlexDate('05/06/2569'), { date: '05/06/2026', month: '2026-06' });
-  assert.deepEqual(parseFlexDate('2026-07'), { date: '', month: '2026-07' });
-  assert.deepEqual(parseFlexDate('7/2569'), { date: '', month: '2026-07' });
-  assert.equal(parseFlexDate('15/01/2025').month, '2025-01'); // Gregorian untouched
-  assert.equal(toMonthKey('1/7/69'), '2026-07');
-});
-
-test('mapExpenseRows: real amount column + Buddhist date (user bug repro)', () => {
-  // Reproduces the user's sheet: a "สัดส่วน" ratio column auto-detect must not
-  // steal, the real amount is "จำนวนเงิน", dates are Buddhist 2-digit.
-  const rows = [
-    { 'วันที่': '1/7/69', 'รายการ': 'ค่าเช่า', 'จำนวนเงิน': '1,600', 'สัดส่วน': '3.25' },
-    { 'วันที่': '2/7/69', 'รายการ': 'เงินเดือน', 'จำนวนเงิน': '1,800', 'สัดส่วน': '3.69' },
-    { 'วันที่': '', 'รายการ': 'รวม', 'จำนวนเงิน': '3,400', 'สัดส่วน': '' }, // total row skipped
-  ];
-  const mapping = detectExpenseMapping(Object.keys(rows[0]));
-  assert.equal(mapping.amount, 'จำนวนเงิน');
-  const out = mapExpenseRows(rows, mapping);
-  assert.equal(out.length, 2); // total row skipped
-  assert.equal(out[0].amount, 1600);
-  assert.equal(out[0].month, '2026-07');
-  assert.equal(out[0].date, '01/07/2026');
-  assert.equal(out[1].amount, 1800);
-});
-
-test('mapExpenseRows honors a manual amount override', () => {
-  const rows = [{ 'A': '1/7/69', 'B': 'ค่าเช่า', 'C': '1600' }];
-  // Headers are opaque so auto-detect finds no amount; caller overrides.
-  const out = mapExpenseRows(rows, { month: 'A', category: 'B', amount: 'C' });
-  assert.equal(out.length, 1);
-  assert.equal(out[0].amount, 1600);
-  assert.equal(out[0].month, '2026-07');
-});
-
-test('settlement feeds engine net profit (payout - COGS)', () => {
-  const sales = [
-    { id: '1', platform: 'shopee', orderId: 'O1', date: '10/05/2026', monthKey: '2026-05', sku: 'A', qty: 5, unitPrice: 100, revenue: 500, status: 'ok' },
-  ];
-  const products = [{ sku: 'A', name: 'A', unitCost: 40 }];
-  const settlement = {
-    id: 'settlement:shopee:2026-05', platform: 'shopee', source: 'settlement',
-    monthKey: '2026-05', revenue: 1000, payout: 700, total: 300, comm: 200, trans: 100,
-  };
-  const r = computeReconciliation({ sales, products, fees: [settlement], filters: { platform: 'all' } });
-  assert.equal(r.settlement.hasData, true);
-  assert.equal(r.settlement.revenue, 1000);
-  assert.equal(r.settlement.payout, 700);
-  assert.equal(r.settlement.cogs, 200); // 5 * 40
-  assert.equal(r.settlement.netProfit, 500); // payout 700 - cogs 200
+  const [s] = computeTeamStats({ teams, channels, sales, employees, monthKey: '2026-07' });
+  assert.equal(s.salesTotal, 150000);
+  assert.equal(s.channelCount, 2);
+  assert.equal(s.memberCount, 2);
+  assert.equal(s.pct, 75);
 });
