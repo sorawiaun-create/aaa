@@ -115,10 +115,13 @@ def execute_campaign(
             "error": err,
         })
 
-    # ---- 1) สถานะ (กฎท้ายสุดชนะ) ----
+    # ---- 1) สถานะ ----
+    # PAUSE ชนะ ACTIVATE เสมอ (fail-safe กันเงินรั่ว): ถ้ามีกฎ "ปิด" เข้าเงื่อนไข
+    # ให้ปิดก่อน แม้จะมีกฎ "เปิด" เข้าเงื่อนไขพร้อมกันและอยู่ล่างกว่า.
     status_actions = [p for p in planned if p.kind == "STATUS"]
     if status_actions:
-        final = status_actions[-1]
+        pauses = [p for p in status_actions if p.status == "PAUSED"]
+        final = pauses[-1] if pauses else status_actions[-1]
         current = (campaign.get("status") or "").upper()
         if final.status != current:
             detail = f"{_th_status(current)} → {_th_status(final.status)}"
