@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-Account Manager — ตั้งค่ากฎอัตโนมัติ</title>
+<title>Multi-Account Manager</title>
 <style>
   :root{
     --bg:#0b1220; --panel:#131c2e; --panel2:#0f1728; --line:#233149;
@@ -14,21 +14,40 @@
   body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
     background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
   a{color:var(--accent)}
-  header{position:sticky;top:0;z-index:20;background:rgba(11,18,32,.92);backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  header h1{font-size:17px;margin:0;font-weight:700}
-  header .sub{color:var(--muted);font-size:12px}
+  header{position:sticky;top:0;z-index:20;background:rgba(11,18,32,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:700;white-space:nowrap}
+  .tabs{display:flex;gap:6px}
+  .tab{padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);background:transparent;border:1px solid transparent}
+  .tab.active{color:var(--text);background:var(--chip);border-color:var(--line)}
   .spacer{flex:1}
-  .wrap{max-width:1000px;margin:0 auto;padding:18px}
-  .btn{border:0;border-radius:9px;padding:9px 15px;font-size:14px;font-weight:600;cursor:pointer;
-    background:var(--chip);color:var(--text);display:inline-flex;align-items:center;gap:7px}
+  .btn{border:0;border-radius:9px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;
+    background:var(--chip);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
   .btn:hover{filter:brightness(1.15)}
   .btn.primary{background:var(--accent2)}
   .btn.green{background:var(--green);color:#04210f}
   .btn.ghost{background:transparent;border:1px solid var(--line)}
   .btn.danger{background:transparent;border:1px solid #5b2330;color:#ff9aa8}
   .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px}
+  .wrap{max-width:1040px;margin:0 auto;padding:16px}
+  .banner{padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px;display:none}
+  .banner.show{display:block}
+  .banner.err{background:#2a1620;border:1px solid #5b2330;color:#ffb3bf}
+  .banner.info{background:#132033;border:1px solid var(--line);color:var(--muted)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  /* overview */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kpi .lbl{color:var(--muted);font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .kpi .val{font-size:26px;font-weight:800;margin-top:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:right;padding:11px 10px;border-bottom:1px solid var(--line);font-size:14px}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .pos{color:#7ff0a6}.neg{color:#ff9aa8}
+  .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
+  .tag.err{background:#3a1620;color:#ff9aa8}
+  /* editor */
   .acct{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--panel)}
   .acct-head{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--panel2);cursor:pointer;flex-wrap:wrap}
   .acct-head .dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
@@ -37,93 +56,96 @@
   .acct.open .chev{transform:rotate(90deg)}
   .chev{transition:.15s;color:var(--muted)}
   .rule{border:1px solid var(--line);border-radius:11px;padding:12px;margin:10px 0;background:var(--panel2)}
-  .rule-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-  .cond{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px}
+  .rule-head{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+  .cond{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:6px 0;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px}
   label{font-size:11px;color:var(--muted);display:block;margin:0 0 3px 2px;text-transform:uppercase;letter-spacing:.3px}
   input,select{background:#0a1120;border:1px solid var(--line);color:var(--text);border-radius:8px;
     padding:8px 10px;font-size:14px;font-family:inherit;width:100%}
   input:focus,select:focus{outline:0;border-color:var(--accent)}
-  .field{min-width:120px}
-  .field.grow{flex:1;min-width:150px}
-  .field.tiny{max-width:110px}
-  .badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:700}
-  .b-PAUSE{background:#3a1620;color:#ff9aa8}
-  .b-ACTIVATE{background:#14331f;color:#7ff0a6}
-  .b-INCREASE_BUDGET{background:#132a3f;color:#8fd0ff}
-  .b-DECREASE_BUDGET{background:#2c2340;color:#c9b0ff}
-  .b-RESET_BUDGET{background:#3a2f13;color:#ffdf8f}
+  .field{min-width:120px}.field.grow{flex:1;min-width:150px}.field.tiny{max-width:120px}
   .row{display:flex;gap:10px;flex-wrap:wrap}
-  .muted{color:var(--muted)}
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1728;border:1px solid var(--line);
-    padding:12px 18px;border-radius:11px;font-size:14px;z-index:50;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;max-width:92%}
-  .toast.show{display:block}
-  .toast.err{border-color:#5b2330}
-  .toast.ok{border-color:#1f4b30}
-  .gate{max-width:560px;margin:8vh auto;padding:24px}
-  .gate h2{margin-top:0}
-  .steps{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 18px}
-  .steps li{margin:12px 0}
-  code{background:#0a1120;border:1px solid var(--line);padding:2px 7px;border-radius:6px;font-size:13px}
-  .hidden{display:none!important}
+  .muted{color:var(--muted)} .hidden{display:none!important}
   .params{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;padding:10px;background:var(--panel);border:1px dashed var(--line);border-radius:9px}
-  .dirty-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);display:none}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1728;border:1px solid var(--line);
+    padding:12px 18px;border-radius:11px;font-size:14px;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;max-width:92%}
+  .toast.show{display:block}.toast.err{border-color:#5b2330}.toast.ok{border-color:#1f4b30}
+  /* overlay */
+  .overlay{position:fixed;inset:0;background:rgba(3,7,15,.72);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+  .overlay.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:540px;width:100%;padding:22px}
+  .steps li{margin:11px 0}
+  code{background:#0a1120;border:1px solid var(--line);padding:2px 7px;border-radius:6px;font-size:13px}
+  .dirty-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);display:none;flex:none}
   .dirty .dirty-dot{display:inline-block}
 </style>
 </head>
 <body>
 
-<!-- ==== GATE: ตั้งค่าครั้งแรก (ใส่ GitHub key) ==== -->
-<div id="gate" class="gate hidden">
-  <h2>🔐 ตั้งค่าครั้งแรก (ทำครั้งเดียว)</h2>
-  <p class="muted">หน้านี้แก้กฎในคลังโค้ดของคุณโดยตรง จึงต้องมี “กุญแจ GitHub” ยืนยันตัวตนก่อน
-  กุญแจถูกเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ถูกส่งไปที่อื่น</p>
-  <ol class="steps">
-    <li>เปิดลิงก์นี้ (สิทธิ์ถูกเลือกไว้ให้แล้ว): <br>
-      <a id="tokenLink" target="_blank" rel="noopener">➜ สร้าง GitHub Token</a><br>
-      <span class="muted">เลื่อนลงล่างสุด กด <b>Generate token</b> แล้ว <b>ก๊อปโค้ดที่ขึ้นต้นด้วย <code>ghp_…</code></b></span>
-    </li>
-    <li>วางกุญแจที่ก๊อปมา:
-      <input id="tokenInput" placeholder="ghp_xxxxxxxxxxxx" style="margin-top:6px">
-    </li>
-  </ol>
-  <div class="row" style="margin-top:16px">
-    <button class="btn green" onclick="saveToken()">✓ บันทึกกุญแจ & เข้าใช้งาน</button>
+<header>
+  <h1>🗂️ Multi-Account Manager</h1>
+  <div class="tabs">
+    <div class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</div>
+    <div class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</div>
   </div>
-  <p class="muted" style="font-size:12px;margin-top:16px">ℹ️ กุญแจนี้ให้สิทธิ์แก้ไฟล์ในคลังโค้ดของคุณ
-    เก็บเป็นความลับ ถ้าหลุดให้ไปกด Revoke แล้วสร้างใหม่</p>
-</div>
+  <div class="spacer"></div>
+  <span class="dirty-dot" title="มีการแก้ที่ยังไม่บันทึก"></span>
+  <button class="btn ghost sm" onclick="reload()">↻ โหลดใหม่</button>
+  <button class="btn ghost sm" id="testBtn" onclick="runTest()">▶ ทดสอบ</button>
+  <button class="btn green" id="saveBtn" onclick="save()">💾 บันทึก</button>
+</header>
 
-<!-- ==== APP ==== -->
-<div id="app" class="hidden">
-  <header>
-    <h1>🗂️ Multi-Account Manager</h1>
-    <span class="sub">ตั้งค่ากฎ ปิด/เปิด/งบ อัตโนมัติ · แก้แล้วมีผลใน ~10 นาที <span class="dirty-dot" title="มีการแก้ไขที่ยังไม่บันทึก"></span></span>
-    <div class="spacer"></div>
-    <button class="btn ghost sm" onclick="runTest()" title="สั่งรันทดสอบบนคลาวด์ (ไม่แก้จริง)">▶ ทดสอบ</button>
-    <button class="btn ghost sm" onclick="reload()">↻ โหลดใหม่</button>
-    <button id="saveBtn" class="btn green" onclick="save()">💾 บันทึก</button>
-  </header>
+<div class="wrap">
+  <div id="banner" class="banner"></div>
 
-  <div class="wrap">
+  <!-- ===== ภาพรวม ===== -->
+  <section id="overview">
+    <div id="ovMeta" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
+    <div id="kpis" class="kpis"></div>
+    <div class="card" style="padding:6px 16px 16px">
+      <h3 style="margin:14px 4px 6px;font-size:15px">รายละเอียดรายบัญชี</h3>
+      <div style="overflow-x:auto">
+        <table id="ovTable">
+          <thead><tr>
+            <th>ชื่อบัญชี</th><th>Spend</th><th>Revenue</th><th>ROAS</th><th>ต้นทุน/ออเดอร์</th><th>ออเดอร์</th><th>สถานะ</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ตั้งกฎ ===== -->
+  <section id="editor" class="hidden">
     <div class="card">
       <div class="row" style="align-items:flex-end">
-        <div class="field">
-          <label>โซนเวลา (timezone)</label>
-          <input id="tz" value="Asia/Bangkok">
-        </div>
-        <div class="field" style="display:flex;align-items:center;gap:8px;padding-top:18px">
+        <div class="field"><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok"></div>
+        <div class="field" style="display:flex;align-items:center;gap:8px;padding-top:20px">
           <input type="checkbox" id="dryRun" style="width:auto">
-          <span>โหมดทดสอบทุกครั้ง (dry-run · ไม่แก้โฆษณาจริง)</span>
+          <span>โหมดทดสอบทุกครั้ง (ไม่แก้โฆษณาจริง)</span>
         </div>
       </div>
-      <p class="muted" style="font-size:12px;margin-bottom:0">
-        💡 <b>Access Token</b> ของ Facebook เก็บเป็นความลับใน GitHub Secret แล้ว (ชื่อ <code>FB_ACCESS_TOKEN</code>)
-        — ทุกบัญชีใช้ตัวเดียวกัน ไม่ต้องกรอกซ้ำที่นี่</p>
+      <p class="muted" style="font-size:12px;margin-bottom:0">💡 Access Token ของ Facebook เก็บใน GitHub Secret
+        (<code>FB_ACCESS_TOKEN</code>) แล้ว ไม่ต้องกรอกที่นี่</p>
     </div>
-
     <div id="accounts"></div>
+    <button class="btn primary" onclick="addAccount()">➕ เพิ่มบัญชีใหม่</button>
+  </section>
+</div>
 
-    <button class="btn primary" onclick="addAccount()" style="margin-top:4px">➕ เพิ่มบัญชีใหม่</button>
+<!-- token overlay -->
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <h2 style="margin-top:0">🔐 เชื่อมต่อ GitHub (ทำครั้งเดียว)</h2>
+    <p class="muted">การ <b>บันทึก</b> ต้องมี “กุญแจ GitHub” ยืนยันตัวตน (เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น)</p>
+    <ol class="steps">
+      <li>กดสร้างกุญแจ (สิทธิ์เลือกไว้ให้แล้ว): <a id="tokenLink" target="_blank" rel="noopener">➜ สร้าง GitHub Token</a><br>
+        <span class="muted">เลื่อนลงล่างสุด กด <b>Generate token</b> แล้วก๊อปโค้ด <code>ghp_…</code></span></li>
+      <li>วางกุญแจ: <input id="tokenInput" placeholder="ghp_xxxxxxxx" style="margin-top:6px"></li>
+    </ol>
+    <div class="row" style="margin-top:14px">
+      <button class="btn green" onclick="saveToken()">✓ บันทึกกุญแจ</button>
+      <button class="btn ghost" onclick="hideOverlay()">ยกเลิก</button>
+    </div>
   </div>
 </div>
 
@@ -131,332 +153,279 @@
 
 <script>
 /* ===================== ค่าคงที่ ===================== */
-const OWNER = "sorawiaun-create";
-const REPO  = "aaa";
-const BRANCH = "main";
-const PATH = "config.json";
-const WORKFLOW = "facebook-ads-automation.yml";
-const TOKEN_KEY = "fbdash_gh_token";
+const OWNER="sorawiaun-create", REPO="aaa", BRANCH="main";
+const PATH="facebook-ads-automation/config.json";
+const STATUS_PATH="facebook-ads-automation/status.json";
+const WORKFLOW="facebook-ads-automation.yml";
+const TOKEN_KEY="fbdash_gh_token";
 
-const METRICS = [
-  ["time_of_day","เวลา (ชม. เช่น 22.5 = 22:30)"],
-  ["spend","ยอดใช้จ่าย (บาท)"],
-  ["purchases","จำนวนการซื้อ"],
-  ["results","ผลลัพธ์ (ทักแชต)"],
-  ["roas","ROAS"],
-  ["cost_per_purchase","ต้นทุนต่อการซื้อ"],
-  ["cost_per_result","ต้นทุนต่อผลลัพธ์ (ต่อทัก)"],
-  ["impressions","การมองเห็น"],
-  ["clicks","คลิก"],
-  ["ctr","CTR %"],
-  ["cpc","ต้นทุนต่อคลิก"],
-  ["cpm","ต้นทุนต่อพันครั้ง"],
-  ["frequency","ความถี่"],
-  ["reach","การเข้าถึง"],
+const METRICS=[
+  ["time_of_day","เวลา (ชม. 22.5=22:30)"],["spend","ยอดใช้จ่าย (บาท)"],["purchases","จำนวนการซื้อ"],
+  ["results","ผลลัพธ์ (ทักแชต)"],["roas","ROAS"],["cost_per_purchase","ต้นทุนต่อการซื้อ"],
+  ["cost_per_result","ต้นทุนต่อผลลัพธ์"],["impressions","การมองเห็น"],["clicks","คลิก"],
+  ["ctr","CTR %"],["cpc","ต้นทุน/คลิก"],["cpm","ต้นทุน/พันครั้ง"],["frequency","ความถี่"],["reach","การเข้าถึง"],
 ];
-const OPERATORS = [[">","มากกว่า >"],["<","น้อยกว่า <"],[">=","≥"],["<=","≤"],["==","เท่ากับ ="],["!=","ไม่เท่ากับ ≠"]];
-const ACTIONS = [
-  ["PAUSE","⏸️ ปิดแคมเปญ"],
-  ["ACTIVATE","▶️ เปิดแคมเปญ"],
-  ["INCREASE_BUDGET","📈 เพิ่มงบ"],
-  ["DECREASE_BUDGET","📉 ลดงบ"],
-  ["RESET_BUDGET","🔄 รีเซ็ตงบ"],
-];
+const OPERATORS=[[">","มากกว่า >"],["<","น้อยกว่า <"],[">=","≥"],["<=","≤"],["==","เท่ากับ ="],["!=","ไม่เท่ากับ ≠"]];
+const ACTIONS=[["PAUSE","⏸️ ปิดแคมเปญ"],["ACTIVATE","▶️ เปิดแคมเปญ"],["INCREASE_BUDGET","📈 เพิ่มงบ"],
+  ["DECREASE_BUDGET","📉 ลดงบ"],["RESET_BUDGET","🔄 รีเซ็ตงบ"]];
 
-document.getElementById("tokenLink").href =
+document.getElementById("tokenLink").href=
   "https://github.com/settings/tokens/new?scopes=repo,workflow&description=FB+Ads+Dashboard";
 
 /* ===================== state ===================== */
-let CONFIG = null;   // {settings, accounts:[...]}
-let SHA = null;      // sha ของ config.json (สำหรับ commit)
-let dirty = false;
+let CONFIG=null, SHA=null, dirty=false;
+function setDirty(v){dirty=v;document.body.classList.toggle("dirty",v);}
+function token(){return localStorage.getItem(TOKEN_KEY)||"";}
+function authHeaders(withAuth){const h={"Accept":"application/vnd.github+json"};if(withAuth&&token())h["Authorization"]="Bearer "+token();return h;}
 
-function setDirty(v){ dirty=v; document.body.classList.toggle("dirty",v); }
+/* ===================== utils ===================== */
+function toB64(str){const b=new TextEncoder().encode(str);let s="";b.forEach(x=>s+=String.fromCharCode(x));return btoa(s);}
+function fromB64(b64){const bin=atob((b64||"").replace(/\n/g,""));return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)));}
+function money(n){return "฿"+Number(n||0).toLocaleString("th-TH",{maximumFractionDigits:0});}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function uid(){return "c_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);}
+function opt(list,val){return list.map(([v,l])=>`<option value="${v}" ${v===val?"selected":""}>${l}</option>`).join("");}
+
+let toastT=null;
+function toast(msg,kind){const el=document.getElementById("toast");el.textContent=msg;el.className="toast show "+(kind||"");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.className="toast",4500);}
+function banner(msg,kind){const el=document.getElementById("banner");if(!msg){el.className="banner";return;}
+  el.textContent=msg;el.className="banner show "+(kind||"info");}
 
 /* ===================== GitHub API ===================== */
-function token(){ return localStorage.getItem(TOKEN_KEY) || ""; }
-function ghHeaders(){ return {"Authorization":"Bearer "+token(),"Accept":"application/vnd.github+json"}; }
-
-function toB64(str){
-  const bytes = new TextEncoder().encode(str);
-  let bin=""; bytes.forEach(b=>bin+=String.fromCharCode(b));
-  return btoa(bin);
+async function apiGet(path,withAuth){
+  const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`;
+  return fetch(url,{headers:authHeaders(withAuth),cache:"no-store"});
 }
-function fromB64(b64){
-  const bin = atob((b64||"").replace(/\n/g,""));
-  const bytes = Uint8Array.from(bin, c=>c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-async function apiGetConfig(){
-  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}?ref=${BRANCH}&t=${Date.now()}`;
-  const r = await fetch(url,{headers:ghHeaders(),cache:"no-store"});
-  if(r.status===401) throw new Error("กุญแจไม่ถูกต้อง/หมดอายุ — กดปุ่มออกจากระบบแล้วใส่ใหม่");
-  if(!r.ok) throw new Error("โหลด config ไม่ได้ ("+r.status+")");
-  const j = await r.json();
-  SHA = j.sha;
+async function loadConfig(){
+  let r=await apiGet(PATH,true);
+  if(r.status===401){ // token เสีย -> ลองแบบไม่ใช้ token (repo สาธารณะอ่านได้)
+    r=await apiGet(PATH,false);
+  }
+  if(!r.ok) throw new Error("โหลด config ไม่ได้ (HTTP "+r.status+") — ตรวจว่าไฟล์ "+PATH+" มีอยู่");
+  const j=await r.json(); SHA=j.sha;
   return JSON.parse(fromB64(j.content));
 }
-
-async function apiPutConfig(obj){
-  const body = {
-    message: "Update rules via dashboard",
-    content: toB64(JSON.stringify(obj,null,2)),
-    branch: BRANCH,
-    sha: SHA,
+async function loadStatus(){
+  let r=await apiGet(STATUS_PATH,true);
+  if(r.status===401) r=await apiGet(STATUS_PATH,false);
+  if(r.status===404) return null;         // ยังไม่มี (รอรอบคลาวด์แรก)
+  if(!r.ok) throw new Error("โหลดภาพรวมไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json();
+  return JSON.parse(fromB64(j.content));
+}
+async function putConfig(obj){
+  const doPut=async(sha)=>{
+    const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+    return fetch(url,{method:"PUT",headers:authHeaders(true),body:JSON.stringify({
+      message:"Update rules via dashboard",content:toB64(JSON.stringify(obj,null,2)),branch:BRANCH,sha})});
   };
-  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
-  const r = await fetch(url,{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
-  if(!r.ok){
-    const t = await r.text();
-    throw new Error("บันทึกไม่ได้ ("+r.status+") "+t.slice(0,120));
+  let r=await doPut(SHA);
+  if(r.status===409){ // sha เก่า -> โหลด sha ใหม่แล้วลองอีกครั้ง
+    const g=await apiGet(PATH,true); const gj=await g.json(); SHA=gj.sha; r=await doPut(SHA);
   }
-  const j = await r.json();
-  SHA = j.content.sha;
+  if(r.status===401||r.status===403) throw new Error("กุญแจไม่มีสิทธิ์บันทึก — กด 🔑 ใส่กุญแจใหม่");
+  if(!r.ok){const t=await r.text();throw new Error("บันทึกไม่ได้ (HTTP "+r.status+") "+t.slice(0,100));}
+  const j=await r.json(); SHA=j.content.sha;
+}
+async function dispatchTest(){
+  const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
+  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true"}})});
+  if(!r.ok) throw new Error("สั่งทดสอบไม่ได้ (HTTP "+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
 }
 
-async function apiRunTest(){
-  const url = `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
-  const r = await fetch(url,{method:"POST",headers:ghHeaders(),
-    body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true"}})});
-  if(!r.ok) throw new Error("สั่งทดสอบไม่ได้ ("+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
-}
-
-/* ===================== toast ===================== */
-let toastT=null;
-function toast(msg,kind){
-  const el=document.getElementById("toast");
-  el.textContent=msg; el.className="toast show "+(kind||"");
-  clearTimeout(toastT); toastT=setTimeout(()=>el.className="toast",4200);
-}
-
-/* ===================== token gate ===================== */
+/* ===================== token overlay ===================== */
+let afterToken=null;
+function showOverlay(cb){afterToken=cb||null;document.getElementById("overlay").classList.add("show");}
+function hideOverlay(){document.getElementById("overlay").classList.remove("show");}
 function saveToken(){
   const v=document.getElementById("tokenInput").value.trim();
-  if(!v){ toast("วางกุญแจก่อนครับ","err"); return; }
-  localStorage.setItem(TOKEN_KEY,v);
-  boot();
+  if(!v){toast("วางกุญแจก่อนครับ","err");return;}
+  localStorage.setItem(TOKEN_KEY,v);hideOverlay();
+  toast("บันทึกกุญแจแล้ว ✓","ok");
+  const cb=afterToken;afterToken=null;if(cb)cb();
 }
-function logout(){ localStorage.removeItem(TOKEN_KEY); location.reload(); }
+function requireToken(cb){ if(token())cb(); else showOverlay(cb); }
 
-/* ===================== render ===================== */
-function uid(){ return "c_"+Date.now()+"_"+Math.random().toString(36).slice(2,7); }
-function opt(list,val){ return list.map(([v,l])=>`<option value="${v}" ${v===val?"selected":""}>${l}</option>`).join(""); }
-
-function render(){
-  document.getElementById("tz").value = CONFIG.settings?.timezone || "Asia/Bangkok";
-  document.getElementById("dryRun").checked = !!CONFIG.settings?.dry_run;
-  const root=document.getElementById("accounts");
-  root.innerHTML="";
-  CONFIG.accounts.forEach((acc,ai)=>root.appendChild(accountEl(acc,ai)));
+/* ===================== tabs ===================== */
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
+  document.getElementById("overview").classList.toggle("hidden",t!=="overview");
+  document.getElementById("editor").classList.toggle("hidden",t!=="editor");
 }
 
+/* ===================== OVERVIEW ===================== */
+function renderOverview(st){
+  const meta=document.getElementById("ovMeta");
+  const kpis=document.getElementById("kpis");
+  const tb=document.querySelector("#ovTable tbody");
+  if(!st){
+    meta.textContent="";
+    kpis.innerHTML="";
+    tb.innerHTML=`<tr><td colspan="7" class="muted" style="text-align:center;padding:26px">
+      ยังไม่มีข้อมูลภาพรวม — รอรอบแรกของคลาวด์ (~10 นาที) หรือกดปุ่ม ▶ ทดสอบ ด้านบน</td></tr>`;
+    return;
+  }
+  const when=st.updated_at?new Date(st.updated_at):null;
+  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"-"}</b>
+    ${st.dry_run?'· <span class="tag">โหมดทดสอบ</span>':''} · ข้อมูลจากรอบที่คลาวด์รันจริง`;
+  const T=st.totals||{};
+  kpis.innerHTML=[
+    ["Spend","ยอดใช้จ่ายรวม",money(T.spend)],
+    ["Revenue","ยอดขายรวม",money(T.revenue)],
+    ["ROAS","ผลตอบแทนเฉลี่ย",(T.roas||0).toFixed(2)+"x"],
+    ["Orders","จำนวนออเดอร์",Number(T.orders||0).toLocaleString("th-TH")],
+  ].map(([lbl,sub,val])=>`<div class="kpi"><div class="lbl"><span>${sub}</span><span class="tag">${lbl}</span></div><div class="val">${val}</div></div>`).join("");
+
+  tb.innerHTML=(st.accounts||[]).map(a=>{
+    if(a.error) return `<tr><td>${esc(a.name)}</td><td colspan="5" class="muted">—</td>
+      <td><span class="tag err" title="${esc(a.error)}">ผิดพลาด</span></td></tr>`;
+    const roas=Number(a.roas||0);
+    return `<tr>
+      <td>${esc(a.name)}</td>
+      <td>${money(a.spend)}</td>
+      <td class="pos">${money(a.revenue)}</td>
+      <td class="${roas>=1?'pos':'neg'}">${roas.toFixed(2)}x</td>
+      <td>${a.orders>0?money(a.cost_per_order):'-'}</td>
+      <td>${Number(a.orders||0).toLocaleString("th-TH")}</td>
+      <td><span class="tag">${a.active_today||0}/${a.campaigns||0} แคมเปญ</span></td>
+    </tr>`;
+  }).join("")||`<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">ไม่มีบัญชี</td></tr>`;
+}
+
+/* ===================== EDITOR ===================== */
+function renderEditor(){
+  document.getElementById("tz").value=CONFIG.settings?.timezone||"Asia/Bangkok";
+  document.getElementById("dryRun").checked=!!CONFIG.settings?.dry_run;
+  const root=document.getElementById("accounts");root.innerHTML="";
+  (CONFIG.accounts||[]).forEach((acc,ai)=>root.appendChild(accountEl(acc,ai)));
+}
 function accountEl(acc,ai){
-  const el=document.createElement("div");
-  el.className="acct"+(acc.__open?" open":"");
-  const ruleCount=(acc.rules||[]).length;
-  el.innerHTML=`
-    <div class="acct-head">
-      <span class="dot"></span>
-      <b class="acct-title">${escapeHtml(acc.name||"(ไม่มีชื่อ)")}</b>
-      <span class="muted" style="font-size:12px">act_${escapeHtml(acc.account_id||"?")} · ${ruleCount} กฎ</span>
-      <div class="spacer"></div>
-      <span class="chev">▶</span>
-    </div>
-    <div class="acct-body"></div>`;
-  el.querySelector(".acct-head").onclick=(e)=>{
-    if(e.target.tagName==="BUTTON"||e.target.tagName==="INPUT") return;
-    acc.__open=!acc.__open; el.classList.toggle("open");
-  };
+  const el=document.createElement("div");el.className="acct"+(acc.__open?" open":"");
+  el.innerHTML=`<div class="acct-head"><span class="dot"></span>
+    <b class="acct-title">${esc(acc.name||"(ไม่มีชื่อ)")}</b>
+    <span class="muted" style="font-size:12px">act_${esc(acc.account_id||"?")} · ${(acc.rules||[]).length} กฎ</span>
+    <div class="spacer"></div><span class="chev">▶</span></div><div class="acct-body"></div>`;
+  el.querySelector(".acct-head").onclick=e=>{if(["BUTTON","INPUT","SELECT"].includes(e.target.tagName))return;
+    acc.__open=!acc.__open;el.classList.toggle("open");};
   const body=el.querySelector(".acct-body");
-
-  // ฟิลด์บัญชี
-  const info=document.createElement("div");
-  info.className="row";
-  info.style.margin="8px 0 4px";
+  const info=document.createElement("div");info.className="row";info.style.margin="8px 0 4px";
   info.appendChild(fieldEl("ชื่อบัญชี",acc.name,"grow",v=>{acc.name=v;el.querySelector(".acct-title").textContent=v||"(ไม่มีชื่อ)";setDirty(true)}));
   info.appendChild(fieldEl("Ad Account ID",acc.account_id,"",v=>{acc.account_id=v;setDirty(true)}));
-  const tl=document.createElement("div"); tl.className="field";
+  const tl=document.createElement("div");tl.className="field";
   tl.innerHTML=`<label>ระดับที่คุม</label><select>${opt([["campaign","Campaign"],["adset","Ad set"]],acc.target_level||"campaign")}</select>`;
   tl.querySelector("select").onchange=e=>{acc.target_level=e.target.value;setDirty(true)};
-  info.appendChild(tl);
-  body.appendChild(info);
-
-  // รายการกฎ
+  info.appendChild(tl);body.appendChild(info);
   const rulesWrap=document.createElement("div");
-  (acc.rules||[]).forEach((rule,ri)=>rulesWrap.appendChild(ruleEl(acc,rule,ri,rulesWrap)));
+  (acc.rules||[]).forEach(rule=>rulesWrap.appendChild(ruleEl(acc,rule,rulesWrap)));
   body.appendChild(rulesWrap);
-
-  // ปุ่มเพิ่มกฎ + ลบบัญชี
-  const actions=document.createElement("div");
-  actions.className="row"; actions.style.marginTop="8px";
-  const addBtn=document.createElement("button");
-  addBtn.className="btn sm"; addBtn.textContent="➕ เพิ่มกฎ";
-  addBtn.onclick=()=>{
-    acc.rules=acc.rules||[];
-    acc.rules.push({name:"กฎใหม่",action:"PAUSE",conditions:[newCond()]});
-    rulesWrap.appendChild(ruleEl(acc,acc.rules[acc.rules.length-1],acc.rules.length-1,rulesWrap));
-    setDirty(true);
-  };
-  const delBtn=document.createElement("button");
-  delBtn.className="btn danger sm"; delBtn.textContent="🗑️ ลบบัญชีนี้";
-  delBtn.onclick=()=>{
-    if(!confirm(`ลบบัญชี "${acc.name}" ทั้งหมด?`)) return;
-    CONFIG.accounts.splice(ai,1); render(); setDirty(true);
-  };
-  actions.appendChild(addBtn); actions.appendChild(delBtn);
-  body.appendChild(actions);
+  const actions=document.createElement("div");actions.className="row";actions.style.marginTop="8px";
+  const addBtn=document.createElement("button");addBtn.className="btn sm";addBtn.textContent="➕ เพิ่มกฎ";
+  addBtn.onclick=()=>{acc.rules=acc.rules||[];const r={name:"กฎใหม่",action:"PAUSE",conditions:[newCond()]};
+    acc.rules.push(r);rulesWrap.appendChild(ruleEl(acc,r,rulesWrap));setDirty(true);};
+  const delBtn=document.createElement("button");delBtn.className="btn danger sm";delBtn.textContent="🗑️ ลบบัญชีนี้";
+  delBtn.onclick=()=>{if(!confirm(`ลบบัญชี "${acc.name}"?`))return;CONFIG.accounts.splice(ai,1);renderEditor();setDirty(true);};
+  actions.append(addBtn,delBtn);body.appendChild(actions);
   return el;
 }
-
-function ruleEl(acc,rule,ri,wrap){
-  const el=document.createElement("div");
-  el.className="rule";
-  const head=document.createElement("div");
-  head.className="rule-head";
+function ruleEl(acc,rule,wrap){
+  const el=document.createElement("div");el.className="rule";
+  const head=document.createElement("div");head.className="rule-head";
   head.appendChild(fieldEl("ชื่อกฎ",rule.name,"grow",v=>{rule.name=v;setDirty(true)}));
-  const actSel=document.createElement("div"); actSel.className="field";
+  const actSel=document.createElement("div");actSel.className="field";
   actSel.innerHTML=`<label>การกระทำ</label><select>${opt(ACTIONS,rule.action)}</select>`;
   actSel.querySelector("select").onchange=e=>{rule.action=e.target.value;renderParams();setDirty(true)};
   head.appendChild(actSel);
-  const rmRule=document.createElement("button");
-  rmRule.className="btn danger sm"; rmRule.textContent="🗑️"; rmRule.title="ลบกฎ";
-  rmRule.style.alignSelf="flex-end";
-  rmRule.onclick=()=>{ const i=acc.rules.indexOf(rule); acc.rules.splice(i,1); el.remove(); setDirty(true); };
-  head.appendChild(rmRule);
-  el.appendChild(head);
-
-  // params (แล้วแต่ action)
-  const paramsBox=document.createElement("div");
-  el.appendChild(paramsBox);
+  const rm=document.createElement("button");rm.className="btn danger sm";rm.textContent="🗑️";rm.title="ลบกฎ";
+  rm.onclick=()=>{const i=acc.rules.indexOf(rule);acc.rules.splice(i,1);el.remove();setDirty(true);};
+  head.appendChild(rm);el.appendChild(head);
+  const paramsBox=document.createElement("div");el.appendChild(paramsBox);
   function renderParams(){
-    paramsBox.innerHTML="";
-    const a=rule.action;
+    paramsBox.innerHTML="";const a=rule.action;
     if(a==="INCREASE_BUDGET"||a==="DECREASE_BUDGET"||a==="RESET_BUDGET"){
-      rule.params=rule.params||{};
-      const box=document.createElement("div"); box.className="params";
-      if(a==="RESET_BUDGET"){
-        box.appendChild(numField("ตั้งงบเป็น (บาท)",rule.params.resetAmount,v=>{rule.params.resetAmount=v;setDirty(true)}));
-      }else{
-        box.appendChild(numField("เปลี่ยนกี่ %",rule.params.percent,v=>{rule.params.percent=v;setDirty(true)}));
-        if(a==="INCREASE_BUDGET")
-          box.appendChild(numField("งบสูงสุด (บาท)",rule.params.maxBudget,v=>{rule.params.maxBudget=v;setDirty(true)}));
-        else
-          box.appendChild(numField("งบต่ำสุด (บาท)",rule.params.minBudget,v=>{rule.params.minBudget=v;setDirty(true)}));
-      }
+      rule.params=rule.params||{};const box=document.createElement("div");box.className="params";
+      if(a==="RESET_BUDGET"){box.appendChild(numField("ตั้งงบเป็น (บาท)",rule.params.resetAmount,v=>{rule.params.resetAmount=v;setDirty(true)}));}
+      else{box.appendChild(numField("เปลี่ยนกี่ %",rule.params.percent,v=>{rule.params.percent=v;setDirty(true)}));
+        if(a==="INCREASE_BUDGET")box.appendChild(numField("งบสูงสุด (บาท)",rule.params.maxBudget,v=>{rule.params.maxBudget=v;setDirty(true)}));
+        else box.appendChild(numField("งบต่ำสุด (บาท)",rule.params.minBudget,v=>{rule.params.minBudget=v;setDirty(true)}));}
       box.appendChild(numField("ทำซ้ำทุก (นาที)",rule.params.frequencyMins,v=>{rule.params.frequencyMins=v;setDirty(true)}));
       paramsBox.appendChild(box);
     }
   }
   renderParams();
-
-  // เงื่อนไข
-  const condLabel=document.createElement("div");
-  condLabel.className="muted"; condLabel.style.cssText="font-size:12px;margin:6px 2px 2px";
-  condLabel.textContent="เงื่อนไข (ต้องเป็นจริงทุกข้อ):";
-  el.appendChild(condLabel);
-  const condWrap=document.createElement("div");
-  rule.conditions=rule.conditions||[];
-  rule.conditions.forEach(c=>condWrap.appendChild(condEl(rule,c,condWrap)));
-  el.appendChild(condWrap);
-
-  const addC=document.createElement("button");
-  addC.className="btn ghost sm"; addC.textContent="+ เพิ่มเงื่อนไข"; addC.style.marginTop="6px";
-  addC.onclick=()=>{ const c=newCond(); rule.conditions.push(c); condWrap.appendChild(condEl(rule,c,condWrap)); setDirty(true); };
-  el.appendChild(addC);
-  return el;
+  const cl=document.createElement("div");cl.className="muted";cl.style.cssText="font-size:12px;margin:6px 2px 2px";
+  cl.textContent="เงื่อนไข (ต้องจริงทุกข้อ):";el.appendChild(cl);
+  const cw=document.createElement("div");rule.conditions=rule.conditions||[];
+  rule.conditions.forEach(c=>cw.appendChild(condEl(rule,c)));el.appendChild(cw);
+  const addC=document.createElement("button");addC.className="btn ghost sm";addC.textContent="+ เพิ่มเงื่อนไข";addC.style.marginTop="6px";
+  addC.onclick=()=>{const c=newCond();rule.conditions.push(c);cw.appendChild(condEl(rule,c));setDirty(true);};
+  el.appendChild(addC);return el;
 }
-
-function condEl(rule,c,wrap){
-  const el=document.createElement("div");
-  el.className="cond";
-  const m=document.createElement("div"); m.className="field grow";
+function condEl(rule,c){
+  const el=document.createElement("div");el.className="cond";
+  const m=document.createElement("div");m.className="field grow";
   m.innerHTML=`<label>ตัวชี้วัด</label><select>${opt(METRICS,c.metric)}</select>`;
   m.querySelector("select").onchange=e=>{c.metric=e.target.value;setDirty(true)};
-  const o=document.createElement("div"); o.className="field tiny";
+  const o=document.createElement("div");o.className="field tiny";
   o.innerHTML=`<label>เงื่อนไข</label><select>${opt(OPERATORS,c.operator)}</select>`;
   o.querySelector("select").onchange=e=>{c.operator=e.target.value;setDirty(true)};
-  const v=numField("ค่า",c.value,val=>{c.value=val;setDirty(true)}); v.classList.add("tiny");
-  const rm=document.createElement("button");
-  rm.className="btn danger sm"; rm.textContent="✕"; rm.style.alignSelf="flex-end";
-  rm.onclick=()=>{ const i=rule.conditions.indexOf(c); rule.conditions.splice(i,1); el.remove(); setDirty(true); };
-  el.append(m,o,v,rm);
-  return el;
+  const v=numField("ค่า",c.value,val=>{c.value=val;setDirty(true)});v.classList.add("tiny");
+  const rm=document.createElement("button");rm.className="btn danger sm";rm.textContent="✕";
+  rm.onclick=()=>{const i=rule.conditions.indexOf(c);rule.conditions.splice(i,1);el.remove();setDirty(true);};
+  el.append(m,o,v,rm);return el;
 }
-
-/* ===================== helpers ===================== */
-function newCond(){ return {id:uid(),metric:"spend",operator:">",value:0,timeframe:"today"}; }
-function fieldEl(label,val,cls,onin){
-  const d=document.createElement("div"); d.className="field "+(cls||"");
-  d.innerHTML=`<label>${label}</label>`;
-  const i=document.createElement("input"); i.value=val??"";
-  i.oninput=e=>onin(e.target.value);
-  d.appendChild(i); return d;
-}
-function numField(label,val,onin){
-  const d=document.createElement("div"); d.className="field";
-  d.innerHTML=`<label>${label}</label>`;
-  const i=document.createElement("input"); i.type="number"; i.step="any";
-  i.value=(val===null||val===undefined)?"":val;
-  i.oninput=e=>{ const s=e.target.value; onin(s===""?null:Number(s)); };
-  d.appendChild(i); return d;
-}
-function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function newCond(){return {id:uid(),metric:"spend",operator:">",value:0,timeframe:"today"};}
+function fieldEl(label,val,cls,onin){const d=document.createElement("div");d.className="field "+(cls||"");
+  d.innerHTML=`<label>${label}</label>`;const i=document.createElement("input");i.value=val??"";
+  i.oninput=e=>onin(e.target.value);d.appendChild(i);return d;}
+function numField(label,val,onin){const d=document.createElement("div");d.className="field";
+  d.innerHTML=`<label>${label}</label>`;const i=document.createElement("input");i.type="number";i.step="any";
+  i.value=(val===null||val===undefined)?"":val;i.oninput=e=>{const s=e.target.value;onin(s===""?null:Number(s));};
+  d.appendChild(i);return d;}
 
 /* ===================== actions ===================== */
 function collect(){
   CONFIG.settings=CONFIG.settings||{};
   CONFIG.settings.timezone=document.getElementById("tz").value.trim()||"Asia/Bangkok";
   CONFIG.settings.dry_run=document.getElementById("dryRun").checked;
-  // เอา __open (state ของ UI) ออกก่อนบันทึก
-  const clean=JSON.parse(JSON.stringify(CONFIG,(k,v)=>k==="__open"?undefined:v));
-  return clean;
+  return JSON.parse(JSON.stringify(CONFIG,(k,v)=>k==="__open"?undefined:v));
 }
-async function save(){
-  const btn=document.getElementById("saveBtn");
-  btn.disabled=true; btn.textContent="⏳ กำลังบันทึก…";
-  try{
-    await apiPutConfig(collect());
-    setDirty(false);
-    toast("✅ บันทึกแล้ว! ระบบคลาวด์จะใช้กฎใหม่ในรอบถัดไป (~10 นาที)","ok");
-  }catch(e){ toast("❌ "+e.message,"err"); }
-  btn.disabled=false; btn.textContent="💾 บันทึก";
+function save(){
+  requireToken(async()=>{
+    const btn=document.getElementById("saveBtn");btn.disabled=true;btn.textContent="⏳ กำลังบันทึก…";
+    try{await putConfig(collect());setDirty(false);toast("✅ บันทึกแล้ว! คลาวด์จะใช้กฎใหม่รอบถัดไป (~10 นาที)","ok");}
+    catch(e){toast("❌ "+e.message,"err");}
+    btn.disabled=false;btn.textContent="💾 บันทึก";
+  });
 }
 async function reload(){
-  if(dirty && !confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?")) return;
-  try{ CONFIG=await apiGetConfig(); render(); setDirty(false); toast("โหลดล่าสุดแล้ว","ok"); }
-  catch(e){ toast("❌ "+e.message,"err"); }
+  if(dirty&&!confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?"))return;
+  await boot();toast("โหลดล่าสุดแล้ว","ok");
 }
-async function runTest(){
-  try{ await apiRunTest();
-    toast("▶ สั่งทดสอบบนคลาวด์แล้ว — ดูผลได้ที่แท็บ Actions ใน GitHub","ok");
-  }catch(e){ toast("❌ "+e.message,"err"); }
-}
+function runTest(){requireToken(async()=>{try{await dispatchTest();
+  toast("▶ สั่งทดสอบบนคลาวด์แล้ว — ผลจะขึ้นในภาพรวมอีกสักครู่","ok");}catch(e){toast("❌ "+e.message,"err");}});}
 function addAccount(){
-  CONFIG.accounts.push({
-    name:"บัญชีใหม่", token:"env:FB_ACCESS_TOKEN", account_id:"",
-    target_level:"campaign", rules:[], __open:true
-  });
-  render(); setDirty(true);
-  window.scrollTo(0,document.body.scrollHeight);
+  CONFIG.accounts=CONFIG.accounts||[];
+  CONFIG.accounts.push({name:"บัญชีใหม่",token:"env:FB_ACCESS_TOKEN",account_id:"",target_level:"campaign",rules:[],__open:true});
+  showTab("editor");renderEditor();setDirty(true);window.scrollTo(0,document.body.scrollHeight);
 }
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
 /* ===================== boot ===================== */
 async function boot(){
-  document.getElementById("gate").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
+  banner("⏳ กำลังโหลดข้อมูล…","info");
   try{
-    CONFIG=await apiGetConfig();
-    render();
+    CONFIG=await loadConfig();
+    renderEditor();
+    banner("");
   }catch(e){
-    toast("❌ "+e.message,"err");
-    if(String(e.message).includes("กุญแจ")){ logout(); }
+    banner("❌ "+e.message,"err");
+    CONFIG=CONFIG||{settings:{},accounts:[]};
   }
+  try{ renderOverview(await loadStatus()); }
+  catch(e){ renderOverview(null); }
 }
-window.addEventListener("beforeunload",e=>{ if(dirty){ e.preventDefault(); e.returnValue=""; }});
-
-if(token()){ boot(); }
-else{ document.getElementById("gate").classList.remove("hidden"); }
+boot();
 </script>
 </body>
 </html>
