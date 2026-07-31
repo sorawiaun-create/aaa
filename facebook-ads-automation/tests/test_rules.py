@@ -117,6 +117,15 @@ class TestPlanning(unittest.TestCase):
         self.assertEqual(len(plan_campaign(rules, night)), 1)
         self.assertEqual(len(plan_campaign(rules, day)), 0)
 
+    def test_disabled_rule_is_skipped(self):
+        rules = [{
+            "name": "ปิดกฎ", "action": "PAUSE", "enabled": False,
+            "conditions": [{"metric": "spend", "operator": ">", "value": 0}],
+        }]
+        self.assertEqual(len(plan_campaign(rules, {"spend": 100})), 0)
+        rules[0]["enabled"] = True
+        self.assertEqual(len(plan_campaign(rules, {"spend": 100})), 1)
+
     def test_increase_budget_plan(self):
         rules = [{
             "name": "เพิ่มงบ", "action": "INCREASE_BUDGET",
