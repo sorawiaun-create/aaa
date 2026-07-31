@@ -38,6 +38,8 @@ export default function SettingsPage() {
   const [connecting, setConnecting] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+  // All advertiser accounts (sellers) the token can manage — for switching.
+  const [allAdvertisers, setAllAdvertisers] = useState<Advertiser[]>([]);
   // Authorization link is prefetched so it can be a real <a> (no popup block).
   const [authUrl, setAuthUrl] = useState<string>("");
 
@@ -62,6 +64,19 @@ export default function SettingsPage() {
       }
     } else {
       setAuthUrl("");
+    }
+
+    // Load the list of seller accounts the token can manage (for switching).
+    if (s.hasAccessToken) {
+      try {
+        const r = await fetch("/api/advertisers");
+        const j = await r.json();
+        setAllAdvertisers(j.ok ? j.advertisers : []);
+      } catch {
+        setAllAdvertisers([]);
+      }
+    } else {
+      setAllAdvertisers([]);
     }
   }
 
@@ -244,6 +259,29 @@ export default function SettingsPage() {
         ) : (
           <div className="rounded-lg border border-amber-800 bg-amber-950/30 p-3 text-sm text-amber-300">
             ยังไม่ได้เชื่อมต่อ — ทำตาม 2 ขั้นตอนด้านล่าง
+          </div>
+        )}
+
+        {view.hasAccessToken && allAdvertisers.length > 0 && (
+          <div>
+            <label className="label">
+              บัญชี seller ที่กำลังควบคุม ({allAdvertisers.length} บัญชี)
+            </label>
+            <select
+              className="input"
+              value={advertiserId}
+              onChange={(e) => pickAdvertiser(e.target.value)}
+            >
+              {allAdvertisers.map((a) => (
+                <option key={a.advertiser_id} value={a.advertiser_id}>
+                  {a.advertiser_name} ({a.advertiser_id})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-neutral-500">
+              แต่ละบัญชีมีแคมเปญของตัวเอง — สลับบัญชีเพื่อดู/ควบคุมแคมเปญของ
+              seller นั้น (เร็วๆ นี้จะรวมทุกบัญชีในหน้าเดียว)
+            </p>
           </div>
         )}
 
