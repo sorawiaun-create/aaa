@@ -49,6 +49,9 @@ function defaultSettings(): Settings {
     apiBase:
       process.env.TIKTOK_API_BASE ??
       "https://business-api.tiktok.com/open_api/v1.3",
+    redirectUri:
+      process.env.TIKTOK_REDIRECT_URI ??
+      "https://chobtham.org/api/auth/callback",
     schedulerEnabled: process.env.SCHEDULER_ENABLED !== "false",
     schedulerIntervalMinutes: Number(
       process.env.SCHEDULER_INTERVAL_MINUTES ?? 15

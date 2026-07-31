@@ -49,6 +49,8 @@ export interface Settings {
   accessToken: string;
   advertiserId: string;
   apiBase: string;
+  // OAuth redirect URI registered in the TikTok app (where auth_code lands).
+  redirectUri: string;
   schedulerEnabled: boolean;
   schedulerIntervalMinutes: number;
 }

@@ -6,12 +6,18 @@ interface SettingsView {
   appId: string;
   advertiserId: string;
   apiBase: string;
+  redirectUri: string;
   schedulerEnabled: boolean;
   schedulerIntervalMinutes: number;
   appSecretMasked: string;
   accessTokenMasked: string;
   hasAppSecret: boolean;
   hasAccessToken: boolean;
+}
+
+interface Advertiser {
+  advertiser_id: string;
+  advertiser_name: string;
 }
 
 export default function SettingsPage() {
@@ -27,6 +33,12 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [verify, setVerify] = useState<string | null>(null);
 
+  // OAuth "Connect TikTok" flow.
+  const [authCode, setAuthCode] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [connectMsg, setConnectMsg] = useState<string | null>(null);
+  const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+
   async function load() {
     const res = await fetch("/api/settings");
     const s: SettingsView = await res.json();
@@ -36,6 +48,50 @@ export default function SettingsPage() {
     setApiBase(s.apiBase);
     setSchedulerEnabled(s.schedulerEnabled);
     setInterval(s.schedulerIntervalMinutes);
+  }
+
+  async function openAuth() {
+    setConnectMsg(null);
+    try {
+      const res = await fetch("/api/auth/url");
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      window.open(json.url, "_blank", "noopener");
+    } catch (e) {
+      setConnectMsg(`เปิดหน้าอนุญาตไม่ได้: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  async function connect() {
+    setConnecting(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch("/api/auth/exchange", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authCode }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      setAdvertisers(json.advertisers ?? []);
+      setAuthCode("");
+      setConnectMsg("เชื่อมต่อสำเร็จ ✓ ระบบบันทึก Access Token แล้ว");
+      await load();
+    } catch (e) {
+      setConnectMsg(`เชื่อมต่อไม่สำเร็จ: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function pickAdvertiser(id: string) {
+    setAdvertiserId(id);
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ advertiserId: id }),
+    });
+    await load();
   }
 
   useEffect(() => {
@@ -159,6 +215,80 @@ export default function SettingsPage() {
             onChange={(e) => setApiBase(e.target.value)}
           />
         </div>
+      </div>
+
+      {/* Connect TikTok (OAuth) */}
+      <div className="card space-y-4">
+        <div>
+          <h2 className="text-sm font-medium text-neutral-300">
+            เชื่อมต่อบัญชี TikTok (ดึงข้อมูลจริง)
+          </h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            บันทึก App ID และ App Secret ด้านบนก่อน แล้วทำ 2 ขั้นตอนนี้เพื่อรับ
+            Access Token อัตโนมัติ (ไม่ต้องกรอกเอง)
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-neutral-800 p-4">
+          <div className="mb-1 text-sm font-medium">
+            ขั้นที่ 1 — อนุญาตแอปบนบัญชีโฆษณา
+          </div>
+          <p className="mb-3 text-xs text-neutral-500">
+            กดปุ่มเพื่อเปิดหน้า TikTok → เลือกบัญชีโฆษณา → กด Authorize
+            จากนั้นจะถูกพาไปหน้า{" "}
+            <span className="text-neutral-300">{view?.redirectUri}</span>{" "}
+            ที่แสดง <b>auth_code</b>
+          </p>
+          <button type="button" className="btn-secondary" onClick={openAuth}>
+            เปิดหน้าอนุญาต TikTok ↗
+          </button>
+        </div>
+
+        <div className="rounded-lg border border-neutral-800 p-4">
+          <div className="mb-1 text-sm font-medium">
+            ขั้นที่ 2 — วาง auth_code ที่ได้
+          </div>
+          <p className="mb-3 text-xs text-neutral-500">
+            คัดลอก auth_code จากหน้าเว็บในขั้นที่ 1 มาวางที่นี่ แล้วกดเชื่อมต่อ
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="input flex-1"
+              placeholder="วาง auth_code ที่นี่"
+              value={authCode}
+              onChange={(e) => setAuthCode(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={connect}
+              disabled={connecting || !authCode.trim()}
+            >
+              {connecting ? "กำลังเชื่อมต่อ…" : "เชื่อมต่อ"}
+            </button>
+          </div>
+        </div>
+
+        {advertisers.length > 1 && (
+          <div>
+            <label className="label">เลือกบัญชีโฆษณาที่จะควบคุม</label>
+            <select
+              className="input"
+              value={advertiserId}
+              onChange={(e) => pickAdvertiser(e.target.value)}
+            >
+              {advertisers.map((a) => (
+                <option key={a.advertiser_id} value={a.advertiser_id}>
+                  {a.advertiser_name} ({a.advertiser_id})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {connectMsg && (
+          <p className="text-sm text-neutral-200">{connectMsg}</p>
+        )}
       </div>
 
       <div className="card space-y-4">

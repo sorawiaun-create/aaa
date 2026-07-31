@@ -20,6 +20,7 @@ export async function GET() {
     appId: s.appId,
     advertiserId: s.advertiserId,
     apiBase: s.apiBase,
+    redirectUri: s.redirectUri,
     schedulerEnabled: s.schedulerEnabled,
     schedulerIntervalMinutes: s.schedulerIntervalMinutes,
     appSecretMasked: mask(s.appSecret),
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
     patch.advertiserId = body.advertiserId.trim();
   if (typeof body.apiBase === "string" && body.apiBase.trim())
     patch.apiBase = body.apiBase.trim();
+  if (typeof body.redirectUri === "string" && body.redirectUri.trim())
+    patch.redirectUri = body.redirectUri.trim();
   if (typeof body.schedulerEnabled === "boolean")
     patch.schedulerEnabled = body.schedulerEnabled;
   if (typeof body.schedulerIntervalMinutes === "number")

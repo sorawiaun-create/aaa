@@ -270,3 +270,78 @@ export async function verifyCredentials(
   if (!info) throw new TikTokApiError("Advertiser not found", -1);
   return info;
 }
+
+/* ------------------------------ OAuth ------------------------------- */
+
+const AUTH_PORTAL = "https://business-api.tiktok.com/portal/auth";
+
+// Builds the URL the user visits to authorize the app on their ad account.
+export function buildAuthorizeUrl(
+  appId: string,
+  redirectUri: string,
+  state = "tk"
+): string {
+  const qs = new URLSearchParams({
+    app_id: appId,
+    state,
+    redirect_uri: redirectUri,
+  });
+  return `${AUTH_PORTAL}?${qs.toString()}`;
+}
+
+interface AccessTokenData {
+  access_token: string;
+  scope: unknown;
+  advertiser_ids: string[];
+}
+
+// Exchanges the one-time auth_code (from the redirect) for a long-lived
+// access token plus the list of advertiser ids the token can manage.
+export async function exchangeAuthCode(
+  s: Settings,
+  authCode: string
+): Promise<AccessTokenData> {
+  if (!s.appId || !s.appSecret) {
+    throw new TikTokApiError("Missing App ID or App Secret", -1);
+  }
+  const base = s.apiBase.replace(/\/$/, "");
+  const res = await fetch(`${base}/oauth2/access_token/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      app_id: s.appId,
+      secret: s.appSecret,
+      auth_code: authCode,
+    }),
+  });
+  const json = (await res.json()) as TikTokResponse<AccessTokenData>;
+  if (json.code !== 0) {
+    throw new TikTokApiError(
+      json.message || "Failed to exchange auth code",
+      json.code,
+      json.request_id
+    );
+  }
+  return json.data;
+}
+
+// Lists advertiser accounts (with names) that the access token can manage.
+export async function getAuthorizedAdvertisers(
+  s: Settings,
+  accessToken: string
+): Promise<Array<{ advertiser_id: string; advertiser_name: string }>> {
+  const base = s.apiBase.replace(/\/$/, "");
+  const qs = new URLSearchParams({
+    app_id: s.appId,
+    secret: s.appSecret,
+    access_token: accessToken,
+  });
+  const res = await fetch(`${base}/oauth2/advertiser/get/?${qs.toString()}`, {
+    headers: { "Access-Token": accessToken },
+  });
+  const json = (await res.json()) as TikTokResponse<{
+    list: Array<{ advertiser_id: string; advertiser_name: string }>;
+  }>;
+  if (json.code !== 0) return [];
+  return json.data.list ?? [];
+}
