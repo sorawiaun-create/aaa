@@ -191,6 +191,12 @@
       บันทึกการทำงานย้อนหลัง (ทุก ~10 นาที) — ดูได้ว่ากฎไหนทำงาน ทำอะไร สำเร็จหรือพลาด ·
       <span class="tag">✅ ทำจริง</span> <span class="tag">🔵 ทดสอบ</span> <span class="tag err">❌ ผิดพลาด</span>
     </div>
+    <div class="row" style="margin-bottom:12px;align-items:center">
+      <select id="logAcct" onchange="setLogFilter()" style="min-width:170px"></select>
+      <label style="display:flex;gap:6px;align-items:center;font-size:13.5px;cursor:pointer">
+        <input type="checkbox" id="logErr" onchange="setLogFilter()"> เฉพาะที่ผิดพลาด (error)
+      </label>
+    </div>
     <div id="logList"></div>
   </section>
 </div>
@@ -342,15 +348,33 @@ function renderOverview(st){
 }
 
 /* ===================== LOG ===================== */
+let LOG_ACT=null, logFA="", logFE=false;
+function setLogFilter(){logFA=document.getElementById("logAcct").value;
+  logFE=document.getElementById("logErr").checked;renderLog();}
 function renderLog(act){
+  if(act!==undefined)LOG_ACT=act;
   const root=document.getElementById("logList");
-  const runs=(act&&act.runs)||[];
+  const runs=(LOG_ACT&&LOG_ACT.runs)||[];
+  // เติมตัวเลือกบัญชีในตัวกรอง (จาก config)
+  const sel=document.getElementById("logAcct");
+  if(sel&&sel.options.length<=1){
+    const names=(CONFIG&&CONFIG.accounts||[]).map(a=>a.name).filter(Boolean);
+    sel.innerHTML='<option value="">ทุกบัญชี</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+    sel.value=logFA;
+  }
   if(!runs.length){root.innerHTML=`<div class="muted" style="text-align:center;padding:26px">ยังไม่มี log — รอรอบแรกของคลาวด์ (~10 นาที) หรือกด ▶ ทดสอบ</div>`;return;}
   const ic={applied:"✅","dry-run":"🔵",error:"❌"};
-  root.innerHTML=runs.map(r=>{
+  const filtered=runs.map(r=>{let evs=r.events||[];
+    if(logFA)evs=evs.filter(e=>e.account===logFA);
+    if(logFE)evs=evs.filter(e=>e.status==="error");
+    return Object.assign({},r,{_evs:evs});});
+  const anyFilter=logFA||logFE;
+  const show=anyFilter?filtered.filter(r=>r._evs.length):filtered;
+  if(!show.length){root.innerHTML=`<div class="muted" style="text-align:center;padding:26px">ไม่พบรายการตามตัวกรอง${logFE?" — ยังไม่มี error 🎉":""}</div>`;return;}
+  root.innerHTML=show.map(r=>{
     const when=r.t?new Date(r.t).toLocaleString("th-TH"):"-";
     const s=r.summary||{};
-    const evs=(r.events||[]);
+    const evs=r._evs;
     const body=evs.length? evs.map(e=>`
         <div class="logrow">
           <span class="logic">${ic[e.status]||"•"}</span>
@@ -485,13 +509,17 @@ function ruleEl(a,rule,n){
   const tog=document.createElement("span");
   const setTog=()=>{const on=rule.enabled!==false;tog.className="toggle "+(on?"on":"off");tog.textContent=on?"เปิด":"ปิด";};
   tog.onclick=()=>{rule.enabled=(rule.enabled===false);setTog();upd();setDirty(true);};setTog();
+  const up=document.createElement("button");up.className="btn ghost xs";up.textContent="↑";up.title="เลื่อนขึ้น";
+  up.onclick=()=>moveRule(a,rule,-1);
+  const down=document.createElement("button");down.className="btn ghost xs";down.textContent="↓";down.title="เลื่อนลง";
+  down.onclick=()=>moveRule(a,rule,1);
   const dup=document.createElement("button");dup.className="btn ghost xs";dup.textContent="⧉";dup.title="ทำซ้ำกฎนี้";
   dup.onclick=()=>{const copy=cloneRules([rule])[0];copy.name=(rule.name||"กฎ")+" (สำเนา)";
     const i=a.rules.indexOf(rule);a.rules.splice(i+1,0,copy);setDirty(true);renderFolders(a);};
   const del=document.createElement("button");del.className="btn danger xs";del.textContent="🗑️";
   del.onclick=()=>{if(!confirm("ลบกฎนี้?"))return;const i=a.rules.indexOf(rule);a.rules.splice(i,1);
     setDirty(true);renderFolders(a);};
-  top.append(lbl,name,seg,tog,dup,del);inner.appendChild(top);
+  top.append(lbl,name,seg,tog,up,down,dup,del);inner.appendChild(top);
 
   // folder selector (ย้ายกฎไปโฟลเดอร์อื่น)
   const fline=document.createElement("div");
@@ -568,6 +596,13 @@ function addAccount(){CONFIG.accounts=CONFIG.accounts||[];
 function deleteAccount(){if(!CONFIG.accounts.length)return;
   if(!confirm(`ลบบัญชี "${acc().name}" ทั้งหมด?`))return;
   CONFIG.accounts.splice(curAcct,1);curAcct=Math.max(0,curAcct-1);setDirty(true);renderEditor();}
+function moveRule(a,rule,dir){
+  const i=a.rules.indexOf(rule);const g=rule.group||DEFAULT_GROUP;let j=-1;
+  if(dir<0){for(let k=i-1;k>=0;k--){if((a.rules[k].group||DEFAULT_GROUP)===g){j=k;break;}}}
+  else{for(let k=i+1;k<a.rules.length;k++){if((a.rules[k].group||DEFAULT_GROUP)===g){j=k;break;}}}
+  if(j<0)return;                       // สุดขอบโฟลเดอร์แล้ว
+  [a.rules[i],a.rules[j]]=[a.rules[j],a.rules[i]];setDirty(true);renderFolders(a);
+}
 function addFolder(){const name=prompt("ตั้งชื่อโฟลเดอร์ใหม่:","โฟลเดอร์ใหม่");if(!name)return;
   acc().rules.push({name:"กฎใหม่",action:"PAUSE",enabled:true,group:name,conditions:[newCond()]});
   openFolders.add(name);setDirty(true);renderFolders(acc());}
