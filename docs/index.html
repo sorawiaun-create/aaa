@@ -53,6 +53,18 @@
     padding:8px 10px;font-size:14px;font-family:inherit}
   select:focus,input:focus{outline:0;border-color:var(--accent)}
   label{font-size:11px;color:var(--muted);display:block;margin:0 0 3px 2px}
+  .ed-layout{display:flex;gap:16px;align-items:flex-start}
+  .sidebar{width:230px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;position:sticky;top:64px}
+  .side-title{font-size:12px;color:var(--muted);font-weight:700;padding:4px 8px 8px;text-transform:uppercase;letter-spacing:.4px}
+  .acct-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;margin-bottom:3px}
+  .acct-item:hover{background:var(--panel2)}
+  .acct-item.sel{background:var(--chip)}
+  .acct-item .an{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acct-item .ac{font-size:11px;color:var(--muted)}
+  .acct-item .sdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
+  .ed-main{flex:1;min-width:0}
+  @media(max-width:760px){.ed-layout{flex-direction:column}.sidebar{width:100%;position:static;display:flex;flex-wrap:wrap;gap:6px}
+    .side-title{width:100%}.acct-item{margin:0;border:1px solid var(--line)}}
   .folder{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--panel);overflow:hidden}
   .folder-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel2);cursor:pointer;flex-wrap:wrap}
   .folder-head .fname{font-weight:700;font-size:15px;border:0;background:transparent;color:var(--text);min-width:120px}
@@ -135,27 +147,33 @@
 
   <!-- ===== ตั้งกฎ ===== -->
   <section id="editor" class="hidden">
-    <div class="card">
-      <div class="row" style="align-items:flex-end">
-        <div style="flex:1;min-width:200px">
-          <label>เลือกบัญชี</label>
-          <select id="acctSel" style="width:100%" onchange="selectAccount(this.value)"></select>
+    <div class="ed-layout">
+      <aside class="sidebar">
+        <div class="side-title">บัญชีทั้งหมด</div>
+        <div id="acctList"></div>
+        <button class="btn ghost sm" style="width:100%;justify-content:center;margin-top:6px" onclick="addAccount()">➕ เพิ่มบัญชี</button>
+      </aside>
+      <div class="ed-main">
+        <div class="card">
+          <div class="row" style="align-items:flex-end">
+            <div style="flex:1;min-width:150px"><label>ชื่อบัญชี</label><input id="accName" style="width:100%"></div>
+            <div style="flex:1;min-width:150px"><label>Ad Account ID</label><input id="accId" style="width:100%"></div>
+            <div><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok" style="width:140px"></div>
+            <div style="display:flex;align-items:center;gap:7px;padding-bottom:9px">
+              <input type="checkbox" id="dryRun"><span style="font-size:13px">โหมดทดสอบ</span>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn sm" onclick="copyAllRules()">📋 คัดลอกกฎทั้งหมด</button>
+            <button class="btn primary sm" id="pasteBtn" onclick="pasteRules()">📄 วางกฎ</button>
+            <div class="spacer"></div>
+            <button class="btn danger sm" onclick="deleteAccount()">🗑️ ลบบัญชีนี้</button>
+          </div>
         </div>
-        <button class="btn sm" onclick="addAccount()">➕ เพิ่มบัญชี</button>
-        <button class="btn danger sm" onclick="deleteAccount()">🗑️ ลบบัญชี</button>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <div style="flex:1;min-width:160px"><label>ชื่อบัญชี</label><input id="accName" style="width:100%"></div>
-        <div style="flex:1;min-width:160px"><label>Ad Account ID</label><input id="accId" style="width:100%"></div>
-        <div><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok" style="width:150px"></div>
-        <div style="display:flex;align-items:center;gap:7px;padding-bottom:9px">
-          <input type="checkbox" id="dryRun"><span style="font-size:13px">โหมดทดสอบ</span>
-        </div>
+        <div id="folders"></div>
+        <button class="btn ghost" style="width:100%;justify-content:center;padding:13px" onclick="addFolder()">📁 สร้างโฟลเดอร์ใหม่</button>
       </div>
     </div>
-
-    <div id="folders"></div>
-    <button class="btn ghost" style="width:100%;justify-content:center;padding:13px" onclick="addFolder()">📁 สร้างโฟลเดอร์ใหม่</button>
   </section>
 </div>
 
@@ -300,22 +318,51 @@ function renderOverview(st){
 
 /* ===================== EDITOR ===================== */
 function acc(){return CONFIG.accounts[curAcct];}
+function renderSidebar(){
+  const list=document.getElementById("acctList");
+  list.innerHTML=(CONFIG.accounts||[]).map((a,i)=>
+    `<div class="acct-item ${i===curAcct?'sel':''}" onclick="selectAccount(${i})">
+       <span class="sdot"></span>
+       <span class="an">${esc(a.name||"(ไม่มีชื่อ)")}</span>
+       <span class="ac">${(a.rules||[]).length}</span>
+     </div>`).join("")||'<div class="muted" style="padding:8px">ยังไม่มีบัญชี</div>';
+}
 function renderEditor(){
-  const sel=document.getElementById("acctSel");
-  sel.innerHTML=(CONFIG.accounts||[]).map((a,i)=>`<option value="${i}" ${i===curAcct?"selected":""}>${esc(a.name||"(ไม่มีชื่อ)")}</option>`).join("");
   document.getElementById("tz").value=CONFIG.settings?.timezone||"Asia/Bangkok";
   document.getElementById("dryRun").checked=!!CONFIG.settings?.dry_run;
+  updatePasteBtn();
+  renderSidebar();
   if(!CONFIG.accounts.length){document.getElementById("folders").innerHTML='<div class="muted" style="padding:20px;text-align:center">ยังไม่มีบัญชี กด "➕ เพิ่มบัญชี"</div>';
     document.getElementById("accName").value="";document.getElementById("accId").value="";return;}
+  if(curAcct>=CONFIG.accounts.length)curAcct=CONFIG.accounts.length-1;
   const a=acc();
   document.getElementById("accName").value=a.name||"";
   document.getElementById("accId").value=a.account_id||"";
-  document.getElementById("accName").oninput=e=>{a.name=e.target.value;
-    document.querySelector(`#acctSel option[value="${curAcct}"]`).textContent=e.target.value||"(ไม่มีชื่อ)";setDirty(true);};
+  document.getElementById("accName").oninput=e=>{a.name=e.target.value;renderSidebar();setDirty(true);};
   document.getElementById("accId").oninput=e=>{a.account_id=e.target.value;setDirty(true);};
   renderFolders(a);
 }
-function selectAccount(i){curAcct=Number(i);renderEditor();}
+function selectAccount(i){
+  if(dirty){/* ไม่ต้องเตือน แก้ค้างในหน่วยความจำอยู่แล้ว */}
+  curAcct=Number(i);openFolders.clear();renderEditor();window.scrollTo(0,0);
+}
+
+/* ---- คลิปบอร์ดคัดลอก/วางกฎ (ข้ามบัญชีได้ เก็บในเบราว์เซอร์) ---- */
+const CLIP_KEY="fbdash_clip";
+function getClip(){try{return JSON.parse(localStorage.getItem(CLIP_KEY)||"[]");}catch(e){return [];}}
+function setClip(rules){localStorage.setItem(CLIP_KEY,JSON.stringify(rules));updatePasteBtn();}
+function cloneRules(rules){return JSON.parse(JSON.stringify(rules)).map(r=>{delete r.__open;
+  (r.conditions||[]).forEach(c=>c.id=uid());return r;});}
+function updatePasteBtn(){const n=getClip().length;const b=document.getElementById("pasteBtn");
+  if(!b)return;b.textContent=`📄 วางกฎ${n?` (${n})`:""}`;b.disabled=!n;b.style.opacity=n?"1":".5";}
+function copyAllRules(){const rules=(acc().rules||[]);if(!rules.length){toast("บัญชีนี้ยังไม่มีกฎ","err");return;}
+  setClip(cloneRules(rules));toast(`📋 คัดลอก ${rules.length} กฎแล้ว — ไปบัญชีอื่นแล้วกด "วางกฎ"`,"ok");}
+function copyFolder(rules,gname){setClip(cloneRules(rules));toast(`📋 คัดลอกโฟลเดอร์ "${gname}" (${rules.length} กฎ)`,"ok");}
+function pasteRules(){const clip=getClip();if(!clip.length){toast("ยังไม่มีกฎที่คัดลอกไว้","err");return;}
+  const a=acc();a.rules=a.rules||[];const add=cloneRules(clip);
+  add.forEach(r=>{if(r.group)openFolders.add(r.group);});
+  a.rules.push(...add);setDirty(true);renderEditor();
+  toast(`📄 วาง ${add.length} กฎเข้าบัญชี "${a.name}" แล้ว`,"ok");}
 
 function groupsOf(a){
   const order=[];const map={};
@@ -335,16 +382,18 @@ function folderEl(a,gname,rules){
     <input class="fname" value="${esc(gname)}" title="แก้ชื่อโฟลเดอร์">
     <span class="tag">${rules.length} กฎ</span><div class="spacer"></div>
     <span class="toggle ${anyOn?'on':'off'}">${anyOn?'เปิด':'ปิด'}</span>
-    <button class="btn danger xs">🗑️</button>`;
+    <button class="btn ghost xs bcopy" title="คัดลอกกฎในโฟลเดอร์นี้">📋</button>
+    <button class="btn danger xs bdel">🗑️</button>`;
   head.onclick=e=>{if(["INPUT","BUTTON"].includes(e.target.tagName)||e.target.classList.contains("toggle"))return;
     el.classList.toggle("open");openFolders.has(gname)?openFolders.delete(gname):openFolders.add(gname);};
+  head.querySelector(".bcopy").onclick=e=>{e.stopPropagation();copyFolder(rules,gname);};
   const fname=head.querySelector(".fname");
   fname.onclick=e=>e.stopPropagation();
   fname.onchange=e=>{const nn=e.target.value.trim()||DEFAULT_GROUP;rules.forEach(r=>r.group=nn);
     if(openFolders.has(gname)){openFolders.delete(gname);openFolders.add(nn);}setDirty(true);renderFolders(a);};
   head.querySelector(".toggle").onclick=e=>{e.stopPropagation();const turnOn=!anyOn;
     rules.forEach(r=>r.enabled=turnOn);setDirty(true);renderFolders(a);};
-  head.querySelector("button").onclick=e=>{e.stopPropagation();
+  head.querySelector(".bdel").onclick=e=>{e.stopPropagation();
     if(!confirm(`ลบโฟลเดอร์ "${gname}" (${rules.length} กฎ) ทั้งหมด?`))return;
     a.rules=a.rules.filter(r=>(r.group||DEFAULT_GROUP)!==gname);setDirty(true);renderFolders(a);};
   el.appendChild(head);
@@ -376,10 +425,13 @@ function ruleEl(a,rule,n){
   const tog=document.createElement("span");
   const setTog=()=>{const on=rule.enabled!==false;tog.className="toggle "+(on?"on":"off");tog.textContent=on?"เปิด":"ปิด";};
   tog.onclick=()=>{rule.enabled=(rule.enabled===false);setTog();upd();setDirty(true);};setTog();
+  const dup=document.createElement("button");dup.className="btn ghost xs";dup.textContent="⧉";dup.title="ทำซ้ำกฎนี้";
+  dup.onclick=()=>{const copy=cloneRules([rule])[0];copy.name=(rule.name||"กฎ")+" (สำเนา)";
+    const i=a.rules.indexOf(rule);a.rules.splice(i+1,0,copy);setDirty(true);renderFolders(a);};
   const del=document.createElement("button");del.className="btn danger xs";del.textContent="🗑️";
   del.onclick=()=>{if(!confirm("ลบกฎนี้?"))return;const i=a.rules.indexOf(rule);a.rules.splice(i,1);
     setDirty(true);renderFolders(a);};
-  top.append(lbl,name,seg,tog,del);inner.appendChild(top);
+  top.append(lbl,name,seg,tog,dup,del);inner.appendChild(top);
 
   // folder selector (ย้ายกฎไปโฟลเดอร์อื่น)
   const fline=document.createElement("div");
