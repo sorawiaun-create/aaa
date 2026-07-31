@@ -1,4 +1,8 @@
-"""ลงมือทำตามแผน (PlannedAction) กับแคมเปญจริง — หรือแค่แสดง log เมื่อ dry-run."""
+"""ลงมือทำตามแผน (PlannedAction) กับแคมเปญจริง — หรือแค่แสดง log เมื่อ dry-run.
+
+นอกจากทำงานแล้ว ยังบันทึก "เหตุการณ์" (events) ทุกครั้งที่มีการเปลี่ยนแปลง
+เพื่อให้หน้า Dashboard โชว์ log ได้ว่ากฎไหนทำงาน ทำอะไร สำเร็จหรือพลาด.
+"""
 from __future__ import annotations
 
 import logging
@@ -25,6 +29,10 @@ class RunSummary:
     errors: int = 0
 
 
+def _th_status(s: str | None) -> str:
+    return {"ACTIVE": "เปิด", "PAUSED": "ปิด"}.get((s or "").upper(), s or "?")
+
+
 def _apply_budget_sequence(
     current_major: float,
     budget_actions: list[PlannedAction],
@@ -35,10 +43,11 @@ def _apply_budget_sequence(
     unit_id: str,
     unit_label: str,
     summary: RunSummary,
-) -> float | None:
-    """คำนวณงบใหม่จากกฎงบทั้งหมดตามลำดับ. คืนงบใหม่ (บาท) ถ้าเปลี่ยน ไม่งั้น None."""
+) -> tuple[float | None, list[dict[str, str]]]:
+    """คำนวณงบใหม่จากกฎงบทั้งหมด. คืน (งบใหม่หรือ None, รายการกฎที่ทำให้เปลี่ยน)."""
     working = current_major
     changed = False
+    applied: list[dict[str, str]] = []
 
     for pa in budget_actions:
         key = pa.state_key(account_id, unit_id)
@@ -57,25 +66,22 @@ def _apply_budget_sequence(
         else:
             continue
 
-        # เพดาน/พื้น
         if pa.max_budget is not None and new > pa.max_budget:
             new = pa.max_budget
         if pa.min_budget is not None and new < pa.min_budget:
             new = pa.min_budget
 
         if abs(new - working) < _EPS:
-            # ไม่มีการเปลี่ยนจริง (เช่น ชนเพดานอยู่แล้ว) — ไม่ mark เพื่อให้ลองใหม่ได้ภายหลัง
             continue
 
-        log.info(
-            "      💰 %s [%s]: %.2f -> %.2f บาท (กฎ: %s)",
-            unit_label, pa.action, working, new, pa.rule_name,
-        )
+        log.info("      💰 %s [%s]: %.2f -> %.2f บาท (กฎ: %s)",
+                 unit_label, pa.action, working, new, pa.rule_name)
         working = new
         changed = True
+        applied.append({"rule": pa.rule_name, "action": pa.action})
         state.mark_applied(key, now)
 
-    return working if changed else None
+    return (working if changed else None), applied
 
 
 def execute_campaign(
@@ -87,16 +93,27 @@ def execute_campaign(
     now: datetime,
     dry_run: bool,
     summary: RunSummary,
+    account_name: str = "",
+    events: list[dict[str, Any]] | None = None,
 ) -> None:
     """ประมวลผลแผนของแคมเปญเดียว แล้วสั่ง API (หรือ log ถ้า dry-run)."""
     cid = campaign["id"]
     cname = campaign.get("name", cid)
     account_id = client.account_id
+    evs = events if events is not None else []
 
     if not planned:
         return
 
     log.info("  ▶ %s (%s)", cname, cid)
+
+    def _event(rule, action, detail, ok, err=None):
+        evs.append({
+            "account": account_name, "campaign": cname, "rule": rule,
+            "action": action, "detail": detail,
+            "status": "error" if err else ("dry-run" if dry_run else "applied"),
+            "error": err,
+        })
 
     # ---- 1) สถานะ (กฎท้ายสุดชนะ) ----
     status_actions = [p for p in planned if p.kind == "STATUS"]
@@ -104,42 +121,54 @@ def execute_campaign(
         final = status_actions[-1]
         current = (campaign.get("status") or "").upper()
         if final.status != current:
-            log.info("      🔀 สถานะ: %s -> %s (กฎ: %s)", current or "?", final.status, final.rule_name)
+            detail = f"{_th_status(current)} → {_th_status(final.status)}"
+            log.info("      🔀 สถานะ: %s (กฎ: %s)", detail, final.rule_name)
             if not dry_run:
                 try:
                     client.update_campaign_status(cid, final.status)
                     summary.status_changes += 1
+                    _event(final.rule_name, final.action, detail, ok=True)
                 except Exception as e:  # noqa: BLE001
                     log.error("      ❌ เปลี่ยนสถานะไม่สำเร็จ: %s", e)
                     summary.errors += 1
+                    _event(final.rule_name, final.action, detail, ok=False, err=str(e)[:200])
             else:
                 summary.status_changes += 1
-        else:
-            log.debug("      สถานะเป็น %s อยู่แล้ว — ไม่เปลี่ยน", current)
+                _event(final.rule_name, final.action, detail, ok=True)
 
     # ---- 2) งบประมาณ ----
     budget_actions = [p for p in planned if p.kind == "BUDGET"]
     if not budget_actions:
         return
 
-    daily_budget_minor = campaign.get("daily_budget")
-    if daily_budget_minor:
-        # CBO: งบอยู่ที่แคมเปญ
-        current_major = client.to_major(daily_budget_minor)
-        new_major = _apply_budget_sequence(
+    def _apply_budget(unit_id, unit_label, current_major, setter, disp):
+        new_major, applied = _apply_budget_sequence(
             current_major, budget_actions,
             state=state, now=now, account_id=account_id,
-            unit_id=cid, unit_label="แคมเปญ", summary=summary,
+            unit_id=unit_id, unit_label=unit_label, summary=summary,
         )
-        if new_major is not None and not dry_run:
+        if new_major is None:
+            return
+        rule = ", ".join(a["rule"] for a in applied)
+        action = applied[-1]["action"] if applied else "BUDGET"
+        detail = f"{disp}งบ {current_major:.0f} → {new_major:.0f} บาท"
+        if not dry_run:
             try:
-                client.update_campaign_daily_budget(cid, client.to_minor(new_major))
+                setter(client.to_minor(new_major))
                 summary.budget_changes += 1
+                _event(rule, action, detail, ok=True)
             except Exception as e:  # noqa: BLE001
-                log.error("      ❌ ปรับงบแคมเปญไม่สำเร็จ: %s", e)
+                log.error("      ❌ ปรับงบไม่สำเร็จ: %s", e)
                 summary.errors += 1
-        elif new_major is not None:
+                _event(rule, action, detail, ok=False, err=str(e)[:200])
+        else:
             summary.budget_changes += 1
+            _event(rule, action, detail, ok=True)
+
+    daily_budget_minor = campaign.get("daily_budget")
+    if daily_budget_minor:
+        _apply_budget(cid, "แคมเปญ", client.to_major(daily_budget_minor),
+                      lambda m: client.update_campaign_daily_budget(cid, m), "")
     else:
         # ABO: งบอยู่ที่ ad set — ปรับทีละ set
         try:
@@ -147,6 +176,7 @@ def execute_campaign(
         except Exception as e:  # noqa: BLE001
             log.error("      ❌ ดึง ad set ไม่ได้: %s", e)
             summary.errors += 1
+            _event("-", "BUDGET", "ดึง ad set ไม่ได้", ok=False, err=str(e)[:200])
             return
 
         adsets_with_budget = [a for a in adsets if a.get("daily_budget")]
@@ -157,18 +187,6 @@ def execute_campaign(
         for adset in adsets_with_budget:
             aid = adset["id"]
             aname = adset.get("name", aid)
-            current_major = client.to_major(adset["daily_budget"])
-            new_major = _apply_budget_sequence(
-                current_major, budget_actions,
-                state=state, now=now, account_id=account_id,
-                unit_id=aid, unit_label=f"ad set '{aname}'", summary=summary,
-            )
-            if new_major is not None and not dry_run:
-                try:
-                    client.update_adset_daily_budget(aid, client.to_minor(new_major))
-                    summary.budget_changes += 1
-                except Exception as e:  # noqa: BLE001
-                    log.error("      ❌ ปรับงบ ad set ไม่สำเร็จ: %s", e)
-                    summary.errors += 1
-            elif new_major is not None:
-                summary.budget_changes += 1
+            _apply_budget(aid, f"ad set '{aname}'", client.to_major(adset["daily_budget"]),
+                          lambda m, _id=aid: client.update_adset_daily_budget(_id, m),
+                          f"[{aname}] ")

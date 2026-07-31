@@ -33,6 +33,7 @@ class Account:
     token: str               # token จริง (resolve จาก env แล้ว)
     target_level: str        # "campaign" (รองรับหลักคือ campaign)
     rules: list[dict[str, Any]]
+    enabled: bool = True     # ปิดบัญชีชั่วคราวจาก Dashboard ได้ (ไม่ต้องลบ)
     purchase_action_types: list[str] = field(default_factory=lambda: list(DEFAULT_PURCHASE_ACTION_TYPES))
     result_action_types: list[str] = field(default_factory=lambda: list(DEFAULT_RESULT_ACTION_TYPES))
 
@@ -145,13 +146,21 @@ def load_config(path: str, *, dry_run_override: bool | None = None) -> Config:
             _validate_rule(r, name, i)
 
         metrics_cfg = a.get("metrics") or {}
+        enabled = a.get("enabled", True) is not False
+        try:
+            tok = _resolve_token(a.get("token"), name)
+        except ConfigError:
+            if enabled:
+                raise
+            tok = ""  # บัญชีที่ปิดอยู่ ไม่ต้องมี token ก็ได้
         accounts.append(
             Account(
                 name=name,
                 account_id=account_id,
-                token=_resolve_token(a.get("token"), name),
+                token=tok,
                 target_level=a.get("target_level") or "campaign",
                 rules=rules,
+                enabled=enabled,
                 purchase_action_types=list(
                     metrics_cfg.get("purchase_action_types") or DEFAULT_PURCHASE_ACTION_TYPES
                 ),

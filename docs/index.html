@@ -63,6 +63,13 @@
   .acct-item .ac{font-size:11px;color:var(--muted)}
   .acct-item .sdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
   .ed-main{flex:1;min-width:0}
+  .acct-item.off{opacity:.42}
+  .acct-item.off .sdot{background:var(--muted)}
+  .apw{cursor:pointer;font-size:14px;flex:none;opacity:.75}
+  .loghead{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--panel2);border-bottom:1px solid var(--line);font-size:13.5px;flex-wrap:wrap}
+  .logrow{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);align-items:flex-start}
+  .logrow:last-child{border-bottom:0}
+  .logic{font-size:15px;flex:none}
   @media(max-width:760px){.ed-layout{flex-direction:column}.sidebar{width:100%;position:static;display:flex;flex-wrap:wrap;gap:6px}
     .side-title{width:100%}.acct-item{margin:0;border:1px solid var(--line)}}
   .folder{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--panel);overflow:hidden}
@@ -117,6 +124,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</div>
     <div class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</div>
+    <div class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</div>
   </div>
   <div class="spacer"></div>
   <span class="dirty-dot" title="มีการแก้ที่ยังไม่บันทึก"></span>
@@ -164,6 +172,7 @@
             </div>
           </div>
           <div class="row" style="margin-top:12px">
+            <button class="btn sm" id="acctToggle" onclick="toggleAccount(curAcct)"></button>
             <button class="btn sm" onclick="copyAllRules()">📋 คัดลอกกฎทั้งหมด</button>
             <button class="btn primary sm" id="pasteBtn" onclick="pasteRules()">📄 วางกฎ</button>
             <div class="spacer"></div>
@@ -174,6 +183,15 @@
         <button class="btn ghost" style="width:100%;justify-content:center;padding:13px" onclick="addFolder()">📁 สร้างโฟลเดอร์ใหม่</button>
       </div>
     </div>
+  </section>
+
+  <!-- ===== Log ===== -->
+  <section id="logs" class="hidden">
+    <div class="muted" style="font-size:12.5px;margin-bottom:10px">
+      บันทึกการทำงานย้อนหลัง (ทุก ~10 นาที) — ดูได้ว่ากฎไหนทำงาน ทำอะไร สำเร็จหรือพลาด ·
+      <span class="tag">✅ ทำจริง</span> <span class="tag">🔵 ทดสอบ</span> <span class="tag err">❌ ผิดพลาด</span>
+    </div>
+    <div id="logList"></div>
   </section>
 </div>
 
@@ -200,6 +218,7 @@
 const OWNER="sorawiaun-create", REPO="aaa", BRANCH="main";
 const PATH="facebook-ads-automation/config.json";
 const STATUS_PATH="facebook-ads-automation/status.json";
+const ACTIVITY_PATH="facebook-ads-automation/activity.json";
 const WORKFLOW="facebook-ads-automation.yml";
 const TOKEN_KEY="fbdash_gh_token";
 const DEFAULT_GROUP="กฎทั่วไป";
@@ -265,6 +284,13 @@ async function loadStatus(){
   if(!r.ok) throw new Error("โหลดภาพรวมไม่ได้ (HTTP "+r.status+")");
   const j=await r.json(); return JSON.parse(fromB64(j.content));
 }
+async function loadActivity(){
+  let r=await apiGet(ACTIVITY_PATH,true);
+  if(r.status===401) r=await apiGet(ACTIVITY_PATH,false);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error("โหลด log ไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); return JSON.parse(fromB64(j.content));
+}
 async function putConfig(obj){
   const doPut=async(sha)=>{const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
     return fetch(url,{method:"PUT",headers:authHeaders(true),body:JSON.stringify({
@@ -293,8 +319,7 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  document.getElementById("overview").classList.toggle("hidden",t!=="overview");
-  document.getElementById("editor").classList.toggle("hidden",t!=="editor");}
+  ["overview","editor","logs"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
 
 /* ===================== OVERVIEW ===================== */
 function renderOverview(st){
@@ -316,17 +341,48 @@ function renderOverview(st){
   }).join("")||`<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">ไม่มีบัญชี</td></tr>`;
 }
 
+/* ===================== LOG ===================== */
+function renderLog(act){
+  const root=document.getElementById("logList");
+  const runs=(act&&act.runs)||[];
+  if(!runs.length){root.innerHTML=`<div class="muted" style="text-align:center;padding:26px">ยังไม่มี log — รอรอบแรกของคลาวด์ (~10 นาที) หรือกด ▶ ทดสอบ</div>`;return;}
+  const ic={applied:"✅","dry-run":"🔵",error:"❌"};
+  root.innerHTML=runs.map(r=>{
+    const when=r.t?new Date(r.t).toLocaleString("th-TH"):"-";
+    const s=r.summary||{};
+    const evs=(r.events||[]);
+    const body=evs.length? evs.map(e=>`
+        <div class="logrow">
+          <span class="logic">${ic[e.status]||"•"}</span>
+          <div style="flex:1;min-width:0">
+            <div><b>${esc(e.account||"")}</b>${e.campaign&&e.campaign!=="-"?" · "+esc(e.campaign):""}</div>
+            <div class="muted" style="font-size:12.5px">${esc(e.rule&&e.rule!=="-"?e.rule+" — ":"")}${esc(e.detail||"")}${e.error?` · <span class="neg">${esc(e.error)}</span>`:""}</div>
+          </div>
+        </div>`).join("")
+      : `<div class="muted" style="padding:8px 12px;font-size:13px">ไม่มีการเปลี่ยนแปลง — ระบบทำงานปกติ ✅</div>`;
+    return `<div class="card" style="padding:0;overflow:hidden">
+      <div class="loghead">
+        🕒 <b>${when}</b> ${r.dry_run?'<span class="tag">ทดสอบ</span>':'<span class="tag" style="color:#7ff0a6">ทำจริง</span>'}
+        <div class="spacer"></div>
+        <span class="muted" style="font-size:12px">ปิด/เปิด ${s.status_changes||0} · งบ ${s.budget_changes||0}${s.errors?` · <span class="neg">error ${s.errors}</span>`:""}</span>
+      </div>${body}</div>`;
+  }).join("");
+}
+
 /* ===================== EDITOR ===================== */
 function acc(){return CONFIG.accounts[curAcct];}
 function renderSidebar(){
   const list=document.getElementById("acctList");
   list.innerHTML=(CONFIG.accounts||[]).map((a,i)=>
-    `<div class="acct-item ${i===curAcct?'sel':''}" onclick="selectAccount(${i})">
+    `<div class="acct-item ${i===curAcct?'sel':''} ${a.enabled===false?'off':''}" onclick="selectAccount(${i})">
        <span class="sdot"></span>
        <span class="an">${esc(a.name||"(ไม่มีชื่อ)")}</span>
        <span class="ac">${(a.rules||[]).length}</span>
+       <span class="apw" title="เปิด/ปิดบัญชี" onclick="event.stopPropagation();toggleAccount(${i})">⏻</span>
      </div>`).join("")||'<div class="muted" style="padding:8px">ยังไม่มีบัญชี</div>';
 }
+function toggleAccount(i){const a=CONFIG.accounts[i];a.enabled=(a.enabled===false);setDirty(true);renderEditor();
+  toast(a.enabled===false?`⏸️ ปิดบัญชี "${a.name}" แล้ว — คลาวด์จะข้ามบัญชีนี้`:`🟢 เปิดบัญชี "${a.name}" แล้ว`,"ok");}
 function renderEditor(){
   document.getElementById("tz").value=CONFIG.settings?.timezone||"Asia/Bangkok";
   document.getElementById("dryRun").checked=!!CONFIG.settings?.dry_run;
@@ -336,6 +392,10 @@ function renderEditor(){
     document.getElementById("accName").value="";document.getElementById("accId").value="";return;}
   if(curAcct>=CONFIG.accounts.length)curAcct=CONFIG.accounts.length-1;
   const a=acc();
+  const tgl=document.getElementById("acctToggle");
+  const on=a.enabled!==false;
+  tgl.textContent=on?"🟢 บัญชีเปิดอยู่":"⏸️ บัญชีปิดอยู่";
+  tgl.className="btn sm "+(on?"green":"");
   document.getElementById("accName").value=a.name||"";
   document.getElementById("accId").value=a.account_id||"";
   document.getElementById("accName").oninput=e=>{a.name=e.target.value;renderSidebar();setDirty(true);};
@@ -503,7 +563,7 @@ function numF(label,val,onin){const d=document.createElement("div");d.className=
 
 /* ===================== account/folder ops ===================== */
 function addAccount(){CONFIG.accounts=CONFIG.accounts||[];
-  CONFIG.accounts.push({name:"บัญชีใหม่",token:"env:FB_ACCESS_TOKEN",account_id:"",target_level:"campaign",rules:[]});
+  CONFIG.accounts.push({name:"บัญชีใหม่",token:"env:FB_ACCESS_TOKEN",account_id:"",target_level:"campaign",enabled:true,rules:[]});
   curAcct=CONFIG.accounts.length-1;setDirty(true);renderEditor();}
 function deleteAccount(){if(!CONFIG.accounts.length)return;
   if(!confirm(`ลบบัญชี "${acc().name}" ทั้งหมด?`))return;
@@ -533,6 +593,7 @@ async function boot(){
   try{CONFIG=await loadConfig();renderEditor();banner("");}
   catch(e){banner("❌ "+e.message,"err");CONFIG=CONFIG||{settings:{},accounts:[]};renderEditor();}
   try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
+  try{renderLog(await loadActivity());}catch(e){renderLog(null);}
 }
 boot();
 </script>

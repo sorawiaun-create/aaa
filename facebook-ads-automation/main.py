@@ -30,6 +30,7 @@ from fb_automation.metrics import compute_metrics
 from fb_automation.rules import plan_campaign
 from fb_automation.state import State
 from fb_automation.status import aggregate_metrics, build_status, write_status
+from fb_automation.activity import append_run, load_activity, write_activity
 
 log = setup_logging()
 
@@ -54,18 +55,26 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
     log.info("=" * 64)
 
     status_accounts: list[dict] = []
+    events: list[dict] = []
 
     for account in config.accounts:
-        log.info("🏦 บัญชี: %s (act_%s) — %d กฎ",
-                 account.name, account.account_id, len(account.rules))
         acct_stat = {
             "name": account.name,
             "account_id": account.account_id,
             "campaigns": 0,
             "active_today": 0,
             "error": None,
+            "disabled": not account.enabled,
             "spend": 0.0, "revenue": 0.0, "orders": 0, "roas": 0.0, "cost_per_order": 0.0,
         }
+        # ข้ามบัญชีที่ถูกปิดจาก Dashboard
+        if not account.enabled:
+            log.info("🏦 บัญชี: %s — ⏸️ ปิดอยู่ ข้าม", account.name)
+            status_accounts.append(acct_stat)
+            continue
+
+        log.info("🏦 บัญชี: %s (act_%s) — %d กฎ",
+                 account.name, account.account_id, len(account.rules))
         try:
             client = FacebookClient(account.account_id, account.token)
             campaigns = client.get_campaigns()
@@ -75,6 +84,9 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
             total.errors += 1
             acct_stat["error"] = str(e)[:200]
             status_accounts.append(acct_stat)
+            events.append({"account": account.name, "campaign": "-", "rule": "-",
+                           "action": "CONNECT", "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+                           "status": "error", "error": str(e)[:200]})
             continue
 
         log.info("  พบ %d แคมเปญ, %d แคมเปญมียอดวันนี้", len(campaigns), len(insights))
@@ -97,6 +109,7 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
                 execute_campaign(
                     client, campaign, planned,
                     state=state, now=now_local, dry_run=dry, summary=total,
+                    account_name=account.name, events=events,
                 )
 
         acct_stat.update(aggregate_metrics(account_metrics))
@@ -119,6 +132,25 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
         ))
     except Exception as e:  # noqa: BLE001
         log.warning("เขียน status.json ไม่สำเร็จ: %s", e)
+
+    # เขียน log การทำงาน (activity.json) — เก็บย้อนหลังให้ดูได้ในหน้า Dashboard
+    try:
+        activity_path = os.environ.get("ACTIVITY_PATH", "activity.json")
+        activity = load_activity(activity_path)
+        append_run(activity, {
+            "t": now_local.isoformat(),
+            "dry_run": dry,
+            "summary": {
+                "status_changes": total.status_changes,
+                "budget_changes": total.budget_changes,
+                "skipped_cooldown": total.skipped_cooldown,
+                "errors": total.errors,
+            },
+            "events": events,
+        })
+        write_activity(activity_path, activity)
+    except Exception as e:  # noqa: BLE001
+        log.warning("เขียน activity.json ไม่สำเร็จ: %s", e)
 
     return total
 
