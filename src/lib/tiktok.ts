@@ -368,6 +368,45 @@ export async function getCampaignsWithMetrics(
   }));
 }
 
+// Diagnostic: for one advertiser, report how many campaigns /campaign/get
+// returns plus a small sample, so we can see whether GMV Max campaigns are
+// exposed via the API and under which account.
+export async function diagnoseCampaigns(
+  s: Settings,
+  advertiserId: string
+): Promise<{
+  count: number;
+  sample: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    objective_type?: string;
+    operation_status: string;
+  }>;
+}> {
+  const data = await request<
+    CampaignGetData & { page_info?: { total_number?: number } }
+  >({ ...s, advertiserId }, "GET", "/campaign/get/", {
+    advertiser_id: advertiserId,
+    page: 1,
+    page_size: 20,
+    fields: [
+      "campaign_id",
+      "campaign_name",
+      "objective_type",
+      "operation_status",
+    ],
+  });
+  return {
+    count: data.page_info?.total_number ?? data.list?.length ?? 0,
+    sample: (data.list ?? []).slice(0, 5).map((c) => ({
+      campaign_id: c.campaign_id,
+      campaign_name: c.campaign_name,
+      objective_type: c.objective_type,
+      operation_status: c.operation_status,
+    })),
+  };
+}
+
 // Enable or disable one or more campaigns.
 export async function updateCampaignStatus(
   s: Settings,
