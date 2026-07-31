@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""จุดเริ่มรัน — ตัวรันกฎอัตโนมัติ Facebook Ads หลายบัญชี.
+
+การใช้งาน:
+    python main.py                     # รัน 1 รอบ (อ่าน config.json)
+    python main.py --dry-run           # จำลอง ไม่แก้ไขจริง
+    python main.py --config custom.json
+    python main.py --loop --interval 10   # วนทุก 10 นาที (สำหรับรันบนเครื่อง/VPS)
+
+ตั้งค่าผ่าน env:
+    FB_ACCESS_TOKEN   token ของ Facebook (ใช้ร่วมทุกบัญชีที่ token ว่างใน config)
+    FB_DRY_RUN        "1"/"true" = จำลองอย่างเดียว
+    CONFIG_PATH       path ของไฟล์ config (ค่าเริ่มต้น ./config.json)
+    STATE_PATH        path ของไฟล์ state (ค่าเริ่มต้น ./state.json)
+    LOG_LEVEL         DEBUG / INFO / WARNING
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from fb_automation.actions import RunSummary, execute_campaign
+from fb_automation.config import Config, ConfigError, load_config
+from fb_automation.fb_client import FacebookClient
+from fb_automation.logging_setup import setup_logging
+from fb_automation.metrics import compute_metrics
+from fb_automation.rules import plan_campaign
+from fb_automation.state import State
+
+log = setup_logging()
+
+
+def _env_truthy(name: str) -> bool:
+    return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
+    """รัน 1 รอบครบทุกบัญชี."""
+    total = RunSummary()
+    dry = config.settings.dry_run
+    name_filter = config.settings.campaign_name_filter
+    import re
+    name_re = re.compile(name_filter) if name_filter else None
+
+    log.info("=" * 64)
+    log.info("เริ่มรอบ %s  (เวลาไทย %s)%s",
+             now_local.strftime("%Y-%m-%d %H:%M:%S"),
+             f"{now_local.hour:02d}:{now_local.minute:02d}",
+             "  [DRY-RUN]" if dry else "")
+    log.info("=" * 64)
+
+    for account in config.accounts:
+        log.info("🏦 บัญชี: %s (act_%s) — %d กฎ",
+                 account.name, account.account_id, len(account.rules))
+        try:
+            client = FacebookClient(account.account_id, account.token)
+            campaigns = client.get_campaigns()
+            insights = client.get_insights_by_campaign()
+        except Exception as e:  # noqa: BLE001
+            log.error("  ❌ เชื่อมต่อ/ดึงข้อมูลบัญชีไม่สำเร็จ: %s", e)
+            total.errors += 1
+            continue
+
+        log.info("  พบ %d แคมเปญ, %d แคมเปญมียอดวันนี้", len(campaigns), len(insights))
+
+        for campaign in campaigns:
+            if name_re and not name_re.search(campaign.get("name", "")):
+                continue
+            metrics = compute_metrics(
+                insights.get(campaign["id"]),
+                now_local=now_local,
+                purchase_action_types=account.purchase_action_types,
+                result_action_types=account.result_action_types,
+            )
+            planned = plan_campaign(account.rules, metrics)
+            if planned:
+                execute_campaign(
+                    client, campaign, planned,
+                    state=state, now=now_local, dry_run=dry, summary=total,
+                )
+
+    log.info("-" * 64)
+    log.info("สรุป: เปลี่ยนสถานะ %d · ปรับงบ %d · ข้าม(รอบ) %d · error %d%s",
+             total.status_changes, total.budget_changes,
+             total.skipped_cooldown, total.errors,
+             "  [DRY-RUN ไม่ได้แก้จริง]" if dry else "")
+    return total
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Facebook Ads multi-account automation")
+    parser.add_argument("--config", default=os.environ.get("CONFIG_PATH", "config.json"))
+    parser.add_argument("--state", default=os.environ.get("STATE_PATH", "state.json"))
+    parser.add_argument("--dry-run", action="store_true", help="จำลอง ไม่แก้ไขจริง")
+    parser.add_argument("--loop", action="store_true", help="วนซ้ำเรื่อย ๆ (ใช้บนเครื่อง/VPS)")
+    parser.add_argument("--interval", type=int, default=10, help="นาทีต่อรอบ เมื่อใช้ --loop")
+    args = parser.parse_args()
+
+    dry_run = args.dry_run or _env_truthy("FB_DRY_RUN")
+
+    try:
+        config = load_config(args.config, dry_run_override=True if dry_run else None)
+    except ConfigError as e:
+        log.error("Config error: %s", e)
+        return 2
+
+    try:
+        tz = ZoneInfo(config.settings.timezone)
+    except Exception:  # noqa: BLE001
+        log.warning("timezone '%s' ไม่ถูกต้อง ใช้ UTC", config.settings.timezone)
+        tz = ZoneInfo("UTC")
+
+    def _one_pass() -> RunSummary:
+        state = State.load(args.state)
+        summary = run_once(config, state, datetime.now(tz))
+        try:
+            state.save()
+        except OSError as e:
+            log.warning("บันทึก state ไม่สำเร็จ: %s", e)
+        return summary
+
+    if not args.loop:
+        summary = _one_pass()
+        return 1 if summary.errors else 0
+
+    log.info("โหมด loop: รันทุก %d นาที (กด Ctrl+C เพื่อหยุด)", args.interval)
+    while True:
+        try:
+            _one_pass()
+        except KeyboardInterrupt:
+            log.info("หยุดโดยผู้ใช้")
+            return 0
+        except Exception as e:  # noqa: BLE001
+            log.error("รอบนี้ล้มเหลว: %s", e)
+        time.sleep(max(60, args.interval * 60))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
