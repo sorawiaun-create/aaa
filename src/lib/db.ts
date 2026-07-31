@@ -6,7 +6,11 @@ import { AutomationLog, AutomationRule, Settings } from "./types";
 // (`next start`), so synchronous file writes are safe and race-free enough for
 // a self-hosted automation tool. Swap for SQLite/Postgres if you scale out.
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// DATA_DIR lets cloud hosts point storage at a persistent volume so the
+// token/settings/rules survive restarts and redeploys. Defaults to ./data.
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(process.cwd(), "data");
 const RULES_FILE = path.join(DATA_DIR, "rules.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const LOGS_FILE = path.join(DATA_DIR, "logs.json");
