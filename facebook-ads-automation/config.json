@@ -2,7 +2,8 @@
   "settings": {
     "timezone": "Asia/Bangkok",
     "dry_run": false,
-    "campaign_name_filter": null
+    "campaign_name_filter": null,
+    "interval_mins": 10
   },
   "accounts": [
     {
@@ -790,7 +791,7 @@
           "action": "PAUSE",
           "conditions": [
             {
-              "value": 22,
+              "value": 17,
               "operator": ">",
               "timeframe": "today",
               "id": "c_1769877781632_1krpj",
@@ -802,33 +803,6 @@
               "timeframe": "today",
               "operator": "<",
               "metric": "time_of_day"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 50,
-              "operator": ">",
-              "metric": "spend",
-              "id": "c_1769877781632_p1wx2"
-            },
-            {
-              "id": "c_1769877781632_xeveb",
-              "value": 75,
-              "operator": "<",
-              "metric": "cost_per_purchase",
-              "timeframe": "today"
-            },
-            {
-              "id": "c_1769877781632_lkmvr",
-              "value": 1,
-              "metric": "purchases",
-              "operator": ">=",
-              "timeframe": "today"
             }
           ]
         }
