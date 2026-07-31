@@ -54,7 +54,7 @@ export async function GET() {
       }
       try {
         const g = await diagnoseGmvMax(s, a.advertiser_id);
-        gmvMaxCount = g.count;
+        gmvMaxCount = `${g.count} (stores: ${g.storeCount})`;
       } catch (e) {
         gmvMaxCount = `error: ${e instanceof Error ? e.message : String(e)}`;
       }

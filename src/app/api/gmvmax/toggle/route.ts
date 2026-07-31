@@ -1,7 +1,7 @@
 import "@/lib/bootstrap";
 import { NextRequest, NextResponse } from "next/server";
 import { addLogs, getSettings, newId } from "@/lib/db";
-import { listGmvMaxCampaigns, updateGmvMaxCampaignStatus } from "@/lib/tiktok";
+import { updateGmvMaxCampaignStatus } from "@/lib/tiktok";
 import { AutomationLog, OperationStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,15 +26,9 @@ export async function POST(req: NextRequest) {
   try {
     await updateGmvMaxCampaignStatus(settings, campaignIds, status);
 
-    let nameById: Record<string, string> = {};
-    try {
-      const cs = await listGmvMaxCampaigns(settings);
-      nameById = Object.fromEntries(
-        cs.map((c) => [c.campaign_id, c.campaign_name])
-      );
-    } catch {
-      /* best-effort */
-    }
+    // Names are best-effort for the log; skip the extra lookup to keep the
+    // toggle fast (the report+info fetch is heavy).
+    const nameById: Record<string, string> = {};
 
     const logs: AutomationLog[] = campaignIds.map((id) => ({
       id: newId("log_"),

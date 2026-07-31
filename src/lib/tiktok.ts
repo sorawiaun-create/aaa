@@ -3,6 +3,7 @@ import {
   AdRow,
   CampaignRow,
   GmvMaxCampaignRow,
+  GmvMaxMetrics,
   OperationStatus,
   Settings,
   TimeWindow,
@@ -424,95 +425,189 @@ export async function updateCampaignStatus(
 }
 
 /* --------------------------- GMV Max -------------------------------- */
-// GMV Max and LIVE GMV Max are Smart+ campaigns and are NOT returned by the
-// standard /campaign/get/. They live under the dedicated smart_plus endpoints.
+// GMV Max / LIVE GMV Max are NOT returned by /campaign/get or
+// /smart_plus/campaign/get. They are enumerated via the GMV Max report
+// (per Shop store), and each campaign's name/status/budget come from
+// /campaign/gmv_max/info/. Verified live against a real account.
 
-interface SmartPlusCampaignData {
-  list: Array<{
-    campaign_id: string;
-    campaign_name: string;
-    operation_status: OperationStatus;
-    objective_type?: string;
-    campaign_type?: string;
-    secondary_status?: string;
-    budget?: number;
-    budget_mode?: string;
-  }>;
-  page_info?: { total_page: number };
+interface GmvMaxStore {
+  store_id: string;
+  store_name?: string;
 }
 
-// Lists GMV Max / LIVE GMV Max (Smart+) campaigns for the advertiser.
-export async function listGmvMaxCampaigns(
-  s: Settings
-): Promise<GmvMaxCampaignRow[]> {
-  assertConfigured(s);
-  const all: SmartPlusCampaignData["list"] = [];
+async function listGmvMaxStores(
+  s: Settings,
+  advertiserId = s.advertiserId
+): Promise<GmvMaxStore[]> {
+  const data = await request<{
+    store_list?: Array<{ store_id: string; store_name?: string }>;
+  }>({ ...s, advertiserId }, "GET", "/gmv_max/store/list/", {
+    advertiser_id: advertiserId,
+  });
+  return (data.store_list ?? []).map((x) => ({
+    store_id: x.store_id,
+    store_name: x.store_name,
+  }));
+}
+
+interface GmvMaxReportData {
+  list: Array<{
+    dimensions: { campaign_id: string };
+    metrics: {
+      gross_revenue?: string;
+      net_cost?: string;
+      orders?: string;
+      roi?: string;
+    };
+  }>;
+  page_info?: { total_page: number; total_number?: number };
+}
+
+// Returns campaign_id -> metrics for all GMV Max campaigns under the stores.
+async function getGmvMaxReport(
+  s: Settings,
+  storeIds: string[],
+  window: TimeWindow,
+  advertiserId = s.advertiserId
+): Promise<Record<string, GmvMaxMetrics>> {
+  const out: Record<string, GmvMaxMetrics> = {};
+  if (storeIds.length === 0) return out;
+  const { start, end } = windowToDates(window);
   let page = 1;
-  for (let i = 0; i < 100; i++) {
-    const data = await request<SmartPlusCampaignData>(
-      s,
+  for (let i = 0; i < 50; i++) {
+    const data = await request<GmvMaxReportData>(
+      { ...s, advertiserId },
       "GET",
-      "/smart_plus/campaign/get/",
+      "/gmv_max/report/get/",
       {
-        advertiser_id: s.advertiserId,
+        advertiser_id: advertiserId,
+        store_ids: storeIds,
+        dimensions: ["campaign_id"],
+        metrics: ["gross_revenue", "net_cost", "orders", "roi"],
+        start_date: start,
+        end_date: end,
         page,
-        page_size: 100,
-        fields: [
-          "campaign_id",
-          "campaign_name",
-          "operation_status",
-          "objective_type",
-          "campaign_type",
-          "secondary_status",
-          "budget",
-          "budget_mode",
-        ],
+        page_size: 1000,
       }
     );
-    all.push(...(data.list ?? []));
+    for (const row of data.list ?? []) {
+      const m = row.metrics;
+      out[row.dimensions.campaign_id] = {
+        gmv: num(m.gross_revenue),
+        spend: num(m.net_cost),
+        orders: num(m.orders),
+        roas: num(m.roi),
+      };
+    }
     const totalPage = data.page_info?.total_page ?? 1;
     if (page >= totalPage) break;
     page += 1;
   }
-  return all.map((c) => ({
-    campaign_id: c.campaign_id,
-    campaign_name: c.campaign_name,
-    operation_status: c.operation_status,
-    budget: c.budget,
-    budget_mode: c.budget_mode,
-    campaign_type: c.campaign_type,
-    objective_type: c.objective_type,
-    secondary_status: c.secondary_status,
-  }));
+  return out;
 }
 
-// Diagnostic: count GMV Max (smart_plus) campaigns for one advertiser.
+interface GmvMaxInfo {
+  campaign_name: string;
+  operation_status: OperationStatus;
+  budget?: number;
+  roas_bid?: number;
+  shopping_ads_type?: string;
+}
+
+async function getGmvMaxInfo(
+  s: Settings,
+  campaignId: string
+): Promise<GmvMaxInfo | null> {
+  try {
+    return await request<GmvMaxInfo>(s, "GET", "/campaign/gmv_max/info/", {
+      advertiser_id: s.advertiserId,
+      campaign_id: campaignId,
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Runs an async fn over items with a bounded concurrency.
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (t: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker())
+  );
+  return results;
+}
+
+const ZERO_GMV: GmvMaxMetrics = { gmv: 0, spend: 0, orders: 0, roas: 0 };
+
+// Lists GMV Max / LIVE GMV Max campaigns for the connected advertiser, with
+// GMV/spend/orders/ROAS metrics and name/status.
+export async function getGmvMaxCampaigns(
+  s: Settings,
+  window: TimeWindow = "last_7d"
+): Promise<GmvMaxCampaignRow[]> {
+  assertConfigured(s);
+  const stores = await listGmvMaxStores(s);
+  const storeIds = stores.map((x) => x.store_id);
+  const reports = await getGmvMaxReport(s, storeIds, window);
+  const ids = Object.keys(reports);
+  const infos = await mapLimit(ids, 8, (id) => getGmvMaxInfo(s, id));
+  return ids.map((id, i) => {
+    const info = infos[i];
+    return {
+      campaign_id: id,
+      campaign_name: info?.campaign_name ?? id,
+      operation_status: info?.operation_status ?? "ENABLE",
+      shopping_ads_type: info?.shopping_ads_type,
+      budget: info?.budget,
+      roas_bid: info?.roas_bid,
+      metrics: reports[id] ?? { ...ZERO_GMV },
+    };
+  });
+}
+
+// Diagnostic: count GMV Max campaigns for one advertiser (stores + report).
 export async function diagnoseGmvMax(
   s: Settings,
   advertiserId: string
-): Promise<{
-  count: number;
-  sample: Array<{ campaign_id: string; campaign_name: string; operation_status: string }>;
-}> {
-  const data = await request<
-    SmartPlusCampaignData & { page_info?: { total_number?: number } }
-  >({ ...s, advertiserId }, "GET", "/smart_plus/campaign/get/", {
-    advertiser_id: advertiserId,
-    page: 1,
-    page_size: 20,
-    fields: ["campaign_id", "campaign_name", "operation_status"],
-  });
+): Promise<{ count: number; storeCount: number }> {
+  const stores = await listGmvMaxStores(s, advertiserId);
+  if (stores.length === 0) return { count: 0, storeCount: 0 };
+  const { start, end } = windowToDates("last_7d");
+  const data = await request<GmvMaxReportData>(
+    { ...s, advertiserId },
+    "GET",
+    "/gmv_max/report/get/",
+    {
+      advertiser_id: advertiserId,
+      store_ids: stores.map((x) => x.store_id),
+      dimensions: ["campaign_id"],
+      metrics: ["net_cost"],
+      start_date: start,
+      end_date: end,
+      page: 1,
+      page_size: 1,
+    }
+  );
   return {
     count: data.page_info?.total_number ?? data.list?.length ?? 0,
-    sample: (data.list ?? []).slice(0, 5).map((c) => ({
-      campaign_id: c.campaign_id,
-      campaign_name: c.campaign_name,
-      operation_status: c.operation_status,
-    })),
+    storeCount: stores.length,
   };
 }
 
-// Enable/disable GMV Max campaigns. The endpoint accepts max 20 ids per call.
+// Enable/disable GMV Max campaigns. There is no operation_status on
+// /campaign/gmv_max/update/, so we use the Smart+ status endpoint and fall
+// back to the standard campaign status endpoint. Batched at 20 ids.
 export async function updateGmvMaxCampaignStatus(
   s: Settings,
   campaignIds: string[],
@@ -521,11 +616,19 @@ export async function updateGmvMaxCampaignStatus(
   assertConfigured(s);
   for (let i = 0; i < campaignIds.length; i += 20) {
     const chunk = campaignIds.slice(i, i + 20);
-    await request(s, "POST", "/smart_plus/campaign/status/update/", {
-      advertiser_id: s.advertiserId,
-      campaign_ids: chunk,
-      operation_status: status,
-    });
+    try {
+      await request(s, "POST", "/smart_plus/campaign/status/update/", {
+        advertiser_id: s.advertiserId,
+        campaign_ids: chunk,
+        operation_status: status,
+      });
+    } catch (e) {
+      await request(s, "POST", "/campaign/status/update/", {
+        advertiser_id: s.advertiserId,
+        campaign_ids: chunk,
+        operation_status: status,
+      });
+    }
   }
 }
 

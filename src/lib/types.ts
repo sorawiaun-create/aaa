@@ -88,16 +88,23 @@ export interface CampaignRow {
   metrics: AdMetrics;
 }
 
-// GMV Max / LIVE GMV Max campaign (from the dedicated smart_plus endpoints).
+// GMV Max / LIVE GMV Max campaign (enumerated via the GMV Max report, with
+// name/status from /campaign/gmv_max/info/).
+export interface GmvMaxMetrics {
+  gmv: number; // gross_revenue
+  spend: number; // net_cost
+  orders: number; // orders
+  roas: number; // roi
+}
+
 export interface GmvMaxCampaignRow {
   campaign_id: string;
   campaign_name: string;
   operation_status: OperationStatus;
+  shopping_ads_type?: string; // LIVE or PRODUCT
   budget?: number;
-  budget_mode?: string;
-  campaign_type?: string;
-  objective_type?: string;
-  secondary_status?: string;
+  roas_bid?: number;
+  metrics: GmvMaxMetrics;
 }
 
 export interface AutomationLog {
