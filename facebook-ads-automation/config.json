@@ -14,234 +14,282 @@
       "rules": [
         {
           "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "id": "c_1769687747124",
-              "value": 22
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1769687754574",
-              "metric": "time_of_day",
-              "value": 23.59,
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
           "action": "ACTIVATE",
           "conditions": [
             {
-              "operator": ">",
-              "id": "c_1769687764658",
               "metric": "time_of_day",
-              "value": 6,
-              "timeframe": "today"
+              "timeframe": "today",
+              "value": 5,
+              "id": "c_1785494593044_ny72g",
+              "operator": ">"
             },
             {
-              "value": 7,
-              "metric": "time_of_day",
-              "id": "c_1769791454994",
               "operator": "<",
-              "timeframe": "today"
+              "id": "c_1785494593044_d2ebo",
+              "value": 7,
+              "timeframe": "today",
+              "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "PAUSE",
+          "conditions": [
+            {
+              "value": 22,
+              "operator": ">",
+              "timeframe": "today",
+              "id": "c_1785494593044_gesjf",
+              "metric": "time_of_day"
+            },
+            {
+              "value": 23.59,
+              "id": "c_1785494593044_l87aw",
+              "timeframe": "today",
+              "operator": "<",
+              "metric": "time_of_day"
+            }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 300
-          },
+          "enabled": true,
+          "group": "รีเซตงบ ",
           "conditions": [
             {
-              "value": 0,
+              "id": "c_1785494593044_m8rpk",
               "metric": "time_of_day",
-              "id": "c_1769687686538",
-              "timeframe": "today",
-              "operator": ">"
+              "operator": ">",
+              "value": 23,
+              "timeframe": "today"
             },
             {
-              "value": 1,
+              "id": "c_1785494593044_byp9p",
               "metric": "time_of_day",
               "operator": "<",
-              "id": "c_1769687712618",
+              "value": 23.59,
               "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
         },
         {
-          "name": "จ่าย 50 ไม่ทัก   ปิด",
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c1",
+              "id": "c_1785494593044_rzk0w",
               "metric": "spend",
-              "value": 50
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
             },
             {
-              "value": 1,
-              "id": "c2",
-              "operator": "<",
+              "id": "c_1785494593044_t0jlt",
               "metric": "results",
+              "operator": "<",
+              "value": 1,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 50  ทุนทัก < 40 ปิด",
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "operator": ">",
-              "value": 50,
+              "id": "c_1785494593044_kf7h1",
               "metric": "spend",
-              "id": "c_1769686441494",
+              "operator": ">",
+              "value": 150,
               "timeframe": "today"
             },
             {
+              "id": "c_1785494593044_mviae",
               "metric": "cost_per_result",
-              "id": "c_1769687283946",
+              "operator": ">",
               "value": 40,
-              "timeframe": "today",
-              "operator": ">"
+              "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 50    ซื้อ 0 ปิด",
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "id": "c_1769686442711",
-              "metric": "spend",
-              "timeframe": "today",
-              "value": 80,
-              "operator": ">"
-            },
-            {
-              "value": 1,
-              "id": "c_1769687396299",
-              "timeframe": "today",
-              "operator": "<",
-              "metric": "purchases"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 50  ทุนซื้อ > 80 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "value": 50,
-              "timeframe": "today",
-              "id": "c_1769686443811",
-              "metric": "spend"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1769687404826",
-              "value": 80,
-              "metric": "cost_per_purchase",
-              "operator": ">"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "metric": "spend",
-              "id": "c_1769687600128",
-              "timeframe": "today",
-              "value": 50,
-              "operator": ">"
-            },
-            {
-              "value": 80,
-              "timeframe": "today",
-              "metric": "cost_per_purchase",
-              "operator": "<",
-              "id": "c_1769687629792"
-            },
-            {
-              "metric": "purchases",
-              "value": 1,
-              "operator": ">=",
-              "timeframe": "today",
-              "id": "c_1769687645696"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": 50,
-            "percent": 50,
-            "maxBudget": 5000
-          },
-          "conditions": [
-            {
-              "timeframe": "today",
-              "operator": ">",
-              "id": "c3",
-              "metric": "roas",
-              "value": 5
-            },
-            {
-              "id": "c_1769687462736",
-              "value": 40,
+              "id": "c_1785494593044_unpfb",
               "metric": "spend",
               "operator": ">",
+              "value": 150,
               "timeframe": "today"
             },
             {
-              "value": 80,
-              "timeframe": "today",
-              "id": "c_1769687573552",
-              "metric": "cost_per_purchase",
-              "operator": "<"
+              "id": "c_1785494593044_yx54p",
+              "metric": "purchases",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
             }
           ]
         },
         {
-          "name": "ADS ดี เพิ่มงบ 30%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": 50,
-            "percent": 30
-          },
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "timeframe": "today",
-              "operator": ">",
+              "id": "c_1785494593044_4e0oi",
               "metric": "spend",
-              "value": 40,
-              "id": "c_1769687530662"
-            },
-            {
-              "value": 3.5,
               "operator": ">",
-              "id": "c_1769687540944",
-              "timeframe": "today",
-              "metric": "roas"
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "value": 90,
-              "operator": "<",
+              "id": "c_1785494593044_993x6",
               "metric": "cost_per_purchase",
-              "id": "c_1769687570877"
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494593044_zqcwj",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_ds0kh",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_i27t3",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_y4x9h",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_24xe0",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494593044_974s2",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_vnfqf",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_pwr9m",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_eso6k",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_mju7q",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
+          "conditions": [
+            {
+              "id": "c_1785494593044_hy5q4",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_kef8z",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494593044_s0voo",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
@@ -253,269 +301,7 @@
       "token": "env:FB_ACCESS_TOKEN",
       "account_id": "917846690184511",
       "target_level": "campaign",
-      "rules": [
-        {
-          "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 22,
-              "timeframe": "today",
-              "id": "c_1769688105123_uvaan",
-              "metric": "time_of_day",
-              "operator": ">"
-            },
-            {
-              "value": 23.59,
-              "metric": "time_of_day",
-              "operator": "<",
-              "id": "c_1769688105123_0ug9f",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "value": 5,
-              "operator": ">",
-              "metric": "time_of_day",
-              "id": "c_1769688105123_2gi2k",
-              "timeframe": "today"
-            },
-            {
-              "id": "c_1769791466660",
-              "value": 7,
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 300
-          },
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 0,
-              "operator": ">",
-              "id": "c_1769688105123_dfrbi",
-              "metric": "time_of_day"
-            },
-            {
-              "timeframe": "today",
-              "value": 1,
-              "metric": "time_of_day",
-              "id": "c_1769688105123_f06p9",
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "id": "c_1769688105122_4oy22",
-              "value": 100,
-              "metric": "spend",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "id": "c_1769688105122_1ooxu",
-              "operator": "<",
-              "value": 1,
-              "metric": "results",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100  ทุนทัก < 60 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 100,
-              "metric": "spend",
-              "id": "c_1769688105122_gada6",
-              "operator": ">"
-            },
-            {
-              "value": 80,
-              "id": "c_1769688105122_hjs3n",
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "cost_per_result"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "value": 100,
-              "metric": "spend",
-              "timeframe": "today",
-              "id": "c_1769688105122_sngtb"
-            },
-            {
-              "timeframe": "today",
-              "operator": "<",
-              "metric": "purchases",
-              "value": 1,
-              "id": "c_1769688105122_0r728"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100  ทุนซื้อ > 80 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 100,
-              "operator": ">",
-              "metric": "spend",
-              "id": "c_1769688105123_qribn"
-            },
-            {
-              "value": 80,
-              "id": "c_1769688105123_e40ow",
-              "metric": "cost_per_purchase",
-              "operator": ">",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "percent": 20,
-            "maxBudget": 5000,
-            "frequencyMins": 60
-          },
-          "conditions": [
-            {
-              "operator": ">",
-              "value": 3.5,
-              "metric": "roas",
-              "id": "c_1769688105123_zynpz",
-              "timeframe": "today"
-            },
-            {
-              "id": "c_1769688105123_x9kri",
-              "value": 40,
-              "metric": "spend",
-              "operator": ">",
-              "timeframe": "today"
-            },
-            {
-              "timeframe": "today",
-              "operator": "<",
-              "metric": "cost_per_purchase",
-              "id": "c_1769688105123_0ota3",
-              "value": 80
-            },
-            {
-              "value": 17,
-              "timeframe": "today",
-              "id": "c_1770037929110",
-              "operator": ">",
-              "metric": "time_of_day"
-            },
-            {
-              "metric": "time_of_day",
-              "id": "c_1770037931782",
-              "timeframe": "today",
-              "operator": "<",
-              "value": 18
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 30%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": null,
-            "percent": 10
-          },
-          "conditions": [
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "spend",
-              "value": 40,
-              "id": "c_1769688105123_y705t"
-            },
-            {
-              "id": "c_1769688105123_oxkb8",
-              "value": 3,
-              "metric": "roas",
-              "operator": ">",
-              "timeframe": "today"
-            },
-            {
-              "id": "c_1769688105123_d8gd0",
-              "timeframe": "today",
-              "operator": "<",
-              "metric": "cost_per_purchase",
-              "value": 80
-            },
-            {
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "operator": ">",
-              "value": 17,
-              "id": "c_1770037939550"
-            },
-            {
-              "timeframe": "today",
-              "value": 18,
-              "operator": "<",
-              "metric": "time_of_day",
-              "id": "c_1770037940008"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "value": 50,
-              "metric": "spend",
-              "id": "c_1769688105123_fko99",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "value": 80,
-              "metric": "cost_per_purchase",
-              "id": "c_1769688105123_z8ct7",
-              "timeframe": "today",
-              "operator": "<"
-            },
-            {
-              "id": "c_1769688105123_uxbjp",
-              "timeframe": "today",
-              "value": 1,
-              "metric": "purchases",
-              "operator": ">="
-            }
-          ]
-        }
-      ],
+      "rules": [],
       "enabled": false
     },
     {
@@ -526,234 +312,282 @@
       "rules": [
         {
           "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "conditions": [
+            {
+              "metric": "time_of_day",
+              "timeframe": "today",
+              "value": 5,
+              "id": "c_1785494630212_0fg5o",
+              "operator": ">"
+            },
+            {
+              "operator": "<",
+              "id": "c_1785494630212_845qc",
+              "value": 7,
+              "timeframe": "today",
+              "metric": "time_of_day"
+            }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
           "action": "PAUSE",
           "conditions": [
             {
               "value": 22,
-              "id": "c_1769690879712_5vusz",
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "metric": "time_of_day",
-              "id": "c_1769690879712_kuba2",
-              "operator": "<",
-              "value": 23.59,
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
               "operator": ">",
-              "id": "c_1769766007487",
-              "value": 5,
               "timeframe": "today",
+              "id": "c_1785494630212_oywg5",
               "metric": "time_of_day"
             },
             {
-              "value": 7,
+              "value": 23.59,
+              "id": "c_1785494630212_y6aq5",
               "timeframe": "today",
-              "metric": "time_of_day",
               "operator": "<",
-              "id": "c_1769766113696"
+              "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
+          "enabled": true,
+          "group": "รีเซตงบ ",
+          "conditions": [
+            {
+              "id": "c_1785494630212_dc3bi",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 23,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_fe82a",
+              "metric": "time_of_day",
+              "operator": "<",
+              "value": 23.59,
+              "timeframe": "today"
+            }
+          ],
           "params": {
-            "resetAmount": 300
-          },
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
+        },
+        {
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "value": 0,
-              "metric": "time_of_day",
+              "id": "c_1785494630212_t7he3",
+              "metric": "spend",
               "operator": ">",
-              "id": "c_1769690879712_76b1w",
+              "value": 100,
               "timeframe": "today"
             },
             {
-              "value": 1,
-              "metric": "time_of_day",
+              "id": "c_1785494630212_7l8os",
+              "metric": "results",
               "operator": "<",
-              "id": "c_1769690879712_guvft",
+              "value": 1,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 30 ไม่ทัก   ปิด",
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "timeframe": "today",
+              "id": "c_1785494630212_y2zwr",
               "metric": "spend",
-              "value": 30,
               "operator": ">",
-              "id": "c_1769690879712_bduqj"
-            },
-            {
-              "id": "c_1769690879712_iol2m",
-              "timeframe": "today",
-              "operator": "<",
-              "value": 1,
-              "metric": "results"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 40  ทุนทัก < 30 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "value": 40,
-              "id": "c_1769690879712_47yr5",
-              "metric": "spend",
+              "value": 150,
               "timeframe": "today"
             },
             {
+              "id": "c_1785494630212_2r3il",
               "metric": "cost_per_result",
               "operator": ">",
-              "value": 30,
-              "id": "c_1769690879712_ggs4v",
+              "value": 40,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 50    ซื้อ 0 ปิด",
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "value": 50,
-              "id": "c_1769690879712_yj7z2",
+              "id": "c_1785494630212_z8yqy",
               "metric": "spend",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1769690879712_9hmuf",
-              "operator": "<",
-              "metric": "purchases",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 50  ทุนซื้อ > 80 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "id": "c_1769690879712_j5hv3",
-              "metric": "spend",
-              "value": 50,
-              "operator": ">"
-            },
-            {
-              "metric": "cost_per_purchase",
-              "id": "c_1769690879712_28a60",
-              "timeframe": "today",
               "operator": ">",
-              "value": 70
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "id": "c_1769690879712_g42fn",
-              "metric": "spend",
-              "value": 50,
-              "operator": ">",
+              "value": 150,
               "timeframe": "today"
             },
             {
-              "id": "c_1769690879712_jd0lu",
-              "operator": "<",
-              "value": 75,
-              "metric": "cost_per_purchase",
-              "timeframe": "today"
-            },
-            {
+              "id": "c_1785494630212_9cfqf",
               "metric": "purchases",
-              "operator": ">=",
-              "id": "c_1769690879712_7p7ss",
+              "operator": "<",
               "value": 1,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "maxBudget": 5000,
-            "frequencyMins": 50,
-            "percent": 50
-          },
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "timeframe": "today",
-              "operator": ">",
-              "metric": "roas",
-              "value": 3.5,
-              "id": "c_1769690879712_29rvy"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1769690879712_urqlv",
-              "operator": ">",
+              "id": "c_1785494630212_yhmt0",
               "metric": "spend",
-              "value": 40
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "operator": "<",
-              "id": "c_1769690879712_4vyeh",
-              "timeframe": "today",
+              "id": "c_1785494630212_ub3lx",
               "metric": "cost_per_purchase",
-              "value": 60
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
             }
           ]
         },
         {
-          "name": "ADS ดี เพิ่มงบ 30%",
+          "name": "ADS ดี เพิ่มงบ 20%",
           "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": 50,
-            "percent": 30
-          },
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
+              "id": "c_1785494630212_fu98o",
               "metric": "spend",
               "operator": ">",
-              "value": 50,
-              "id": "c_1769690879712_4c9r2",
+              "value": 100,
               "timeframe": "today"
             },
             {
-              "id": "c_1769690879712_bwzuq",
-              "value": 3,
-              "operator": ">",
+              "id": "c_1785494630212_f83td",
               "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
               "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "operator": "<",
-              "id": "c_1769690879712_ktnin",
+              "id": "c_1785494630212_igv4f",
               "metric": "cost_per_purchase",
-              "value": 75
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_3u9d5",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_hejm8",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494630212_3bkzp",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_jkk20",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_xgsp0",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_65oeo",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_xqwsp",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
+          "conditions": [
+            {
+              "id": "c_1785494630212_zcfv5",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_xetjg",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494630212_4pitm",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
@@ -780,11 +614,12 @@
             {
               "operator": "<",
               "id": "c_1769877781632_43kft",
-              "value": 18,
+              "value": 7,
               "timeframe": "today",
               "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
@@ -804,6 +639,246 @@
               "operator": "<",
               "metric": "time_of_day"
             }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "enabled": true,
+          "group": "รีเซตงบ ",
+          "conditions": [
+            {
+              "id": "c_1785494085108_h702a",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 23,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494115318_zym6h",
+              "metric": "time_of_day",
+              "operator": "<",
+              "value": 23.59,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
+        },
+        {
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494139934_3kd1o",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494154575_m9udr",
+              "metric": "results",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494171750_t2j3r",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494190192_bkz0c",
+              "metric": "cost_per_result",
+              "operator": ">",
+              "value": 40,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494259236_lfhbd",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494277106_5y4pr",
+              "metric": "purchases",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494285279_ylxjs",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494295259_154gy",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494321476_yrdld",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494352861_ld4ds",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494361989_kr506",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494367116_8snvv",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494370633_u967s",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494448258_jmj8l",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494448258_9u9xh",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494448258_gt3v2",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494448258_10noa",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494448258_h8iyz",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
+          "conditions": [
+            {
+              "id": "c_1785494519740_sz8nv",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494530520_1falg",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494531307_jklth",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
+            }
           ]
         }
       ]
@@ -816,234 +891,282 @@
       "rules": [
         {
           "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "metric": "time_of_day",
-              "id": "c_1770036170753_n1pi1",
-              "value": 22,
-              "operator": ">",
-              "timeframe": "today"
-            },
-            {
-              "operator": "<",
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "id": "c_1770036170753_4czv2",
-              "value": 23.59
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
           "action": "ACTIVATE",
           "conditions": [
             {
-              "value": 5,
               "metric": "time_of_day",
-              "operator": ">",
               "timeframe": "today",
-              "id": "c_1770036170753_pr2uu"
+              "value": 5,
+              "id": "c_1785494646940_wlla4",
+              "operator": ">"
             },
             {
               "operator": "<",
-              "id": "c_1770036170753_cnxen",
-              "metric": "time_of_day",
+              "id": "c_1785494646940_wq70q",
+              "value": 7,
               "timeframe": "today",
-              "value": 7
+              "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "PAUSE",
+          "conditions": [
+            {
+              "value": 22,
+              "operator": ">",
+              "timeframe": "today",
+              "id": "c_1785494646940_9rt8b",
+              "metric": "time_of_day"
+            },
+            {
+              "value": 23.59,
+              "id": "c_1785494646940_an6lx",
+              "timeframe": "today",
+              "operator": "<",
+              "metric": "time_of_day"
+            }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 300
-          },
+          "enabled": true,
+          "group": "รีเซตงบ ",
           "conditions": [
             {
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036170753_f1n8h",
+              "id": "c_1785494646940_au89u",
               "metric": "time_of_day",
-              "value": 0
-            },
-            {
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "operator": "<",
-              "value": 1,
-              "id": "c_1770036170753_mybyq"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 30 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "metric": "spend",
               "operator": ">",
-              "value": 30,
-              "id": "c_1770036170753_kywkv",
+              "value": 23,
               "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "id": "c_1770036170753_xsmp8",
-              "value": 1,
+              "id": "c_1785494646940_yij1x",
+              "metric": "time_of_day",
+              "operator": "<",
+              "value": 23.59,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
+        },
+        {
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494646940_ldhsz",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_39kbg",
               "metric": "results",
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 40  ทุนทัก < 30 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 40,
-              "metric": "spend",
-              "operator": ">",
-              "id": "c_1770036170753_zfo6s"
-            },
-            {
-              "value": 30,
-              "id": "c_1770036170753_xy8fp",
-              "operator": ">",
-              "metric": "cost_per_result",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 50    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 50,
-              "metric": "spend",
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036170753_lufgj"
-            },
-            {
-              "timeframe": "today",
-              "metric": "purchases",
-              "id": "c_1770036170753_agocu",
               "operator": "<",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 50  ทุนซื้อ > 80 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036170753_bzrde",
-              "metric": "spend",
-              "value": 50
-            },
-            {
-              "operator": ">",
-              "metric": "cost_per_purchase",
-              "id": "c_1770036170753_x0h4x",
-              "value": 70,
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "id": "c_1770036170753_wtbhh",
-              "value": 50,
-              "metric": "spend",
-              "operator": ">",
-              "timeframe": "today"
-            },
-            {
-              "metric": "cost_per_purchase",
-              "id": "c_1770036170753_zo1tu",
-              "operator": "<",
-              "timeframe": "today",
-              "value": 75
-            },
-            {
               "value": 1,
-              "timeframe": "today",
-              "id": "c_1770036170753_de1w6",
-              "operator": ">=",
-              "metric": "purchases"
+              "timeframe": "today"
             }
           ]
         },
         {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "maxBudget": 5000,
-            "percent": 50,
-            "frequencyMins": 50
-          },
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "value": 3.5,
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036170753_hl0su",
-              "metric": "roas"
-            },
-            {
-              "operator": ">",
+              "id": "c_1785494646940_kfth8",
               "metric": "spend",
-              "timeframe": "today",
-              "value": 40,
-              "id": "c_1770036170753_81w3x"
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
             },
             {
+              "id": "c_1785494646940_jvus5",
+              "metric": "cost_per_result",
+              "operator": ">",
+              "value": 40,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494646940_rr4cp",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_z798d",
+              "metric": "purchases",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494646940_vbgug",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_5fi5u",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494646940_ap6d7",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_hmykq",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_acgm1",
+              "metric": "cost_per_purchase",
               "operator": "<",
               "value": 60,
-              "timeframe": "today",
-              "id": "c_1770036170753_cxmye",
-              "metric": "cost_per_purchase"
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_sb6i7",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_icjro",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
         },
         {
-          "name": "ADS ดี เพิ่มงบ 30%",
+          "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": 50,
-            "percent": 30
-          },
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
-              "value": 50,
+              "id": "c_1785494646940_nls53",
               "metric": "spend",
-              "timeframe": "today",
               "operator": ">",
-              "id": "c_1770036170753_ocioj"
+              "value": 100,
+              "timeframe": "today"
             },
             {
-              "id": "c_1770036170753_nvxfk",
+              "id": "c_1785494646940_a5z2v",
+              "metric": "roas",
+              "operator": ">",
               "value": 3,
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "roas"
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "value": 75,
+              "id": "c_1785494646940_coo1w",
+              "metric": "cost_per_purchase",
               "operator": "<",
-              "id": "c_1770036170753_1gcsc",
-              "metric": "cost_per_purchase"
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_qp8ta",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_fplzl",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
+          "conditions": [
+            {
+              "id": "c_1785494646940_qbnxz",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_oyjx6",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494646940_qvbgz",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
@@ -1055,304 +1178,7 @@
       "token": "env:FB_ACCESS_TOKEN",
       "account_id": "1450323635575621",
       "target_level": "campaign",
-      "rules": [
-        {
-          "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "id": "c_1770276522994_gsyrf",
-              "value": 22,
-              "operator": ">"
-            },
-            {
-              "value": 23.59,
-              "id": "c_1770276522994_1hnei",
-              "metric": "time_of_day",
-              "operator": "<",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "operator": ">",
-              "metric": "time_of_day",
-              "id": "c_1770276522994_ll227",
-              "value": 6,
-              "timeframe": "today"
-            },
-            {
-              "id": "c_1770276522994_poonk",
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "value": 7,
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 300
-          },
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 0,
-              "operator": ">",
-              "id": "c_1770276522994_t3jw8",
-              "metric": "time_of_day"
-            },
-            {
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "id": "c_1770276522994_4ajes",
-              "operator": "<",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 60 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "value": 60,
-              "id": "c_1770276522994_30nmt",
-              "metric": "spend",
-              "operator": ">"
-            },
-            {
-              "value": 1,
-              "metric": "results",
-              "id": "c_1770276522994_x2hh8",
-              "operator": "<",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100  ทุนทัก > 50 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 100,
-              "id": "c_1770276522994_hah1x",
-              "timeframe": "today",
-              "operator": ">",
-              "metric": "spend"
-            },
-            {
-              "timeframe": "today",
-              "value": 50,
-              "operator": ">",
-              "id": "c_1770276522994_se2bv",
-              "metric": "cost_per_result"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 200    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 200,
-              "metric": "spend",
-              "timeframe": "today",
-              "operator": ">",
-              "id": "c_1770276522994_07a13"
-            },
-            {
-              "id": "c_1770276522994_5ko93",
-              "metric": "purchases",
-              "timeframe": "today",
-              "value": 1,
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 200  ทุนซื้อ > 220 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 200,
-              "operator": ">",
-              "id": "c_1770276522994_olhlu",
-              "metric": "spend",
-              "timeframe": "today"
-            },
-            {
-              "metric": "cost_per_purchase",
-              "id": "c_1770276522994_t0eh4",
-              "operator": ">",
-              "timeframe": "today",
-              "value": 220
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770472426567",
-              "value": 300,
-              "metric": "spend"
-            },
-            {
-              "timeframe": "today",
-              "operator": "<",
-              "value": 2.8,
-              "id": "c_1770472427669",
-              "metric": "roas"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "metric": "spend",
-              "timeframe": "today",
-              "operator": ">",
-              "id": "c_1770276522994_xzdlm",
-              "value": 100
-            },
-            {
-              "operator": "<",
-              "value": 220,
-              "metric": "cost_per_purchase",
-              "timeframe": "today",
-              "id": "c_1770276522994_n99qo"
-            },
-            {
-              "id": "c_1770276522994_10ic9",
-              "metric": "purchases",
-              "timeframe": "today",
-              "value": 1,
-              "operator": ">="
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "percent": 30,
-            "maxBudget": 3000,
-            "frequencyMins": 50
-          },
-          "conditions": [
-            {
-              "operator": ">",
-              "metric": "roas",
-              "id": "c_1770276522994_71y62",
-              "timeframe": "today",
-              "value": 3.5
-            },
-            {
-              "metric": "spend",
-              "timeframe": "today",
-              "value": 80,
-              "operator": ">",
-              "id": "c_1770276522994_wmq7i"
-            },
-            {
-              "value": 180,
-              "operator": "<",
-              "id": "c_1770276522994_rlml1",
-              "timeframe": "today",
-              "metric": "cost_per_purchase"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1770276522994_2vopm",
-              "metric": "time_of_day",
-              "value": 6,
-              "operator": ">"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1770276522994_kxcw2",
-              "operator": "<",
-              "metric": "time_of_day",
-              "value": 18
-            },
-            {
-              "timeframe": "today",
-              "metric": "roas",
-              "value": 20,
-              "operator": "<",
-              "id": "c_1770276522994_jew2e"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 30%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "maxBudget": 3000,
-            "percent": 20,
-            "frequencyMins": 50
-          },
-          "conditions": [
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "spend",
-              "id": "c_1770276522994_bzdhx",
-              "value": 100
-            },
-            {
-              "id": "c_1770276522994_t0opd",
-              "value": 3,
-              "metric": "roas",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "timeframe": "today",
-              "metric": "cost_per_purchase",
-              "operator": "<",
-              "value": 220,
-              "id": "c_1770276522994_n10in"
-            },
-            {
-              "operator": ">",
-              "timeframe": "today",
-              "value": 6,
-              "metric": "time_of_day",
-              "id": "c_1770276522994_c7lm9"
-            },
-            {
-              "timeframe": "today",
-              "id": "c_1770276522994_7vfq0",
-              "operator": "<",
-              "metric": "time_of_day",
-              "value": 18
-            },
-            {
-              "timeframe": "today",
-              "value": 10,
-              "operator": "<",
-              "metric": "roas",
-              "id": "c_1770276522994_zfhch"
-            }
-          ]
-        }
-      ],
+      "rules": [],
       "enabled": false
     },
     {
@@ -1363,234 +1189,282 @@
       "rules": [
         {
           "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "conditions": [
+            {
+              "metric": "time_of_day",
+              "timeframe": "today",
+              "value": 5,
+              "id": "c_1785494657322_ce5ce",
+              "operator": ">"
+            },
+            {
+              "operator": "<",
+              "id": "c_1785494657322_qb4gn",
+              "value": 7,
+              "timeframe": "today",
+              "metric": "time_of_day"
+            }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
           "action": "PAUSE",
           "conditions": [
             {
-              "timeframe": "today",
-              "operator": ">",
-              "metric": "time_of_day",
               "value": 22,
-              "id": "c_1770036182021_xrguq"
+              "operator": ">",
+              "timeframe": "today",
+              "id": "c_1785494657322_o8ubo",
+              "metric": "time_of_day"
             },
             {
               "value": 23.59,
-              "id": "c_1770036182021_xo44o",
+              "id": "c_1785494657322_ismwe",
               "timeframe": "today",
               "operator": "<",
               "metric": "time_of_day"
             }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "operator": ">",
-              "id": "c_1770036182021_qtwzw",
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "value": 5
-            },
-            {
-              "id": "c_1770036182021_qezzt",
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "value": 7,
-              "operator": "<"
-            }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 300
-          },
+          "enabled": true,
+          "group": "รีเซตงบ ",
           "conditions": [
             {
+              "id": "c_1785494657322_ma2er",
               "metric": "time_of_day",
-              "value": 0,
-              "timeframe": "today",
-              "id": "c_1770036182021_s8m6c",
-              "operator": ">"
+              "operator": ">",
+              "value": 23,
+              "timeframe": "today"
             },
             {
-              "value": 1,
-              "id": "c_1770036182021_v6b2y",
+              "id": "c_1785494657322_x9r48",
               "metric": "time_of_day",
-              "timeframe": "today",
-              "operator": "<"
+              "operator": "<",
+              "value": 23.59,
+              "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
         },
         {
           "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "timeframe": "today",
-              "id": "c_1770036182021_ndiyq",
+              "id": "c_1785494657322_kucsb",
               "metric": "spend",
+              "operator": ">",
               "value": 100,
-              "operator": ">"
+              "timeframe": "today"
             },
             {
-              "id": "c_1770036182021_zkfi2",
+              "id": "c_1785494657322_d8zow",
               "metric": "results",
-              "value": 1,
               "operator": "<",
+              "value": 1,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 100  ทุนทัก < 60 ปิด",
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
+              "id": "c_1785494657322_au8wx",
               "metric": "spend",
-              "value": 100,
               "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036182021_42hg8"
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "operator": ">",
-              "value": 60,
-              "timeframe": "today",
-              "id": "c_1770036182021_58sph",
-              "metric": "cost_per_result"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "value": 100,
-              "metric": "spend",
-              "timeframe": "today",
-              "id": "c_1770036182021_5kffe"
-            },
-            {
-              "operator": "<",
-              "id": "c_1770036182021_blfi3",
-              "value": 1,
-              "timeframe": "today",
-              "metric": "purchases"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100  ทุนซื้อ > 80 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "operator": ">",
-              "metric": "spend",
-              "value": 100,
-              "timeframe": "today",
-              "id": "c_1770036182021_00fwt"
-            },
-            {
-              "value": 80,
-              "id": "c_1770036182021_dclt3",
-              "timeframe": "today",
-              "operator": ">",
-              "metric": "cost_per_purchase"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "id": "c_1770036182021_ubdno",
-              "value": 50,
-              "metric": "spend",
-              "timeframe": "today",
-              "operator": ">"
-            },
-            {
-              "id": "c_1770036182021_rkbxg",
-              "timeframe": "today",
-              "metric": "cost_per_purchase",
-              "value": 80,
-              "operator": "<"
-            },
-            {
-              "timeframe": "today",
-              "operator": ">=",
-              "metric": "purchases",
-              "id": "c_1770036182021_135pw",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "maxBudget": 5000,
-            "percent": 50,
-            "frequencyMins": 50
-          },
-          "conditions": [
-            {
-              "value": 3.5,
-              "timeframe": "today",
-              "operator": ">",
-              "id": "c_1770036182021_p8hdn",
-              "metric": "roas"
-            },
-            {
-              "metric": "spend",
-              "id": "c_1770036182021_0btd7",
-              "timeframe": "today",
-              "operator": ">",
-              "value": 40
-            },
-            {
-              "metric": "cost_per_purchase",
-              "value": 80,
-              "operator": "<",
-              "timeframe": "today",
-              "id": "c_1770036182021_oxlxk"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 30%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "frequencyMins": 50,
-            "percent": 30
-          },
-          "conditions": [
-            {
+              "id": "c_1785494657322_8vjej",
+              "metric": "cost_per_result",
               "operator": ">",
               "value": 40,
-              "timeframe": "today",
-              "id": "c_1770036182021_ul25b",
-              "metric": "spend"
-            },
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
             {
+              "id": "c_1785494657322_gfypf",
+              "metric": "spend",
               "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770036182021_pbh5j",
-              "metric": "roas",
-              "value": 3
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "id": "c_1770036182021_7son8",
+              "id": "c_1785494657322_w8768",
+              "metric": "purchases",
               "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494657322_o473v",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_i1pxe",
               "metric": "cost_per_purchase",
-              "value": 80
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494657322_uybnf",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_7sdhw",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_0gjjw",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_ea4s1",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_27fcv",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494657322_w18uz",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_q00sp",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_55via",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_w52a8",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_kd9dc",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
+          "conditions": [
+            {
+              "id": "c_1785494657322_8eq5m",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_0e2br",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494657322_2m2k1",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
@@ -1605,121 +1479,88 @@
       "rules": [
         {
           "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "id": "c_1770042758833_7vvm2",
-              "metric": "time_of_day",
-              "operator": ">",
-              "value": 22
-            },
-            {
-              "id": "c_1770042758833_iunc6",
-              "value": 23.59,
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
           "action": "ACTIVATE",
           "conditions": [
             {
               "metric": "time_of_day",
               "timeframe": "today",
-              "id": "c_1770042758833_o32ag",
-              "operator": ">",
-              "value": 5
-            },
-            {
-              "operator": "<",
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "id": "c_1770042758833_q2nov",
-              "value": 7
-            }
-          ]
-        },
-        {
-          "name": "กฎใหม่",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "metric": "time_of_day",
-              "value": 13,
-              "id": "c_1770304682616",
+              "value": 5,
+              "id": "c_1785494607350_i2me3",
               "operator": ">"
             },
             {
               "operator": "<",
-              "value": 16,
-              "id": "c_1770304685003",
+              "id": "c_1785494607350_ekwso",
+              "value": 7,
               "timeframe": "today",
               "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "PAUSE",
           "conditions": [
             {
-              "value": 16,
+              "value": 22,
               "operator": ">",
-              "id": "c_1770304683774",
               "timeframe": "today",
+              "id": "c_1785494607350_9xp9g",
               "metric": "time_of_day"
             },
             {
+              "value": 23.59,
+              "id": "c_1785494607350_bu85m",
               "timeframe": "today",
-              "metric": "time_of_day",
               "operator": "<",
-              "value": 17,
-              "id": "c_1770304688212"
+              "metric": "time_of_day"
             }
-          ]
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "params": {
-            "resetAmount": 1000
-          },
+          "enabled": true,
+          "group": "รีเซตงบ ",
           "conditions": [
             {
+              "id": "c_1785494607350_0j2mw",
+              "metric": "time_of_day",
               "operator": ">",
-              "id": "c_1770042758833_l38j3",
               "value": 23,
-              "timeframe": "today",
-              "metric": "time_of_day"
+              "timeframe": "today"
             },
             {
-              "id": "c_1770042758833_ry86n",
+              "id": "c_1785494607350_ohu7o",
               "metric": "time_of_day",
-              "timeframe": "today",
               "operator": "<",
-              "value": 23.59
+              "value": 23.59,
+              "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
         },
         {
-          "name": "จ่าย 60 ไม่ทัก   ปิด",
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "value": 150,
-              "id": "c_1770042758833_t6c6c",
+              "id": "c_1785494607350_q4gsq",
+              "metric": "spend",
               "operator": ">",
-              "timeframe": "today",
-              "metric": "spend"
+              "value": 100,
+              "timeframe": "today"
             },
             {
+              "id": "c_1785494607350_7cvi2",
               "metric": "results",
-              "id": "c_1770042758833_hg22s",
               "operator": "<",
               "value": 1,
               "timeframe": "today"
@@ -1727,215 +1568,193 @@
           ]
         },
         {
-          "name": "จ่าย 100  ทุนทัก < 60 ปิด",
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
+              "id": "c_1785494607350_laj9q",
               "metric": "spend",
-              "timeframe": "today",
               "operator": ">",
-              "value": 148,
-              "id": "c_1770042758833_5403f"
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "operator": ">",
+              "id": "c_1785494607350_vnvsg",
               "metric": "cost_per_result",
-              "value": 60,
-              "id": "c_1770042758833_uxk7b",
+              "operator": ">",
+              "value": 40,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 200    ซื้อ 0 ปิด",
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
-              "operator": ">",
-              "timeframe": "today",
-              "value": 250,
+              "id": "c_1785494607350_pj4zs",
               "metric": "spend",
-              "id": "c_1770042758833_xtr7k"
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "operator": "<",
+              "id": "c_1785494607350_2exvj",
               "metric": "purchases",
+              "operator": "<",
               "value": 1,
-              "id": "c_1770042758833_l8vpt",
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "จ่าย 200  ทุนซื้อ > 220 ปิด",
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
+              "id": "c_1785494607350_jw2fd",
               "metric": "spend",
-              "timeframe": "today",
-              "value": 250,
               "operator": ">",
-              "id": "c_1770042758833_16dzi"
+              "value": 150,
+              "timeframe": "today"
             },
             {
-              "id": "c_1770042758833_hzz4d",
-              "value": 220,
-              "operator": ">",
+              "id": "c_1785494607350_sezg0",
               "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "กฎใหม่",
-          "action": "PAUSE",
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
-              "timeframe": "today",
-              "id": "c_1770472395627",
-              "operator": ">",
+              "id": "c_1785494607350_aj2bn",
               "metric": "spend",
-              "value": 300
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "id": "c_1770472401705",
-              "value": 2.8,
+              "id": "c_1785494607350_nsa7q",
               "metric": "roas",
-              "operator": "<"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี เพิ่มงบ 50%",
-          "action": "INCREASE_BUDGET",
-          "params": {
-            "percent": 10,
-            "frequencyMins": 50,
-            "maxBudget": 3000
-          },
-          "conditions": [
-            {
-              "timeframe": "today",
+              "operator": ">",
               "value": 3.5,
-              "id": "c_1770042758833_ophqg",
-              "metric": "roas",
-              "operator": ">"
+              "timeframe": "today"
             },
             {
-              "value": 80,
-              "id": "c_1770042758833_jezjn",
-              "operator": ">",
-              "timeframe": "today",
-              "metric": "spend"
-            },
-            {
-              "value": 180,
+              "id": "c_1785494607350_5j17a",
+              "metric": "cost_per_purchase",
               "operator": "<",
-              "id": "c_1770042758833_yxwdm",
-              "timeframe": "today",
-              "metric": "cost_per_purchase"
+              "value": 60,
+              "timeframe": "today"
             },
             {
+              "id": "c_1785494607350_vfymm",
               "metric": "time_of_day",
-              "timeframe": "today",
+              "operator": ">",
               "value": 6,
-              "id": "c_1770042888539",
-              "operator": ">"
+              "timeframe": "today"
             },
             {
-              "id": "c_1770042889088",
+              "id": "c_1785494607350_m97ii",
+              "metric": "time_of_day",
+              "operator": ">=",
               "value": 18,
-              "operator": "<",
-              "timeframe": "today",
-              "metric": "time_of_day"
-            },
-            {
-              "value": 20,
-              "operator": "<",
-              "timeframe": "today",
-              "metric": "roas",
-              "id": "c_1770091685062"
+              "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
         },
         {
-          "name": "ADS ดี เพิ่มงบ 30%",
+          "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "params": {
-            "maxBudget": 3000,
-            "percent": 5,
-            "frequencyMins": 50
-          },
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
-              "id": "c_1770042758833_o8l3s",
-              "operator": ">",
-              "timeframe": "today",
+              "id": "c_1785494607350_rjtvc",
               "metric": "spend",
-              "value": 100
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
+              "id": "c_1785494607350_rruk5",
               "metric": "roas",
               "operator": ">",
               "value": 3,
-              "id": "c_1770042758833_sfp77"
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "id": "c_1770042758833_vf2ta",
-              "value": 220,
+              "id": "c_1785494607350_sh39a",
               "metric": "cost_per_purchase",
-              "operator": "<"
-            },
-            {
-              "value": 6,
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "operator": ">",
-              "id": "c_1770042898822"
-            },
-            {
-              "value": 18,
-              "id": "c_1770042899568",
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "operator": "<"
-            },
-            {
-              "metric": "roas",
-              "timeframe": "today",
               "operator": "<",
-              "value": 10,
-              "id": "c_1770091712799"
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494607350_963vs",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494607350_ja93q",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
             }
-          ]
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
         },
         {
-          "name": "ADS ดี - เปิด ",
+          "name": "กฎใหม่",
           "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
           "conditions": [
             {
-              "value": 100,
+              "id": "c_1785494607350_kuuez",
               "metric": "spend",
               "operator": ">",
-              "timeframe": "today",
-              "id": "c_1770042758833_fi694"
+              "value": 100,
+              "timeframe": "today"
             },
             {
-              "timeframe": "today",
-              "value": 220,
-              "operator": "<",
+              "id": "c_1785494607350_nh3ky",
               "metric": "cost_per_purchase",
-              "id": "c_1770042758833_y1dmb"
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
             },
             {
-              "id": "c_1770042758833_1e72v",
-              "timeframe": "today",
-              "value": 1,
+              "id": "c_1785494607350_8tufw",
               "metric": "purchases",
-              "operator": ">="
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
@@ -1950,148 +1769,282 @@
       "rules": [
         {
           "name": "กฎใหม่",
+          "action": "ACTIVATE",
+          "conditions": [
+            {
+              "metric": "time_of_day",
+              "timeframe": "today",
+              "value": 5,
+              "id": "c_1785494668270_4hxbf",
+              "operator": ">"
+            },
+            {
+              "operator": "<",
+              "id": "c_1785494668270_ndgfg",
+              "value": 7,
+              "timeframe": "today",
+              "metric": "time_of_day"
+            }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
           "action": "PAUSE",
           "conditions": [
             {
               "value": 22,
               "operator": ">",
-              "id": "c_1770647112475_qtklq",
               "timeframe": "today",
+              "id": "c_1785494668270_82rkv",
               "metric": "time_of_day"
             },
             {
-              "id": "c_1770647112475_wdxpr",
-              "timeframe": "today",
               "value": 23.59,
+              "id": "c_1785494668270_qn38c",
+              "timeframe": "today",
               "operator": "<",
               "metric": "time_of_day"
             }
+          ],
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "enabled": true,
+          "group": "รีเซตงบ ",
+          "conditions": [
+            {
+              "id": "c_1785494668270_ppzkz",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 23,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_xduw6",
+              "metric": "time_of_day",
+              "operator": "<",
+              "value": 23.59,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "resetAmount": 3000,
+            "frequencyMins": 60
+          }
+        },
+        {
+          "name": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_24gyq",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_247iz",
+              "metric": "results",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
           ]
+        },
+        {
+          "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_rlc03",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_cp806",
+              "metric": "cost_per_result",
+              "operator": ">",
+              "value": 40,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_30t81",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_o8e0j",
+              "metric": "purchases",
+              "operator": "<",
+              "value": 1,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_j6rdb",
+              "metric": "spend",
+              "operator": ">",
+              "value": 150,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_arm9n",
+              "metric": "cost_per_purchase",
+              "operator": ">",
+              "value": 75,
+              "timeframe": "today"
+            }
+          ]
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 20%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_q55v9",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_oc2da",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3.5,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_t4y4i",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_r0aba",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_71yvz",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 20,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
+        },
+        {
+          "name": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "enabled": true,
+          "group": "🚀 กฎเพิ่มงบ (Scaling)",
+          "conditions": [
+            {
+              "id": "c_1785494668270_qia0w",
+              "metric": "spend",
+              "operator": ">",
+              "value": 100,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_9v6bt",
+              "metric": "roas",
+              "operator": ">",
+              "value": 3,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_e0jyo",
+              "metric": "cost_per_purchase",
+              "operator": "<",
+              "value": 60,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_t7dvd",
+              "metric": "time_of_day",
+              "operator": ">",
+              "value": 6,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785494668270_rq0jb",
+              "metric": "time_of_day",
+              "operator": ">=",
+              "value": 18,
+              "timeframe": "today"
+            }
+          ],
+          "params": {
+            "percent": 10,
+            "maxBudget": 5000,
+            "frequencyMins": 50
+          }
         },
         {
           "name": "กฎใหม่",
           "action": "ACTIVATE",
+          "enabled": true,
+          "group": "ADS ดี - เปิด",
           "conditions": [
             {
-              "value": 5,
-              "timeframe": "today",
-              "id": "c_1770647112475_omjra",
-              "operator": ">",
-              "metric": "time_of_day"
-            },
-            {
-              "operator": "<",
-              "value": 7,
-              "metric": "time_of_day",
-              "timeframe": "today",
-              "id": "c_1770647112475_iddo8"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 40 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
+              "id": "c_1785494668270_ber36",
               "metric": "spend",
               "operator": ">",
-              "id": "c_1770647112475_0kxjq",
-              "value": 150
-            },
-            {
-              "metric": "results",
-              "timeframe": "today",
-              "operator": "<",
-              "id": "c_1770647112475_zn7lw",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 50  ทุนทัก < 30 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "value": 150,
-              "operator": ">",
-              "metric": "spend",
-              "id": "c_1770647112475_8aoqx",
+              "value": 100,
               "timeframe": "today"
             },
             {
-              "id": "c_1770647112475_i4gtq",
-              "value": 45,
-              "operator": ">",
-              "metric": "cost_per_result",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 65    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "timeframe": "today",
-              "metric": "spend",
-              "id": "c_1770647112475_lh9bd",
-              "operator": ">",
-              "value": 149
-            },
-            {
-              "operator": "<",
-              "value": 1,
-              "metric": "purchases",
-              "id": "c_1770647112475_wqjbb",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "จ่าย 100  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "conditions": [
-            {
-              "metric": "spend",
-              "operator": ">",
-              "timeframe": "today",
-              "value": 149,
-              "id": "c_1770647112475_65dmr"
-            },
-            {
-              "value": 70,
+              "id": "c_1785494668270_1utkl",
               "metric": "cost_per_purchase",
               "operator": ">",
-              "id": "c_1770647112475_gv18r",
-              "timeframe": "today"
-            }
-          ]
-        },
-        {
-          "name": "ADS ดี - เปิด ",
-          "action": "ACTIVATE",
-          "conditions": [
-            {
-              "id": "c_1770647112475_6bqd1",
-              "timeframe": "today",
-              "value": 50,
-              "metric": "spend",
-              "operator": ">"
-            },
-            {
-              "id": "c_1770647112475_5xcvq",
               "value": 75,
-              "timeframe": "today",
-              "operator": "<",
-              "metric": "cost_per_purchase"
+              "timeframe": "today"
             },
             {
-              "value": 1,
-              "timeframe": "today",
-              "operator": ">=",
-              "id": "c_1770647112475_oj920",
-              "metric": "purchases"
+              "id": "c_1785494668270_wgn0w",
+              "metric": "purchases",
+              "operator": ">",
+              "value": 0,
+              "timeframe": "today"
             }
           ]
         }
