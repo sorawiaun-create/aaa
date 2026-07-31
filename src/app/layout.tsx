@@ -15,12 +15,11 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body>
-        <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4">
+        <div className="flex min-h-screen">
           <NavBar />
-          <main className="flex-1 py-6">{children}</main>
-          <footer className="py-6 text-center text-xs text-neutral-600">
-            TikTok Ads Automation · rule-based auto on/off
-          </footer>
+          <main className="flex-1 overflow-x-hidden px-6 py-6">
+            <div className="mx-auto max-w-6xl">{children}</div>
+          </main>
         </div>
       </body>
     </html>
