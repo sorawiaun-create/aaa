@@ -1,0 +1,62 @@
+name: Facebook Ads Automation
+
+# รันอัตโนมัติทุก N นาที บนเซิร์ฟเวอร์ของ GitHub (ฟรี ไม่ต้องเปิดคอมทิ้งไว้)
+on:
+  schedule:
+    # ทุก 10 นาที (GitHub ต่ำสุด = ทุก 5 นาที: '*/5 * * * *')
+    # หมายเหตุ: เวลาของ cron เป็น UTC และอาจดีเลย์บ้างช่วง GitHub โหลดหนัก
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "จำลอง (ไม่แก้ไขจริง)"
+        type: boolean
+        default: false
+
+# กันไม่ให้รอบใหม่ทับรอบเก่าที่ยังทำงานอยู่
+concurrency:
+  group: facebook-ads-automation
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: facebook-ads-automation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: facebook-ads-automation/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # โหลด state ล่าสุด (จำเวลาเพิ่มงบ frequencyMins ข้ามรอบ)
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: facebook-ads-automation/state.json
+          key: fb-ads-state-${{ github.run_id }}
+          restore-keys: |
+            fb-ads-state-
+
+      - name: Run automation
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+          FB_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          LOG_LEVEL: INFO
+        run: python main.py
+
+      # บันทึก state กลับ (ทำเสมอ แม้รอบจะ error)
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: facebook-ads-automation/state.json
+          key: fb-ads-state-${{ github.run_id }}
