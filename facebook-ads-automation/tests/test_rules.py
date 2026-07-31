@@ -151,7 +151,7 @@ class TestBudgetSequence(unittest.TestCase):
     def test_increase_respects_max(self):
         state = State("/tmp/nonexistent_state_x.json", {})
         pa = self._plan(percent=50, max_budget=100)
-        new = _apply_budget_sequence(
+        new, _ = _apply_budget_sequence(
             80, [pa], state=state, now=NOON, account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )
@@ -160,7 +160,7 @@ class TestBudgetSequence(unittest.TestCase):
     def test_reset_budget(self):
         state = State("/tmp/nonexistent_state_y.json", {})
         pa = self._plan(action="RESET_BUDGET", budget_op="reset", reset_amount=300)
-        new = _apply_budget_sequence(
+        new, _ = _apply_budget_sequence(
             57, [pa], state=state, now=NOON, account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )
@@ -169,7 +169,7 @@ class TestBudgetSequence(unittest.TestCase):
     def test_no_change_returns_none(self):
         state = State("/tmp/nonexistent_state_z.json", {})
         pa = self._plan(action="RESET_BUDGET", budget_op="reset", reset_amount=300)
-        new = _apply_budget_sequence(
+        new, _ = _apply_budget_sequence(
             300, [pa], state=state, now=NOON, account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )
@@ -179,19 +179,19 @@ class TestBudgetSequence(unittest.TestCase):
         state = State("/tmp/nonexistent_state_w.json", {})
         pa = self._plan(percent=50, frequency_mins=50)
         # ครั้งแรกผ่าน
-        new1 = _apply_budget_sequence(
+        new1, _ = _apply_budget_sequence(
             100, [pa], state=state, now=NOON, account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )
         self.assertEqual(new1, 150)
         # อีก 10 นาที -> ยังไม่ครบ 50 นาที -> ข้าม
-        new2 = _apply_budget_sequence(
+        new2, _ = _apply_budget_sequence(
             150, [pa], state=state, now=NOON + timedelta(minutes=10), account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )
         self.assertIsNone(new2)
         # อีก 60 นาที -> ครบแล้ว -> เพิ่มได้
-        new3 = _apply_budget_sequence(
+        new3, _ = _apply_budget_sequence(
             150, [pa], state=state, now=NOON + timedelta(minutes=60), account_id="1", unit_id="c1",
             unit_label="แคมเปญ", summary=RunSummary(),
         )

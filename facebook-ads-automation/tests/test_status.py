@@ -54,3 +54,26 @@ class TestBuildStatus(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+import tempfile
+from fb_automation.activity import load_activity, append_run, write_activity
+
+
+class TestActivity(unittest.TestCase):
+    def test_append_and_trim(self):
+        act = {"runs": []}
+        for i in range(70):
+            append_run(act, {"t": str(i), "events": []}, keep=60)
+        self.assertEqual(len(act["runs"]), 60)
+        self.assertEqual(act["runs"][0]["t"], "69")   # ล่าสุดอยู่บนสุด
+
+    def test_roundtrip(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "activity.json")
+            write_activity(p, {"runs": [{"t": "x", "events": [{"account": "A"}]}]})
+            got = load_activity(p)
+            self.assertEqual(got["runs"][0]["events"][0]["account"], "A")
+
+    def test_load_missing(self):
+        self.assertEqual(load_activity("/tmp/nope_xyz_activity.json"), {"runs": []})
