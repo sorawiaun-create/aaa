@@ -142,6 +142,7 @@ async function listAdEntities(s: Settings): Promise<AdGetData["list"]> {
 const REPORT_METRICS = [
   "spend",
   "complete_payment_roas",
+  "complete_payment",
   "cost_per_conversion",
   "conversion",
   "cpc",
@@ -183,9 +184,15 @@ async function getAdReports(
   const out: Record<string, AdMetrics> = {};
   for (const row of data.list ?? []) {
     const m = row.metrics;
+    const spend = num(m.spend);
+    const roas = num(m.complete_payment_roas);
     out[row.dimensions.ad_id] = {
-      spend: num(m.spend),
-      roas: num(m.complete_payment_roas),
+      spend,
+      // GMV (gross merchandise value / ยอดขายรวม) is derived from payment ROAS:
+      // ROAS = revenue / spend, so revenue (GMV) = ROAS * spend.
+      gmv: roas * spend,
+      roas,
+      complete_payment: num(m.complete_payment),
       cost_per_conversion: num(m.cost_per_conversion),
       conversion: num(m.conversion),
       cpc: num(m.cpc),
@@ -200,7 +207,9 @@ async function getAdReports(
 
 const ZERO_METRICS: AdMetrics = {
   spend: 0,
+  gmv: 0,
   roas: 0,
+  complete_payment: 0,
   cost_per_conversion: 0,
   conversion: 0,
   cpc: 0,

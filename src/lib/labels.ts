@@ -8,8 +8,10 @@ import {
 // Shared, client-safe display metadata (no server-only imports here).
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
+  gmv: "GMV (ยอดขายรวม)",
   spend: "Spend (ค่าโฆษณา)",
   roas: "ROAS",
+  complete_payment: "Orders (จำนวนออร์เดอร์)",
   cost_per_conversion: "CPA (ต้นทุน/conversion)",
   conversion: "Conversions",
   cpc: "CPC",

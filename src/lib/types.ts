@@ -7,7 +7,9 @@ export type OperationStatus = "ENABLE" | "DISABLE";
 // Metrics we can build automation rules on. These map to TikTok report metrics.
 export type MetricKey =
   | "spend"
+  | "gmv" // gross merchandise value (ยอดขายรวม) = roas * spend
   | "roas" // = complete_payment_roas
+  | "complete_payment" // number of paid orders
   | "cost_per_conversion" // CPA
   | "conversion" // number of conversions
   | "cpc"
@@ -53,7 +55,9 @@ export interface Settings {
 
 export interface AdMetrics {
   spend: number;
+  gmv: number;
   roas: number;
+  complete_payment: number;
   cost_per_conversion: number;
   conversion: number;
   cpc: number;

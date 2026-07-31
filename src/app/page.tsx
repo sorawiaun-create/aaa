@@ -47,14 +47,11 @@ export default function DashboardPage() {
 
   const summary = useMemo(() => {
     const spend = ads.reduce((a, x) => a + x.metrics.spend, 0);
-    const conv = ads.reduce((a, x) => a + x.metrics.conversion, 0);
-    const revenue = ads.reduce(
-      (a, x) => a + x.metrics.roas * x.metrics.spend,
-      0
-    );
-    const roas = spend > 0 ? revenue / spend : 0;
+    const orders = ads.reduce((a, x) => a + x.metrics.complete_payment, 0);
+    const gmv = ads.reduce((a, x) => a + x.metrics.gmv, 0);
+    const roas = spend > 0 ? gmv / spend : 0;
     const running = ads.filter((a) => a.operation_status === "ENABLE").length;
-    return { spend, conv, roas, running, total: ads.length };
+    return { spend, orders, gmv, roas, running, total: ads.length };
   }, [ads]);
 
   const chartData = useMemo(
@@ -162,11 +159,11 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <Stat label="GMV (ยอดขายรวม)" value={formatNumber(summary.gmv)} highlight />
         <Stat label="ค่าโฆษณา (Spend)" value={formatNumber(summary.spend)} />
         <Stat label="ROAS เฉลี่ย" value={formatNumber(summary.roas)} />
-        <Stat label="Conversions" value={formatNumber(summary.conv, 0)} />
-        <Stat label="กำลังรัน" value={`${summary.running}`} />
-        <Stat label="โฆษณาทั้งหมด" value={`${summary.total}`} />
+        <Stat label="Orders (ออร์เดอร์)" value={formatNumber(summary.orders, 0)} />
+        <Stat label="กำลังรัน / ทั้งหมด" value={`${summary.running} / ${summary.total}`} />
       </div>
 
       {chartData.length > 0 && (
@@ -207,10 +204,11 @@ export default function DashboardPage() {
           <thead>
             <tr className="border-b border-neutral-800 text-left text-xs uppercase tracking-wide text-neutral-500">
               <th className="p-3">โฆษณา</th>
+              <th className="p-3 text-right">GMV</th>
               <th className="p-3 text-right">Spend</th>
               <th className="p-3 text-right">ROAS</th>
+              <th className="p-3 text-right">Orders</th>
               <th className="p-3 text-right">CPA</th>
-              <th className="p-3 text-right">Conv.</th>
               <th className="p-3 text-right">CTR</th>
               <th className="p-3 text-center">สถานะ</th>
               <th className="p-3 text-right">จัดการ</th>
@@ -230,6 +228,9 @@ export default function DashboardPage() {
                       ID: {ad.ad_id}
                     </div>
                   </td>
+                  <td className="p-3 text-right font-medium text-brand">
+                    {formatNumber(ad.metrics.gmv)}
+                  </td>
                   <td className="p-3 text-right">
                     {formatNumber(ad.metrics.spend)}
                   </td>
@@ -237,10 +238,10 @@ export default function DashboardPage() {
                     {formatNumber(ad.metrics.roas)}
                   </td>
                   <td className="p-3 text-right">
-                    {formatNumber(ad.metrics.cost_per_conversion)}
+                    {formatNumber(ad.metrics.complete_payment, 0)}
                   </td>
                   <td className="p-3 text-right">
-                    {formatNumber(ad.metrics.conversion, 0)}
+                    {formatNumber(ad.metrics.cost_per_conversion)}
                   </td>
                   <td className="p-3 text-right">
                     {formatNumber(ad.metrics.ctr)}
@@ -274,7 +275,7 @@ export default function DashboardPage() {
             })}
             {!loading && ads.length === 0 && !error && (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-neutral-500">
+                <td colSpan={9} className="p-8 text-center text-neutral-500">
                   ไม่พบโฆษณา — ตรวจสอบการตั้งค่า API ที่หน้า Settings
                 </td>
               </tr>
@@ -286,11 +287,25 @@ export default function DashboardPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="card">
+    <div className={`card ${highlight ? "border-brand/50 bg-brand/5" : ""}`}>
       <div className="text-xs text-neutral-400">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
+      <div
+        className={`mt-1 text-2xl font-semibold ${
+          highlight ? "text-brand" : ""
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

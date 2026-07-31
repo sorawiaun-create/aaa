@@ -10,7 +10,9 @@ import {
 
 const METRICS: MetricKey[] = [
   "spend",
+  "gmv",
   "roas",
+  "complete_payment",
   "cost_per_conversion",
   "conversion",
   "cpc",
