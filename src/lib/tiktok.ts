@@ -605,6 +605,103 @@ export async function diagnoseGmvMax(
   };
 }
 
+// Diagnostic: try each candidate status-update endpoint on one GMV Max
+// campaign and report the raw API code/message plus the campaign's status
+// after each attempt, so we can identify which endpoint actually works.
+export async function diagnoseGmvMaxToggle(
+  s: Settings,
+  campaignId: string,
+  target: OperationStatus
+): Promise<{
+  campaignId: string;
+  target: OperationStatus;
+  steps: Array<{
+    endpoint: string;
+    httpStatus?: number;
+    code?: number;
+    message?: string;
+    statusAfter: string;
+  }>;
+}> {
+  assertConfigured(s);
+  const base = s.apiBase.replace(/\/$/, "");
+  const headers = {
+    "Access-Token": s.accessToken,
+    "Content-Type": "application/json",
+  };
+
+  async function readStatus(): Promise<string> {
+    const info = await getGmvMaxInfo(s, campaignId);
+    return info?.operation_status ?? "?";
+  }
+  async function tryPost(path: string, body: object) {
+    try {
+      const res = await fetch(`${base}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+      const text = await res.text();
+      try {
+        const j = JSON.parse(text);
+        return { httpStatus: res.status, code: j.code, message: j.message };
+      } catch {
+        return { httpStatus: res.status, code: -1, message: text.slice(0, 120) };
+      }
+    } catch (e) {
+      return {
+        httpStatus: 0,
+        code: -1,
+        message: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  const steps: Array<{
+    endpoint: string;
+    httpStatus?: number;
+    code?: number;
+    message?: string;
+    statusAfter: string;
+  }> = [];
+  steps.push({ endpoint: "info (before)", statusAfter: await readStatus() });
+
+  const candidates = [
+    {
+      ep: "/campaign/status/update/",
+      body: {
+        advertiser_id: s.advertiserId,
+        campaign_ids: [campaignId],
+        operation_status: target,
+      },
+    },
+    {
+      ep: "/smart_plus/campaign/status/update/",
+      body: {
+        advertiser_id: s.advertiserId,
+        campaign_ids: [campaignId],
+        operation_status: target,
+      },
+    },
+    {
+      ep: "/campaign/gmv_max/update/",
+      body: {
+        advertiser_id: s.advertiserId,
+        campaign_id: campaignId,
+        operation_status: target,
+      },
+    },
+  ];
+
+  for (const c of candidates) {
+    const r = await tryPost(c.ep, c.body);
+    const statusAfter = await readStatus();
+    steps.push({ endpoint: c.ep, ...r, statusAfter });
+    if (statusAfter === target) break;
+  }
+  return { campaignId, target, steps };
+}
+
 // Enable/disable GMV Max campaigns. There is no operation_status on
 // /campaign/gmv_max/update/, so we use the Smart+ status endpoint and fall
 // back to the standard campaign status endpoint. Batched at 20 ids.
