@@ -33,9 +33,9 @@ function readJson<T>(file: string, fallback: T): T {
 
 function writeJson(file: string, data: unknown) {
   ensureDir();
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-  fs.renameSync(tmp, file);
+  // Write directly (no tmp+rename): renaming over an existing file is flaky on
+  // Windows when antivirus/OneDrive briefly locks it, which could drop saves.
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
 }
 
 /* ----------------------------- Settings ----------------------------- */

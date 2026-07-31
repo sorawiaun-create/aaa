@@ -276,7 +276,14 @@ export default function DashboardPage() {
             {!loading && ads.length === 0 && !error && (
               <tr>
                 <td colSpan={9} className="p-8 text-center text-neutral-500">
-                  ไม่พบโฆษณา — ตรวจสอบการตั้งค่า API ที่หน้า Settings
+                  ไม่พบโฆษณาระดับ ad
+                  <div className="mt-2 text-xs">
+                    ถ้าคุณใช้ <b>GMV Max / LIVE</b> ข้อมูลจะอยู่ที่หน้า{" "}
+                    <a href="/campaigns" className="text-brand underline">
+                      Campaigns
+                    </a>{" "}
+                    (แดชบอร์ดนี้แสดงเฉพาะโฆษณาแบบเดิม)
+                  </div>
                 </td>
               </tr>
             )}

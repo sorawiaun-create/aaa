@@ -232,6 +232,21 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        {view.hasAccessToken ? (
+          <div className="rounded-lg border border-emerald-800 bg-emerald-950/40 p-3 text-sm text-emerald-300">
+            ✓ เชื่อมต่อแล้ว · Advertiser ID:{" "}
+            <span className="font-mono">{view.advertiserId || "-"}</span>
+            <div className="mt-1 text-xs text-emerald-400/80">
+              ข้อมูล GMV Max/LIVE ดูได้ที่หน้า “Campaigns” (หน้า Dashboard
+              แสดงเฉพาะโฆษณาระดับ ad)
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-amber-800 bg-amber-950/30 p-3 text-sm text-amber-300">
+            ยังไม่ได้เชื่อมต่อ — ทำตาม 2 ขั้นตอนด้านล่าง
+          </div>
+        )}
+
         <div className="rounded-lg border border-neutral-800 p-4">
           <div className="mb-1 text-sm font-medium">
             ขั้นที่ 1 — อนุญาตแอปบนบัญชีโฆษณา
