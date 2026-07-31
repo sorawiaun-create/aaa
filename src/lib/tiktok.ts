@@ -2,6 +2,7 @@ import {
   AdMetrics,
   AdRow,
   CampaignRow,
+  GmvMaxCampaignRow,
   OperationStatus,
   Settings,
   TimeWindow,
@@ -420,6 +421,112 @@ export async function updateCampaignStatus(
     campaign_ids: campaignIds,
     operation_status: status,
   });
+}
+
+/* --------------------------- GMV Max -------------------------------- */
+// GMV Max and LIVE GMV Max are Smart+ campaigns and are NOT returned by the
+// standard /campaign/get/. They live under the dedicated smart_plus endpoints.
+
+interface SmartPlusCampaignData {
+  list: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    operation_status: OperationStatus;
+    objective_type?: string;
+    campaign_type?: string;
+    secondary_status?: string;
+    budget?: number;
+    budget_mode?: string;
+  }>;
+  page_info?: { total_page: number };
+}
+
+// Lists GMV Max / LIVE GMV Max (Smart+) campaigns for the advertiser.
+export async function listGmvMaxCampaigns(
+  s: Settings
+): Promise<GmvMaxCampaignRow[]> {
+  assertConfigured(s);
+  const all: SmartPlusCampaignData["list"] = [];
+  let page = 1;
+  for (let i = 0; i < 100; i++) {
+    const data = await request<SmartPlusCampaignData>(
+      s,
+      "GET",
+      "/smart_plus/campaign/get/",
+      {
+        advertiser_id: s.advertiserId,
+        page,
+        page_size: 100,
+        fields: [
+          "campaign_id",
+          "campaign_name",
+          "operation_status",
+          "objective_type",
+          "campaign_type",
+          "secondary_status",
+          "budget",
+          "budget_mode",
+        ],
+      }
+    );
+    all.push(...(data.list ?? []));
+    const totalPage = data.page_info?.total_page ?? 1;
+    if (page >= totalPage) break;
+    page += 1;
+  }
+  return all.map((c) => ({
+    campaign_id: c.campaign_id,
+    campaign_name: c.campaign_name,
+    operation_status: c.operation_status,
+    budget: c.budget,
+    budget_mode: c.budget_mode,
+    campaign_type: c.campaign_type,
+    objective_type: c.objective_type,
+    secondary_status: c.secondary_status,
+  }));
+}
+
+// Diagnostic: count GMV Max (smart_plus) campaigns for one advertiser.
+export async function diagnoseGmvMax(
+  s: Settings,
+  advertiserId: string
+): Promise<{
+  count: number;
+  sample: Array<{ campaign_id: string; campaign_name: string; operation_status: string }>;
+}> {
+  const data = await request<
+    SmartPlusCampaignData & { page_info?: { total_number?: number } }
+  >({ ...s, advertiserId }, "GET", "/smart_plus/campaign/get/", {
+    advertiser_id: advertiserId,
+    page: 1,
+    page_size: 20,
+    fields: ["campaign_id", "campaign_name", "operation_status"],
+  });
+  return {
+    count: data.page_info?.total_number ?? data.list?.length ?? 0,
+    sample: (data.list ?? []).slice(0, 5).map((c) => ({
+      campaign_id: c.campaign_id,
+      campaign_name: c.campaign_name,
+      operation_status: c.operation_status,
+    })),
+  };
+}
+
+// Enable/disable GMV Max campaigns. The endpoint accepts max 20 ids per call.
+export async function updateGmvMaxCampaignStatus(
+  s: Settings,
+  campaignIds: string[],
+  status: OperationStatus
+): Promise<void> {
+  assertConfigured(s);
+  for (let i = 0; i < campaignIds.length; i += 20) {
+    const chunk = campaignIds.slice(i, i + 20);
+    await request(s, "POST", "/smart_plus/campaign/status/update/", {
+      advertiser_id: s.advertiserId,
+      campaign_ids: chunk,
+      operation_status: status,
+    });
+  }
 }
 
 // Verifies credentials by fetching the advertiser's own info.

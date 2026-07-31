@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/db";
 import {
   diagnoseCampaigns,
+  diagnoseGmvMax,
   getAuthorizedAdvertisers,
 } from "@/lib/tiktok";
 
@@ -21,6 +22,7 @@ export async function GET() {
       advertiser_id: string;
       advertiser_name: string;
       campaignCount: number | string;
+      gmvMaxCount: number | string;
       sample: unknown[];
     }>;
     error?: string;
@@ -40,22 +42,29 @@ export async function GET() {
     const advertisers = await getAuthorizedAdvertisers(s, s.accessToken);
     // Limit to 15 accounts to keep the check fast.
     for (const a of advertisers.slice(0, 15)) {
+      let campaignCount: number | string = 0;
+      let sample: unknown[] = [];
+      let gmvMaxCount: number | string = 0;
       try {
         const d = await diagnoseCampaigns(s, a.advertiser_id);
-        out.advertisers.push({
-          advertiser_id: a.advertiser_id,
-          advertiser_name: a.advertiser_name,
-          campaignCount: d.count,
-          sample: d.sample,
-        });
+        campaignCount = d.count;
+        sample = d.sample;
       } catch (e) {
-        out.advertisers.push({
-          advertiser_id: a.advertiser_id,
-          advertiser_name: a.advertiser_name,
-          campaignCount: `error: ${e instanceof Error ? e.message : String(e)}`,
-          sample: [],
-        });
+        campaignCount = `error: ${e instanceof Error ? e.message : String(e)}`;
       }
+      try {
+        const g = await diagnoseGmvMax(s, a.advertiser_id);
+        gmvMaxCount = g.count;
+      } catch (e) {
+        gmvMaxCount = `error: ${e instanceof Error ? e.message : String(e)}`;
+      }
+      out.advertisers.push({
+        advertiser_id: a.advertiser_id,
+        advertiser_name: a.advertiser_name,
+        campaignCount,
+        gmvMaxCount,
+        sample,
+      });
     }
   } catch (e) {
     out.error = e instanceof Error ? e.message : String(e);

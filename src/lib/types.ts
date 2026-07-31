@@ -88,6 +88,18 @@ export interface CampaignRow {
   metrics: AdMetrics;
 }
 
+// GMV Max / LIVE GMV Max campaign (from the dedicated smart_plus endpoints).
+export interface GmvMaxCampaignRow {
+  campaign_id: string;
+  campaign_name: string;
+  operation_status: OperationStatus;
+  budget?: number;
+  budget_mode?: string;
+  campaign_type?: string;
+  objective_type?: string;
+  secondary_status?: string;
+}
+
 export interface AutomationLog {
   id: string;
   timestamp: string;
