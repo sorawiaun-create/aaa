@@ -70,6 +70,14 @@
   .logrow{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);align-items:flex-start}
   .logrow:last-child{border-bottom:0}
   .logic{font-size:15px;flex:none}
+  .brow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:0}
+  .bstat{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;flex:none}
+  .bstat.on{background:#14331f;color:#7ff0a6}.bstat.off{background:#3a1620;color:#ff9aa8}
+  .bname{flex:1;min-width:150px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bmetric{font-size:12px;color:var(--muted);flex:none}
+  .brow input{width:90px;padding:6px 8px}
+  .pend{background:#3a2f13;color:#ffdf8f}
   @media(max-width:760px){.ed-layout{flex-direction:column}.sidebar{width:100%;position:static;display:flex;flex-wrap:wrap;gap:6px}
     .side-title{width:100%}.acct-item{margin:0;border:1px solid var(--line)}}
   .folder{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--panel);overflow:hidden}
@@ -123,6 +131,7 @@
   <h1>🗂️ Multi-Account Manager</h1>
   <div class="tabs">
     <div class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</div>
+    <div class="tab" data-tab="board" onclick="showTab('board')">🧩 กระดานแอด</div>
     <div class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</div>
     <div class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</div>
   </div>
@@ -166,7 +175,12 @@
           <div class="row" style="align-items:flex-end">
             <div style="flex:1;min-width:150px"><label>ชื่อบัญชี</label><input id="accName" style="width:100%"></div>
             <div style="flex:1;min-width:150px"><label>Ad Account ID</label><input id="accId" style="width:100%"></div>
-            <div><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok" style="width:140px"></div>
+            <div><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok" style="width:130px"></div>
+            <div><label>ทำงานทุก</label>
+              <select id="interval" style="width:120px">
+                <option value="10">10 นาที</option><option value="20">20 นาที</option>
+                <option value="30">30 นาที</option><option value="60">60 นาที</option>
+              </select></div>
             <div style="display:flex;align-items:center;gap:7px;padding-bottom:9px">
               <input type="checkbox" id="dryRun"><span style="font-size:13px">โหมดทดสอบ</span>
             </div>
@@ -183,6 +197,13 @@
         <button class="btn ghost" style="width:100%;justify-content:center;padding:13px" onclick="addFolder()">📁 สร้างโฟลเดอร์ใหม่</button>
       </div>
     </div>
+  </section>
+
+  <!-- ===== กระดานแอด ===== -->
+  <section id="board" class="hidden">
+    <div id="boardMeta" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
+    <div id="pendingBar" class="card hidden" style="position:sticky;top:56px;z-index:15;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px"></div>
+    <div id="boardList"></div>
   </section>
 
   <!-- ===== Log ===== -->
@@ -225,6 +246,8 @@ const OWNER="sorawiaun-create", REPO="aaa", BRANCH="main";
 const PATH="facebook-ads-automation/config.json";
 const STATUS_PATH="facebook-ads-automation/status.json";
 const ACTIVITY_PATH="facebook-ads-automation/activity.json";
+const BOARD_PATH="facebook-ads-automation/board.json";
+const COMMANDS_PATH="facebook-ads-automation/commands.json";
 const WORKFLOW="facebook-ads-automation.yml";
 const TOKEN_KEY="fbdash_gh_token";
 const DEFAULT_GROUP="กฎทั่วไป";
@@ -307,10 +330,31 @@ async function putConfig(obj){
   if(!r.ok){const t=await r.text();throw new Error("บันทึกไม่ได้ (HTTP "+r.status+") "+t.slice(0,100));}
   const j=await r.json(); SHA=j.content.sha;
 }
-async function dispatchTest(){
+async function dispatchRun(dry){
   const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
-  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true"}})});
-  if(!r.ok) throw new Error("สั่งทดสอบไม่ได้ (HTTP "+r.status+")");
+  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:String(!!dry)}})});
+  if(!r.ok) throw new Error("สั่งรันไม่ได้ (HTTP "+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
+}
+async function loadBoard(){
+  let r=await apiGet(BOARD_PATH,true); if(r.status===401) r=await apiGet(BOARD_PATH,false);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error("โหลดกระดานแอดไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); return JSON.parse(fromB64(j.content));
+}
+async function loadCommandsFile(){
+  let r=await apiGet(COMMANDS_PATH,true); if(r.status===401) r=await apiGet(COMMANDS_PATH,false);
+  if(r.status===404) return {list:[],sha:null};
+  if(!r.ok) throw new Error("อ่านคิวคำสั่งไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); const d=JSON.parse(fromB64(j.content));
+  return {list:(d&&d.commands)||[], sha:j.sha};
+}
+async function putCommandsFile(list,sha){
+  const body={message:"Queue manual commands from board",
+    content:toB64(JSON.stringify({commands:list},null,2)),branch:BRANCH};
+  if(sha) body.sha=sha;
+  const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${COMMANDS_PATH}`,
+    {method:"PUT",headers:authHeaders(true),body:JSON.stringify(body)});
+  if(!r.ok){const t=await r.text();throw new Error("ส่งคำสั่งไม่ได้ (HTTP "+r.status+") "+t.slice(0,100));}
 }
 
 /* ===================== token ===================== */
@@ -325,7 +369,7 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  ["overview","editor","logs"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
+  ["overview","board","editor","logs"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
 
 /* ===================== OVERVIEW ===================== */
 function renderOverview(st){
@@ -393,6 +437,88 @@ function renderLog(act){
   }).join("");
 }
 
+/* ===================== กระดานแอด ===================== */
+let BOARD=null, PENDING=[];
+function hasPending(c,action){return PENDING.some(p=>p.campaign_id===c.id&&(!action||p.action===action));}
+function renderBoard(b){
+  if(b!==undefined)BOARD=b;
+  const meta=document.getElementById("boardMeta"),root=document.getElementById("boardList");
+  if(!BOARD){meta.textContent="";root.innerHTML=`<div class="muted" style="text-align:center;padding:26px">ยังไม่มีข้อมูลกระดานแอด — รอรอบแรกของคลาวด์ (~10 นาที) หรือกด ▶ ทดสอบ</div>`;updatePendingBar();return;}
+  const when=BOARD.updated_at?new Date(BOARD.updated_at).toLocaleString("th-TH"):"-";
+  meta.innerHTML=`อัปเดตล่าสุด: <b>${when}</b> · กดปุ่มสั่งเปิด/ปิด/ตั้งงบรายแคมเปญ แล้วกด “ส่งคำสั่ง” ด้านบน`;
+  root.innerHTML="";
+  (BOARD.accounts||[]).forEach(a=>root.appendChild(boardAccountEl(a)));
+  updatePendingBar();
+}
+function boardAccountEl(a){
+  const el=document.createElement("div");el.className="folder open";
+  const camps=a.campaigns||[];
+  const head=document.createElement("div");head.className="folder-head";
+  head.innerHTML=`<span class="fchev">▶</span>🏦 <b style="font-size:15px">${esc(a.name)}</b>
+    <span class="tag">${camps.length} แคมเปญ</span>${a.disabled?' <span class="tag">ปิดอยู่</span>':''}${a.error?' <span class="tag err">error</span>':''}`;
+  head.onclick=()=>el.classList.toggle("open");
+  const body=document.createElement("div");body.className="folder-body";body.style.padding="0";
+  if(!camps.length)body.innerHTML='<div class="muted" style="padding:10px 12px">— ไม่มีแคมเปญ —</div>';
+  else camps.forEach(c=>body.appendChild(boardRow(a,c)));
+  el.append(head,body);return el;
+}
+function boardRow(a,c){
+  const active=c.status==="ACTIVE";
+  const el=document.createElement("div");el.className="brow";
+  const st=document.createElement("span");st.className="bstat "+(active?"on":"off");st.textContent=active?"🟢 เปิด":"⏸️ ปิด";
+  const nm=document.createElement("span");nm.className="bname";nm.textContent=c.name||c.id;nm.title=c.name||"";
+  const met=document.createElement("span");met.className="bmetric";
+  met.textContent=`฿${Math.round(c.spend||0).toLocaleString("th-TH")} · ROAS ${(c.roas||0).toFixed(2)}x`;
+  el.append(st,nm,met);
+  // ตั้งงบ (เฉพาะแคมเปญที่มีงบระดับแคมเปญ)
+  if(c.budget!==null&&c.budget!==undefined){
+    const bi=document.createElement("input");bi.type="number";bi.step="any";bi.value=c.budget;bi.title="งบรายวัน (บาท)";
+    const bb=document.createElement("button");bb.className="btn sm";bb.textContent="ตั้งงบ";
+    bb.onclick=()=>{const v=Number(bi.value);if(!(v>0)){toast("ใส่งบให้ถูกต้อง","err");return;}
+      queueCmd(a,c,"SET_BUDGET",v);};
+    el.append(bi,bb);
+  }
+  // เปิด/ปิด
+  const tg=document.createElement("button");tg.className="btn sm "+(active?"danger":"green");
+  tg.textContent=active?"⏸️ ปิด":"▶️ เปิด";
+  tg.onclick=()=>queueCmd(a,c,active?"PAUSE":"ACTIVATE");
+  el.append(tg);
+  if(hasPending(c)){const p=document.createElement("span");p.className="tag pend";p.textContent="⏳ รอส่ง";el.append(p);}
+  return el;
+}
+function queueCmd(a,c,action,value){
+  // กันซ้ำ action เดิมของแคมเปญเดิม
+  PENDING=PENDING.filter(p=>!(p.campaign_id===c.id&&p.action===action&&["PAUSE","ACTIVATE"].includes(action)));
+  PENDING=PENDING.filter(p=>!(p.campaign_id===c.id&&["PAUSE","ACTIVATE"].includes(action)&&["PAUSE","ACTIVATE"].includes(p.action)));
+  PENDING.push({account_id:a.account_id,account_name:a.name,campaign_id:c.id,campaign_name:c.name,action,value});
+  renderBoard();
+}
+function updatePendingBar(){
+  const bar=document.getElementById("pendingBar");
+  if(!PENDING.length){bar.className="card hidden";bar.innerHTML="";return;}
+  bar.className="card";
+  bar.innerHTML=`<b>📋 มีคำสั่งรอส่ง ${PENDING.length} รายการ</b><div class="spacer"></div>
+    <button class="btn ghost sm" id="pcancel">ยกเลิก</button>
+    <button class="btn sm" id="psend">📤 ส่ง (ทำรอบถัดไป)</button>
+    <button class="btn green sm" id="pnow">⚡ ส่ง & ทำเดี๋ยวนี้</button>`;
+  bar.querySelector("#pcancel").onclick=()=>{PENDING=[];renderBoard();};
+  bar.querySelector("#psend").onclick=()=>sendCommands(false);
+  bar.querySelector("#pnow").onclick=()=>sendCommands(true);
+}
+function sendCommands(runNow){
+  if(!PENDING.length)return;
+  requireToken(async()=>{
+    try{
+      const {list,sha}=await loadCommandsFile();
+      await putCommandsFile(list.concat(PENDING),sha);
+      const n=PENDING.length;PENDING=[];renderBoard();
+      if(runNow){await dispatchRun(false);
+        toast(`⚡ ส่ง ${n} คำสั่ง + สั่งทำเดี๋ยวนี้ (รอ ~1 นาที แล้วกดโหลดใหม่)`,"ok");}
+      else toast(`📤 ส่ง ${n} คำสั่งแล้ว — จะทำงานในรอบถัดไป`,"ok");
+    }catch(e){toast("❌ "+e.message,"err");}
+  });
+}
+
 /* ===================== EDITOR ===================== */
 function acc(){return CONFIG.accounts[curAcct];}
 function renderSidebar(){
@@ -410,6 +536,7 @@ function toggleAccount(i){const a=CONFIG.accounts[i];a.enabled=(a.enabled===fals
 function renderEditor(){
   document.getElementById("tz").value=CONFIG.settings?.timezone||"Asia/Bangkok";
   document.getElementById("dryRun").checked=!!CONFIG.settings?.dry_run;
+  document.getElementById("interval").value=String(CONFIG.settings?.interval_mins||10);
   updatePasteBtn();
   renderSidebar();
   if(!CONFIG.accounts.length){document.getElementById("folders").innerHTML='<div class="muted" style="padding:20px;text-align:center">ยังไม่มีบัญชี กด "➕ เพิ่มบัญชี"</div>';
@@ -611,6 +738,7 @@ function addFolder(){const name=prompt("ตั้งชื่อโฟลเด�
 function collect(){CONFIG.settings=CONFIG.settings||{};
   CONFIG.settings.timezone=document.getElementById("tz").value.trim()||"Asia/Bangkok";
   CONFIG.settings.dry_run=document.getElementById("dryRun").checked;
+  CONFIG.settings.interval_mins=Number(document.getElementById("interval").value)||10;
   return JSON.parse(JSON.stringify(CONFIG,(k,v)=>k==="__open"?undefined:v));}
 function save(){requireToken(async()=>{const btn=document.getElementById("saveBtn");
   btn.disabled=true;btn.textContent="⏳ กำลังบันทึก…";
@@ -618,7 +746,7 @@ function save(){requireToken(async()=>{const btn=document.getElementById("saveBt
   catch(e){toast("❌ "+e.message,"err");}
   btn.disabled=false;btn.textContent="💾 บันทึก";});}
 async function reload(){if(dirty&&!confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?"))return;await boot();toast("โหลดล่าสุดแล้ว","ok");}
-function runTest(){requireToken(async()=>{try{await dispatchTest();
+function runTest(){requireToken(async()=>{try{await dispatchRun(true);
   toast("▶ สั่งทดสอบบนคลาวด์แล้ว — ผลจะขึ้นในภาพรวมอีกสักครู่","ok");}catch(e){toast("❌ "+e.message,"err");}});}
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
@@ -628,6 +756,7 @@ async function boot(){
   try{CONFIG=await loadConfig();renderEditor();banner("");}
   catch(e){banner("❌ "+e.message,"err");CONFIG=CONFIG||{settings:{},accounts:[]};renderEditor();}
   try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
+  try{renderBoard(await loadBoard());}catch(e){renderBoard(null);}
   try{renderLog(await loadActivity());}catch(e){renderLog(null);}
 }
 boot();

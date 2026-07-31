@@ -55,6 +55,8 @@ jobs:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           FB_DRY_RUN: ${{ github.event.inputs.dry_run }}
           LOG_LEVEL: INFO
+          # กดรันเอง (workflow_dispatch / สั่งทำเดี๋ยวนี้) = บังคับรันเต็มรอบ ไม่สนความถี่
+          RUN_FORCE: ${{ github.event_name == 'workflow_dispatch' }}
           # แจ้งเตือน LINE (ไม่บังคับ — ไม่ตั้งก็ข้าม)
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_TO: ${{ secrets.LINE_TO }}
@@ -75,7 +77,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f facebook-ads-automation/status.json facebook-ads-automation/activity.json || true
+          git add -f facebook-ads-automation/status.json facebook-ads-automation/activity.json \
+                     facebook-ads-automation/board.json facebook-ads-automation/commands.json || true
           if git diff --cached --quiet; then
             echo "ไม่มีการเปลี่ยนแปลง"
             exit 0

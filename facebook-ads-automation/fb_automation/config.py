@@ -46,6 +46,7 @@ class Account:
 class Settings:
     timezone: str = DEFAULT_TIMEZONE
     dry_run: bool = False
+    interval_mins: int = 10   # ให้ประเมินกฎทุกกี่นาที (10/20/30/60) — cron จะ tick ทุก 10 นาที
     # กรอง campaign ตามชื่อ (regex) ถ้าต้องการ — ค่าว่าง = ทุกแคมเปญ
     campaign_name_filter: str | None = None
 
@@ -170,9 +171,14 @@ def load_config(path: str, *, dry_run_override: bool | None = None) -> Config:
             )
         )
 
+    try:
+        interval = int(settings_raw.get("interval_mins", 10) or 10)
+    except (TypeError, ValueError):
+        interval = 10
     settings = Settings(
         timezone=settings_raw.get("timezone", DEFAULT_TIMEZONE),
         dry_run=bool(settings_raw.get("dry_run", False)),
+        interval_mins=max(10, interval),
         campaign_name_filter=settings_raw.get("campaign_name_filter") or None,
     )
     if dry_run_override is not None:
