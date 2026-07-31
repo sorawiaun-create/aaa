@@ -67,6 +67,9 @@ def plan_campaign(rules: list[dict[str, Any]], metrics: dict[str, float]) -> lis
     """
     planned: list[PlannedAction] = []
     for idx, rule in enumerate(rules):
+        # ข้ามกฎที่ถูกปิดชั่วคราวจาก Dashboard (enabled=false)
+        if rule.get("enabled", True) is False:
+            continue
         if not rule_matches(rule, metrics):
             continue
 

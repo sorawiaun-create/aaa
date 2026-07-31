@@ -29,6 +29,7 @@
   .btn.ghost{background:transparent;border:1px solid var(--line)}
   .btn.danger{background:transparent;border:1px solid #5b2330;color:#ff9aa8}
   .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px}
+  .btn.xs{padding:4px 8px;font-size:12px;border-radius:6px}
   .wrap{max-width:1040px;margin:0 auto;padding:16px}
   .banner{padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px;display:none}
   .banner.show{display:block}
@@ -48,28 +49,46 @@
   .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
   .tag.err{background:#3a1620;color:#ff9aa8}
   /* editor */
-  .acct{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--panel)}
-  .acct-head{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--panel2);cursor:pointer;flex-wrap:wrap}
-  .acct-head .dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
-  .acct-body{padding:6px 15px 15px;display:none}
-  .acct.open .acct-body{display:block}
-  .acct.open .chev{transform:rotate(90deg)}
-  .chev{transition:.15s;color:var(--muted)}
-  .rule{border:1px solid var(--line);border-radius:11px;padding:12px;margin:10px 0;background:var(--panel2)}
-  .rule-head{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
-  .cond{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:6px 0;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px}
-  label{font-size:11px;color:var(--muted);display:block;margin:0 0 3px 2px;text-transform:uppercase;letter-spacing:.3px}
-  input,select{background:#0a1120;border:1px solid var(--line);color:var(--text);border-radius:8px;
-    padding:8px 10px;font-size:14px;font-family:inherit;width:100%}
-  input:focus,select:focus{outline:0;border-color:var(--accent)}
-  .field{min-width:120px}.field.grow{flex:1;min-width:150px}.field.tiny{max-width:120px}
+  select,input{background:#0a1120;border:1px solid var(--line);color:var(--text);border-radius:8px;
+    padding:8px 10px;font-size:14px;font-family:inherit}
+  select:focus,input:focus{outline:0;border-color:var(--accent)}
+  label{font-size:11px;color:var(--muted);display:block;margin:0 0 3px 2px}
+  .folder{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--panel);overflow:hidden}
+  .folder-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel2);cursor:pointer;flex-wrap:wrap}
+  .folder-head .fname{font-weight:700;font-size:15px;border:0;background:transparent;color:var(--text);min-width:120px}
+  .folder-body{padding:6px 14px 14px;display:none}
+  .folder.open .folder-body{display:block}
+  .folder.open .fchev{transform:rotate(90deg)}
+  .fchev{transition:.15s;color:var(--muted)}
+  .rule{border:1px solid var(--line);border-radius:12px;padding:0;margin:10px 0;background:var(--panel2);overflow:hidden}
+  .rule.off{opacity:.5}
+  .summary{background:#0e1a2c;border-bottom:1px solid var(--line);padding:9px 13px;font-size:13.5px;color:#cfe0f5}
+  .rule-inner{padding:12px 13px}
+  .rule-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .rlabel{font-size:11px;font-weight:800;color:var(--muted);background:var(--chip);padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+  .rname{flex:1;min-width:130px;font-weight:600}
+  .segbar{display:flex;gap:4px;background:#0a1120;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg{padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);display:flex;gap:5px;align-items:center;white-space:nowrap}
+  .seg.active{background:var(--chip);color:var(--text)}
+  .seg.active.pause{background:#3a1620;color:#ff9aa8}
+  .seg.active.act{background:#14331f;color:#7ff0a6}
+  .seg.active.inc{background:#132a3f;color:#8fd0ff}
+  .seg.active.dec{background:#2c2340;color:#c9b0ff}
+  .seg.active.reset{background:#3a2f13;color:#ffdf8f}
+  .toggle{cursor:pointer;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;border:1px solid var(--line)}
+  .toggle.on{background:#14331f;color:#7ff0a6;border-color:#1f4b30}
+  .toggle.off{background:var(--chip);color:var(--muted)}
+  .params{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 10px;padding:10px;background:var(--panel);border:1px dashed var(--line);border-radius:9px}
+  .params .field{min-width:120px}
+  .cond{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+  .cond .pfx{font-size:12px;color:var(--muted);min-width:26px;font-weight:700}
+  .cond select,.cond input{flex:0 0 auto}
+  .cond .m{min-width:150px}.cond .v{width:90px}
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .muted{color:var(--muted)} .hidden{display:none!important}
-  .params{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;padding:10px;background:var(--panel);border:1px dashed var(--line);border-radius:9px}
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1728;border:1px solid var(--line);
     padding:12px 18px;border-radius:11px;font-size:14px;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;max-width:92%}
   .toast.show{display:block}.toast.err{border-color:#5b2330}.toast.ok{border-color:#1f4b30}
-  /* overlay */
   .overlay{position:fixed;inset:0;background:rgba(3,7,15,.72);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
   .overlay.show{display:flex}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:540px;width:100%;padding:22px}
@@ -90,7 +109,7 @@
   <div class="spacer"></div>
   <span class="dirty-dot" title="มีการแก้ที่ยังไม่บันทึก"></span>
   <button class="btn ghost sm" onclick="reload()">↻ โหลดใหม่</button>
-  <button class="btn ghost sm" id="testBtn" onclick="runTest()">▶ ทดสอบ</button>
+  <button class="btn ghost sm" onclick="runTest()">▶ ทดสอบ</button>
   <button class="btn green" id="saveBtn" onclick="save()">💾 บันทึก</button>
 </header>
 
@@ -118,29 +137,36 @@
   <section id="editor" class="hidden">
     <div class="card">
       <div class="row" style="align-items:flex-end">
-        <div class="field"><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok"></div>
-        <div class="field" style="display:flex;align-items:center;gap:8px;padding-top:20px">
-          <input type="checkbox" id="dryRun" style="width:auto">
-          <span>โหมดทดสอบทุกครั้ง (ไม่แก้โฆษณาจริง)</span>
+        <div style="flex:1;min-width:200px">
+          <label>เลือกบัญชี</label>
+          <select id="acctSel" style="width:100%" onchange="selectAccount(this.value)"></select>
+        </div>
+        <button class="btn sm" onclick="addAccount()">➕ เพิ่มบัญชี</button>
+        <button class="btn danger sm" onclick="deleteAccount()">🗑️ ลบบัญชี</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div style="flex:1;min-width:160px"><label>ชื่อบัญชี</label><input id="accName" style="width:100%"></div>
+        <div style="flex:1;min-width:160px"><label>Ad Account ID</label><input id="accId" style="width:100%"></div>
+        <div><label>โซนเวลา</label><input id="tz" value="Asia/Bangkok" style="width:150px"></div>
+        <div style="display:flex;align-items:center;gap:7px;padding-bottom:9px">
+          <input type="checkbox" id="dryRun"><span style="font-size:13px">โหมดทดสอบ</span>
         </div>
       </div>
-      <p class="muted" style="font-size:12px;margin-bottom:0">💡 Access Token ของ Facebook เก็บใน GitHub Secret
-        (<code>FB_ACCESS_TOKEN</code>) แล้ว ไม่ต้องกรอกที่นี่</p>
     </div>
-    <div id="accounts"></div>
-    <button class="btn primary" onclick="addAccount()">➕ เพิ่มบัญชีใหม่</button>
+
+    <div id="folders"></div>
+    <button class="btn ghost" style="width:100%;justify-content:center;padding:13px" onclick="addFolder()">📁 สร้างโฟลเดอร์ใหม่</button>
   </section>
 </div>
 
-<!-- token overlay -->
 <div id="overlay" class="overlay">
   <div class="modal">
     <h2 style="margin-top:0">🔐 เชื่อมต่อ GitHub (ทำครั้งเดียว)</h2>
-    <p class="muted">การ <b>บันทึก</b> ต้องมี “กุญแจ GitHub” ยืนยันตัวตน (เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น)</p>
+    <p class="muted">การ <b>บันทึก</b> ต้องมี “กุญแจ GitHub” (เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น)</p>
     <ol class="steps">
-      <li>กดสร้างกุญแจ (สิทธิ์เลือกไว้ให้แล้ว): <a id="tokenLink" target="_blank" rel="noopener">➜ สร้าง GitHub Token</a><br>
-        <span class="muted">เลื่อนลงล่างสุด กด <b>Generate token</b> แล้วก๊อปโค้ด <code>ghp_…</code></span></li>
-      <li>วางกุญแจ: <input id="tokenInput" placeholder="ghp_xxxxxxxx" style="margin-top:6px"></li>
+      <li>กดสร้างกุญแจ: <a id="tokenLink" target="_blank" rel="noopener">➜ สร้าง GitHub Token</a><br>
+        <span class="muted">เลื่อนลงล่างสุด กด <b>Generate token</b> แล้วก๊อป <code>ghp_…</code></span></li>
+      <li>วางกุญแจ: <input id="tokenInput" placeholder="ghp_xxxxxxxx" style="margin-top:6px;width:100%"></li>
     </ol>
     <div class="row" style="margin-top:14px">
       <button class="btn green" onclick="saveToken()">✓ บันทึกกุญแจ</button>
@@ -158,22 +184,31 @@ const PATH="facebook-ads-automation/config.json";
 const STATUS_PATH="facebook-ads-automation/status.json";
 const WORKFLOW="facebook-ads-automation.yml";
 const TOKEN_KEY="fbdash_gh_token";
+const DEFAULT_GROUP="กฎทั่วไป";
 
 const METRICS=[
-  ["time_of_day","เวลา (ชม. 22.5=22:30)"],["spend","ยอดใช้จ่าย (บาท)"],["purchases","จำนวนการซื้อ"],
-  ["results","ผลลัพธ์ (ทักแชต)"],["roas","ROAS"],["cost_per_purchase","ต้นทุนต่อการซื้อ"],
-  ["cost_per_result","ต้นทุนต่อผลลัพธ์"],["impressions","การมองเห็น"],["clicks","คลิก"],
-  ["ctr","CTR %"],["cpc","ต้นทุน/คลิก"],["cpm","ต้นทุน/พันครั้ง"],["frequency","ความถี่"],["reach","การเข้าถึง"],
+  ["time_of_day","เวลาปัจจุบัน"],["spend","ยอดจ่าย (บาท)"],["purchases","จำนวนการซื้อ"],
+  ["results","ผลลัพธ์ (ทัก)"],["roas","ROAS"],["cost_per_purchase","ทุนต่อการซื้อ"],
+  ["cost_per_result","ทุนต่อทัก"],["impressions","การมองเห็น"],["clicks","คลิก"],
+  ["ctr","CTR %"],["cpc","ทุน/คลิก"],["cpm","ทุน/พันครั้ง"],["frequency","ความถี่"],["reach","การเข้าถึง"],
 ];
-const OPERATORS=[[">","มากกว่า >"],["<","น้อยกว่า <"],[">=","≥"],["<=","≤"],["==","เท่ากับ ="],["!=","ไม่เท่ากับ ≠"]];
-const ACTIONS=[["PAUSE","⏸️ ปิดแคมเปญ"],["ACTIVATE","▶️ เปิดแคมเปญ"],["INCREASE_BUDGET","📈 เพิ่มงบ"],
-  ["DECREASE_BUDGET","📉 ลดงบ"],["RESET_BUDGET","🔄 รีเซ็ตงบ"]];
+const METRIC_TH=Object.fromEntries(METRICS);
+const OPERATORS=[[">","มากกว่า"],["<","น้อยกว่า"],[">=","อย่างน้อย"],["<=","ไม่เกิน"],["==","เท่ากับ"],["!=","ไม่เท่ากับ"]];
+const OP_TH=Object.fromEntries(OPERATORS);
+const ACTIONS=[
+  {a:"PAUSE",label:"หยุด",icon:"⏸️",cls:"pause"},
+  {a:"ACTIVATE",label:"เริ่ม",icon:"▶️",cls:"act"},
+  {a:"INCREASE_BUDGET",label:"เพิ่มงบ",icon:"📈",cls:"inc"},
+  {a:"DECREASE_BUDGET",label:"ลดงบ",icon:"📉",cls:"dec"},
+  {a:"RESET_BUDGET",label:"รีเซ็ต",icon:"🔄",cls:"reset"},
+];
 
 document.getElementById("tokenLink").href=
   "https://github.com/settings/tokens/new?scopes=repo,workflow&description=FB+Ads+Dashboard";
 
 /* ===================== state ===================== */
-let CONFIG=null, SHA=null, dirty=false;
+let CONFIG=null, SHA=null, dirty=false, curAcct=0;
+const openFolders=new Set();
 function setDirty(v){dirty=v;document.body.classList.toggle("dirty",v);}
 function token(){return localStorage.getItem(TOKEN_KEY)||"";}
 function authHeaders(withAuth){const h={"Accept":"application/vnd.github+json"};if(withAuth&&token())h["Authorization"]="Bearer "+token();return h;}
@@ -185,6 +220,8 @@ function money(n){return "฿"+Number(n||0).toLocaleString("th-TH",{maximumFract
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function uid(){return "c_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);}
 function opt(list,val){return list.map(([v,l])=>`<option value="${v}" ${v===val?"selected":""}>${l}</option>`).join("");}
+function fmtTime(v){const h=Math.floor(v);let mm=Math.round((v-h)*100);if(mm>59)mm=59;return h+":"+String(mm).padStart(2,"0");}
+function fmtVal(metric,v){if(v===null||v===undefined||v==="")return "?";return metric==="time_of_day"?fmtTime(Number(v)):String(v);}
 
 let toastT=null;
 function toast(msg,kind){const el=document.getElementById("toast");el.textContent=msg;el.className="toast show "+(kind||"");
@@ -199,231 +236,251 @@ async function apiGet(path,withAuth){
 }
 async function loadConfig(){
   let r=await apiGet(PATH,true);
-  if(r.status===401){ // token เสีย -> ลองแบบไม่ใช้ token (repo สาธารณะอ่านได้)
-    r=await apiGet(PATH,false);
-  }
-  if(!r.ok) throw new Error("โหลด config ไม่ได้ (HTTP "+r.status+") — ตรวจว่าไฟล์ "+PATH+" มีอยู่");
-  const j=await r.json(); SHA=j.sha;
-  return JSON.parse(fromB64(j.content));
+  if(r.status===401) r=await apiGet(PATH,false);
+  if(!r.ok) throw new Error("โหลด config ไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); SHA=j.sha; return JSON.parse(fromB64(j.content));
 }
 async function loadStatus(){
   let r=await apiGet(STATUS_PATH,true);
   if(r.status===401) r=await apiGet(STATUS_PATH,false);
-  if(r.status===404) return null;         // ยังไม่มี (รอรอบคลาวด์แรก)
+  if(r.status===404) return null;
   if(!r.ok) throw new Error("โหลดภาพรวมไม่ได้ (HTTP "+r.status+")");
-  const j=await r.json();
-  return JSON.parse(fromB64(j.content));
+  const j=await r.json(); return JSON.parse(fromB64(j.content));
 }
 async function putConfig(obj){
-  const doPut=async(sha)=>{
-    const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+  const doPut=async(sha)=>{const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
     return fetch(url,{method:"PUT",headers:authHeaders(true),body:JSON.stringify({
-      message:"Update rules via dashboard",content:toB64(JSON.stringify(obj,null,2)),branch:BRANCH,sha})});
-  };
+      message:"Update rules via dashboard",content:toB64(JSON.stringify(obj,null,2)),branch:BRANCH,sha})});};
   let r=await doPut(SHA);
-  if(r.status===409){ // sha เก่า -> โหลด sha ใหม่แล้วลองอีกครั้ง
-    const g=await apiGet(PATH,true); const gj=await g.json(); SHA=gj.sha; r=await doPut(SHA);
-  }
-  if(r.status===401||r.status===403) throw new Error("กุญแจไม่มีสิทธิ์บันทึก — กด 🔑 ใส่กุญแจใหม่");
+  if(r.status===409){const g=await apiGet(PATH,true);const gj=await g.json();SHA=gj.sha;r=await doPut(SHA);}
+  if(r.status===401||r.status===403) throw new Error("กุญแจไม่มีสิทธิ์บันทึก — ใส่กุญแจใหม่");
   if(!r.ok){const t=await r.text();throw new Error("บันทึกไม่ได้ (HTTP "+r.status+") "+t.slice(0,100));}
   const j=await r.json(); SHA=j.content.sha;
 }
 async function dispatchTest(){
   const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
   const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true"}})});
-  if(!r.ok) throw new Error("สั่งทดสอบไม่ได้ (HTTP "+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
+  if(!r.ok) throw new Error("สั่งทดสอบไม่ได้ (HTTP "+r.status+")");
 }
 
-/* ===================== token overlay ===================== */
+/* ===================== token ===================== */
 let afterToken=null;
 function showOverlay(cb){afterToken=cb||null;document.getElementById("overlay").classList.add("show");}
 function hideOverlay(){document.getElementById("overlay").classList.remove("show");}
-function saveToken(){
-  const v=document.getElementById("tokenInput").value.trim();
+function saveToken(){const v=document.getElementById("tokenInput").value.trim();
   if(!v){toast("วางกุญแจก่อนครับ","err");return;}
-  localStorage.setItem(TOKEN_KEY,v);hideOverlay();
-  toast("บันทึกกุญแจแล้ว ✓","ok");
-  const cb=afterToken;afterToken=null;if(cb)cb();
-}
-function requireToken(cb){ if(token())cb(); else showOverlay(cb); }
+  localStorage.setItem(TOKEN_KEY,v);hideOverlay();toast("บันทึกกุญแจแล้ว ✓","ok");
+  const cb=afterToken;afterToken=null;if(cb)cb();}
+function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
-function showTab(t){
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
+function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
   document.getElementById("overview").classList.toggle("hidden",t!=="overview");
-  document.getElementById("editor").classList.toggle("hidden",t!=="editor");
-}
+  document.getElementById("editor").classList.toggle("hidden",t!=="editor");}
 
 /* ===================== OVERVIEW ===================== */
 function renderOverview(st){
-  const meta=document.getElementById("ovMeta");
-  const kpis=document.getElementById("kpis");
-  const tb=document.querySelector("#ovTable tbody");
-  if(!st){
-    meta.textContent="";
-    kpis.innerHTML="";
-    tb.innerHTML=`<tr><td colspan="7" class="muted" style="text-align:center;padding:26px">
-      ยังไม่มีข้อมูลภาพรวม — รอรอบแรกของคลาวด์ (~10 นาที) หรือกดปุ่ม ▶ ทดสอบ ด้านบน</td></tr>`;
-    return;
-  }
+  const meta=document.getElementById("ovMeta"),kpis=document.getElementById("kpis"),tb=document.querySelector("#ovTable tbody");
+  if(!st){meta.textContent="";kpis.innerHTML="";
+    tb.innerHTML=`<tr><td colspan="7" class="muted" style="text-align:center;padding:26px">ยังไม่มีข้อมูลภาพรวม — รอรอบแรกของคลาวด์ (~10 นาที) หรือกด ▶ ทดสอบ</td></tr>`;return;}
   const when=st.updated_at?new Date(st.updated_at):null;
-  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"-"}</b>
-    ${st.dry_run?'· <span class="tag">โหมดทดสอบ</span>':''} · ข้อมูลจากรอบที่คลาวด์รันจริง`;
+  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"-"}</b> ${st.dry_run?'· <span class="tag">โหมดทดสอบ</span>':''} · ข้อมูลจากรอบที่คลาวด์รันจริง`;
   const T=st.totals||{};
-  kpis.innerHTML=[
-    ["Spend","ยอดใช้จ่ายรวม",money(T.spend)],
-    ["Revenue","ยอดขายรวม",money(T.revenue)],
-    ["ROAS","ผลตอบแทนเฉลี่ย",(T.roas||0).toFixed(2)+"x"],
-    ["Orders","จำนวนออเดอร์",Number(T.orders||0).toLocaleString("th-TH")],
-  ].map(([lbl,sub,val])=>`<div class="kpi"><div class="lbl"><span>${sub}</span><span class="tag">${lbl}</span></div><div class="val">${val}</div></div>`).join("");
-
+  kpis.innerHTML=[["Spend","ยอดใช้จ่ายรวม",money(T.spend)],["Revenue","ยอดขายรวม",money(T.revenue)],
+    ["ROAS","ผลตอบแทนเฉลี่ย",(T.roas||0).toFixed(2)+"x"],["Orders","จำนวนออเดอร์",Number(T.orders||0).toLocaleString("th-TH")]]
+    .map(([lbl,sub,val])=>`<div class="kpi"><div class="lbl"><span>${sub}</span><span class="tag">${lbl}</span></div><div class="val">${val}</div></div>`).join("");
   tb.innerHTML=(st.accounts||[]).map(a=>{
-    if(a.error) return `<tr><td>${esc(a.name)}</td><td colspan="5" class="muted">—</td>
-      <td><span class="tag err" title="${esc(a.error)}">ผิดพลาด</span></td></tr>`;
+    if(a.error)return `<tr><td>${esc(a.name)}</td><td colspan="5" class="muted">—</td><td><span class="tag err">ผิดพลาด</span></td></tr>`;
     const roas=Number(a.roas||0);
-    return `<tr>
-      <td>${esc(a.name)}</td>
-      <td>${money(a.spend)}</td>
-      <td class="pos">${money(a.revenue)}</td>
-      <td class="${roas>=1?'pos':'neg'}">${roas.toFixed(2)}x</td>
-      <td>${a.orders>0?money(a.cost_per_order):'-'}</td>
-      <td>${Number(a.orders||0).toLocaleString("th-TH")}</td>
-      <td><span class="tag">${a.active_today||0}/${a.campaigns||0} แคมเปญ</span></td>
-    </tr>`;
+    return `<tr><td>${esc(a.name)}</td><td>${money(a.spend)}</td><td class="pos">${money(a.revenue)}</td>
+      <td class="${roas>=1?'pos':'neg'}">${roas.toFixed(2)}x</td><td>${a.orders>0?money(a.cost_per_order):'-'}</td>
+      <td>${Number(a.orders||0).toLocaleString("th-TH")}</td><td><span class="tag">${a.active_today||0}/${a.campaigns||0} แคมเปญ</span></td></tr>`;
   }).join("")||`<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">ไม่มีบัญชี</td></tr>`;
 }
 
 /* ===================== EDITOR ===================== */
+function acc(){return CONFIG.accounts[curAcct];}
 function renderEditor(){
+  const sel=document.getElementById("acctSel");
+  sel.innerHTML=(CONFIG.accounts||[]).map((a,i)=>`<option value="${i}" ${i===curAcct?"selected":""}>${esc(a.name||"(ไม่มีชื่อ)")}</option>`).join("");
   document.getElementById("tz").value=CONFIG.settings?.timezone||"Asia/Bangkok";
   document.getElementById("dryRun").checked=!!CONFIG.settings?.dry_run;
-  const root=document.getElementById("accounts");root.innerHTML="";
-  (CONFIG.accounts||[]).forEach((acc,ai)=>root.appendChild(accountEl(acc,ai)));
+  if(!CONFIG.accounts.length){document.getElementById("folders").innerHTML='<div class="muted" style="padding:20px;text-align:center">ยังไม่มีบัญชี กด "➕ เพิ่มบัญชี"</div>';
+    document.getElementById("accName").value="";document.getElementById("accId").value="";return;}
+  const a=acc();
+  document.getElementById("accName").value=a.name||"";
+  document.getElementById("accId").value=a.account_id||"";
+  document.getElementById("accName").oninput=e=>{a.name=e.target.value;
+    document.querySelector(`#acctSel option[value="${curAcct}"]`).textContent=e.target.value||"(ไม่มีชื่อ)";setDirty(true);};
+  document.getElementById("accId").oninput=e=>{a.account_id=e.target.value;setDirty(true);};
+  renderFolders(a);
 }
-function accountEl(acc,ai){
-  const el=document.createElement("div");el.className="acct"+(acc.__open?" open":"");
-  el.innerHTML=`<div class="acct-head"><span class="dot"></span>
-    <b class="acct-title">${esc(acc.name||"(ไม่มีชื่อ)")}</b>
-    <span class="muted" style="font-size:12px">act_${esc(acc.account_id||"?")} · ${(acc.rules||[]).length} กฎ</span>
-    <div class="spacer"></div><span class="chev">▶</span></div><div class="acct-body"></div>`;
-  el.querySelector(".acct-head").onclick=e=>{if(["BUTTON","INPUT","SELECT"].includes(e.target.tagName))return;
-    acc.__open=!acc.__open;el.classList.toggle("open");};
-  const body=el.querySelector(".acct-body");
-  const info=document.createElement("div");info.className="row";info.style.margin="8px 0 4px";
-  info.appendChild(fieldEl("ชื่อบัญชี",acc.name,"grow",v=>{acc.name=v;el.querySelector(".acct-title").textContent=v||"(ไม่มีชื่อ)";setDirty(true)}));
-  info.appendChild(fieldEl("Ad Account ID",acc.account_id,"",v=>{acc.account_id=v;setDirty(true)}));
-  const tl=document.createElement("div");tl.className="field";
-  tl.innerHTML=`<label>ระดับที่คุม</label><select>${opt([["campaign","Campaign"],["adset","Ad set"]],acc.target_level||"campaign")}</select>`;
-  tl.querySelector("select").onchange=e=>{acc.target_level=e.target.value;setDirty(true)};
-  info.appendChild(tl);body.appendChild(info);
-  const rulesWrap=document.createElement("div");
-  (acc.rules||[]).forEach(rule=>rulesWrap.appendChild(ruleEl(acc,rule,rulesWrap)));
-  body.appendChild(rulesWrap);
-  const actions=document.createElement("div");actions.className="row";actions.style.marginTop="8px";
-  const addBtn=document.createElement("button");addBtn.className="btn sm";addBtn.textContent="➕ เพิ่มกฎ";
-  addBtn.onclick=()=>{acc.rules=acc.rules||[];const r={name:"กฎใหม่",action:"PAUSE",conditions:[newCond()]};
-    acc.rules.push(r);rulesWrap.appendChild(ruleEl(acc,r,rulesWrap));setDirty(true);};
-  const delBtn=document.createElement("button");delBtn.className="btn danger sm";delBtn.textContent="🗑️ ลบบัญชีนี้";
-  delBtn.onclick=()=>{if(!confirm(`ลบบัญชี "${acc.name}"?`))return;CONFIG.accounts.splice(ai,1);renderEditor();setDirty(true);};
-  actions.append(addBtn,delBtn);body.appendChild(actions);
+function selectAccount(i){curAcct=Number(i);renderEditor();}
+
+function groupsOf(a){
+  const order=[];const map={};
+  (a.rules||[]).forEach(r=>{const g=r.group||DEFAULT_GROUP;if(!(g in map)){map[g]=[];order.push(g);}map[g].push(r);});
+  if(!order.length){order.push(DEFAULT_GROUP);map[DEFAULT_GROUP]=[];}
+  return order.map(g=>[g,map[g]]);
+}
+function renderFolders(a){
+  const root=document.getElementById("folders");root.innerHTML="";
+  groupsOf(a).forEach(([g,rules])=>root.appendChild(folderEl(a,g,rules)));
+}
+function folderEl(a,gname,rules){
+  const el=document.createElement("div");el.className="folder"+(openFolders.has(gname)?" open":"");
+  const anyOn=rules.some(r=>r.enabled!==false);
+  const head=document.createElement("div");head.className="folder-head";
+  head.innerHTML=`<span class="fchev">▶</span>📁
+    <input class="fname" value="${esc(gname)}" title="แก้ชื่อโฟลเดอร์">
+    <span class="tag">${rules.length} กฎ</span><div class="spacer"></div>
+    <span class="toggle ${anyOn?'on':'off'}">${anyOn?'เปิด':'ปิด'}</span>
+    <button class="btn danger xs">🗑️</button>`;
+  head.onclick=e=>{if(["INPUT","BUTTON"].includes(e.target.tagName)||e.target.classList.contains("toggle"))return;
+    el.classList.toggle("open");openFolders.has(gname)?openFolders.delete(gname):openFolders.add(gname);};
+  const fname=head.querySelector(".fname");
+  fname.onclick=e=>e.stopPropagation();
+  fname.onchange=e=>{const nn=e.target.value.trim()||DEFAULT_GROUP;rules.forEach(r=>r.group=nn);
+    if(openFolders.has(gname)){openFolders.delete(gname);openFolders.add(nn);}setDirty(true);renderFolders(a);};
+  head.querySelector(".toggle").onclick=e=>{e.stopPropagation();const turnOn=!anyOn;
+    rules.forEach(r=>r.enabled=turnOn);setDirty(true);renderFolders(a);};
+  head.querySelector("button").onclick=e=>{e.stopPropagation();
+    if(!confirm(`ลบโฟลเดอร์ "${gname}" (${rules.length} กฎ) ทั้งหมด?`))return;
+    a.rules=a.rules.filter(r=>(r.group||DEFAULT_GROUP)!==gname);setDirty(true);renderFolders(a);};
+  el.appendChild(head);
+  const body=document.createElement("div");body.className="folder-body";
+  rules.forEach((r,i)=>body.appendChild(ruleEl(a,r,i+1)));
+  const add=document.createElement("button");add.className="btn ghost sm";add.textContent="+ เพิ่มกฎในโฟลเดอร์นี้";
+  add.onclick=()=>{const r={name:"กฎใหม่",action:"PAUSE",enabled:true,group:gname,conditions:[newCond()]};
+    a.rules.push(r);openFolders.add(gname);setDirty(true);renderFolders(a);};
+  body.appendChild(add);el.appendChild(body);
   return el;
 }
-function ruleEl(acc,rule,wrap){
-  const el=document.createElement("div");el.className="rule";
-  const head=document.createElement("div");head.className="rule-head";
-  head.appendChild(fieldEl("ชื่อกฎ",rule.name,"grow",v=>{rule.name=v;setDirty(true)}));
-  const actSel=document.createElement("div");actSel.className="field";
-  actSel.innerHTML=`<label>การกระทำ</label><select>${opt(ACTIONS,rule.action)}</select>`;
-  actSel.querySelector("select").onchange=e=>{rule.action=e.target.value;renderParams();setDirty(true)};
-  head.appendChild(actSel);
-  const rm=document.createElement("button");rm.className="btn danger sm";rm.textContent="🗑️";rm.title="ลบกฎ";
-  rm.onclick=()=>{const i=acc.rules.indexOf(rule);acc.rules.splice(i,1);el.remove();setDirty(true);};
-  head.appendChild(rm);el.appendChild(head);
-  const paramsBox=document.createElement("div");el.appendChild(paramsBox);
-  function renderParams(){
-    paramsBox.innerHTML="";const a=rule.action;
-    if(a==="INCREASE_BUDGET"||a==="DECREASE_BUDGET"||a==="RESET_BUDGET"){
+function ruleEl(a,rule,n){
+  const el=document.createElement("div");el.className="rule"+(rule.enabled===false?" off":"");
+  const summary=document.createElement("div");summary.className="summary";
+  const inner=document.createElement("div");inner.className="rule-inner";
+  const upd=()=>{summary.innerHTML=ruleSummary(rule);el.classList.toggle("off",rule.enabled===false);};
+
+  // top
+  const top=document.createElement("div");top.className="rule-top";
+  const lbl=document.createElement("span");lbl.className="rlabel";lbl.textContent="RULE "+n;
+  const name=document.createElement("input");name.className="rname";name.value=rule.name||"";
+  name.oninput=e=>{rule.name=e.target.value;setDirty(true);};
+  const seg=document.createElement("div");seg.className="segbar";
+  ACTIONS.forEach(A=>{const b=document.createElement("div");b.className="seg "+A.cls+(rule.action===A.a?" active":"");
+    b.innerHTML=A.icon+" "+A.label;
+    b.onclick=()=>{rule.action=A.a;seg.querySelectorAll(".seg").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");renderParams();upd();setDirty(true);};
+    seg.appendChild(b);});
+  const tog=document.createElement("span");
+  const setTog=()=>{const on=rule.enabled!==false;tog.className="toggle "+(on?"on":"off");tog.textContent=on?"เปิด":"ปิด";};
+  tog.onclick=()=>{rule.enabled=(rule.enabled===false);setTog();upd();setDirty(true);};setTog();
+  const del=document.createElement("button");del.className="btn danger xs";del.textContent="🗑️";
+  del.onclick=()=>{if(!confirm("ลบกฎนี้?"))return;const i=a.rules.indexOf(rule);a.rules.splice(i,1);
+    setDirty(true);renderFolders(a);};
+  top.append(lbl,name,seg,tog,del);inner.appendChild(top);
+
+  // folder selector (ย้ายกฎไปโฟลเดอร์อื่น)
+  const fline=document.createElement("div");
+  fline.style.cssText="margin:0 0 10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px";
+  fline.append("📁 โฟลเดอร์:");
+  const fsel=document.createElement("select");fsel.style.cssText="padding:4px 8px;font-size:12px";
+  const groups=groupsOf(a).map(x=>x[0]);
+  fsel.innerHTML=groups.map(g=>`<option value="${esc(g)}" ${((rule.group||DEFAULT_GROUP)===g)?"selected":""}>${esc(g)}</option>`).join("")
+    +'<option value="__new__">＋ โฟลเดอร์ใหม่…</option>';
+  fsel.onchange=e=>{let val=e.target.value;
+    if(val==="__new__"){const nn=(prompt("ชื่อโฟลเดอร์ใหม่:")||"").trim();if(!nn){renderFolders(a);return;}val=nn;}
+    rule.group=val;openFolders.add(val);setDirty(true);renderFolders(a);};
+  fline.appendChild(fsel);inner.appendChild(fline);
+
+  // params
+  const paramsBox=document.createElement("div");inner.appendChild(paramsBox);
+  function renderParams(){paramsBox.innerHTML="";const A=rule.action;
+    if(A==="INCREASE_BUDGET"||A==="DECREASE_BUDGET"||A==="RESET_BUDGET"){
       rule.params=rule.params||{};const box=document.createElement("div");box.className="params";
-      if(a==="RESET_BUDGET"){box.appendChild(numField("ตั้งงบเป็น (บาท)",rule.params.resetAmount,v=>{rule.params.resetAmount=v;setDirty(true)}));}
-      else{box.appendChild(numField("เปลี่ยนกี่ %",rule.params.percent,v=>{rule.params.percent=v;setDirty(true)}));
-        if(a==="INCREASE_BUDGET")box.appendChild(numField("งบสูงสุด (บาท)",rule.params.maxBudget,v=>{rule.params.maxBudget=v;setDirty(true)}));
-        else box.appendChild(numField("งบต่ำสุด (บาท)",rule.params.minBudget,v=>{rule.params.minBudget=v;setDirty(true)}));}
-      box.appendChild(numField("ทำซ้ำทุก (นาที)",rule.params.frequencyMins,v=>{rule.params.frequencyMins=v;setDirty(true)}));
+      if(A==="RESET_BUDGET")box.appendChild(numF("ตั้งงบเป็น (บาท)",rule.params.resetAmount,v=>{rule.params.resetAmount=v;upd();setDirty(true);}));
+      else{box.appendChild(numF("เปลี่ยนกี่ %",rule.params.percent,v=>{rule.params.percent=v;upd();setDirty(true);}));
+        if(A==="INCREASE_BUDGET")box.appendChild(numF("งบสูงสุด (บาท)",rule.params.maxBudget,v=>{rule.params.maxBudget=v;upd();setDirty(true);}));
+        else box.appendChild(numF("งบต่ำสุด (บาท)",rule.params.minBudget,v=>{rule.params.minBudget=v;upd();setDirty(true);}));}
+      box.appendChild(numF("ทำซ้ำทุก (นาที)",rule.params.frequencyMins,v=>{rule.params.frequencyMins=v;setDirty(true);}));
       paramsBox.appendChild(box);
-    }
-  }
+    }}
   renderParams();
-  const cl=document.createElement("div");cl.className="muted";cl.style.cssText="font-size:12px;margin:6px 2px 2px";
-  cl.textContent="เงื่อนไข (ต้องจริงทุกข้อ):";el.appendChild(cl);
+
+  // conditions
   const cw=document.createElement("div");rule.conditions=rule.conditions||[];
-  rule.conditions.forEach(c=>cw.appendChild(condEl(rule,c)));el.appendChild(cw);
-  const addC=document.createElement("button");addC.className="btn ghost sm";addC.textContent="+ เพิ่มเงื่อนไข";addC.style.marginTop="6px";
-  addC.onclick=()=>{const c=newCond();rule.conditions.push(c);cw.appendChild(condEl(rule,c));setDirty(true);};
-  el.appendChild(addC);return el;
+  const drawConds=()=>{cw.innerHTML="";rule.conditions.forEach((c,ci)=>cw.appendChild(condEl(rule,c,ci,upd,drawConds)));};
+  drawConds();inner.appendChild(cw);
+  const addC=document.createElement("button");addC.className="btn ghost sm";addC.textContent="+ เพิ่มเงื่อนไข";
+  addC.onclick=()=>{rule.conditions.push(newCond());drawConds();upd();setDirty(true);};
+  inner.appendChild(addC);
+
+  upd();el.append(summary,inner);return el;
 }
-function condEl(rule,c){
+function condEl(rule,c,ci,upd,redraw){
   const el=document.createElement("div");el.className="cond";
-  const m=document.createElement("div");m.className="field grow";
-  m.innerHTML=`<label>ตัวชี้วัด</label><select>${opt(METRICS,c.metric)}</select>`;
-  m.querySelector("select").onchange=e=>{c.metric=e.target.value;setDirty(true)};
-  const o=document.createElement("div");o.className="field tiny";
-  o.innerHTML=`<label>เงื่อนไข</label><select>${opt(OPERATORS,c.operator)}</select>`;
-  o.querySelector("select").onchange=e=>{c.operator=e.target.value;setDirty(true)};
-  const v=numField("ค่า",c.value,val=>{c.value=val;setDirty(true)});v.classList.add("tiny");
-  const rm=document.createElement("button");rm.className="btn danger sm";rm.textContent="✕";
-  rm.onclick=()=>{const i=rule.conditions.indexOf(c);rule.conditions.splice(i,1);el.remove();setDirty(true);};
-  el.append(m,o,v,rm);return el;
+  const pfx=document.createElement("span");pfx.className="pfx";pfx.textContent=ci===0?"ถ้า":"และ";
+  const m=document.createElement("select");m.className="m";m.innerHTML=opt(METRICS,c.metric);
+  m.onchange=e=>{c.metric=e.target.value;upd();setDirty(true);};
+  const o=document.createElement("select");o.innerHTML=opt(OPERATORS,c.operator);
+  o.onchange=e=>{c.operator=e.target.value;upd();setDirty(true);};
+  const v=document.createElement("input");v.className="v";v.type="number";v.step="any";
+  v.value=(c.value===null||c.value===undefined)?"":c.value;
+  v.oninput=e=>{const s=e.target.value;c.value=s===""?null:Number(s);upd();setDirty(true);};
+  const rm=document.createElement("button");rm.className="btn danger xs";rm.textContent="✕";
+  rm.onclick=()=>{rule.conditions.splice(ci,1);redraw();upd();setDirty(true);};
+  el.append(pfx,m,o,v,rm);return el;
+}
+function ruleSummary(rule){
+  const conds=(rule.conditions||[]).map(c=>`<b>${METRIC_TH[c.metric]||c.metric}</b> ${OP_TH[c.operator]||c.operator} <b>${fmtVal(c.metric,c.value)}</b>`).join(" และ ");
+  const p=rule.params||{};let act="";
+  if(rule.action==="PAUSE")act="🔴 สั่งปิดทันที";
+  else if(rule.action==="ACTIVATE")act="🟢 สั่งเปิดทันที";
+  else if(rule.action==="INCREASE_BUDGET")act=`📈 เพิ่มงบ ${p.percent||0}%`+(p.maxBudget?` (สูงสุด ${p.maxBudget}฿)`:"");
+  else if(rule.action==="DECREASE_BUDGET")act=`📉 ลดงบ ${p.percent||0}%`;
+  else if(rule.action==="RESET_BUDGET")act=`🔄 ตั้งงบเป็น ${p.resetAmount||0}฿`;
+  const off=rule.enabled===false?'<span class="tag" style="margin-left:6px">ปิดอยู่</span>':"";
+  return `ℹ️ ถ้า ${conds||"(ยังไม่มีเงื่อนไข)"} → ${act}${off}`;
 }
 function newCond(){return {id:uid(),metric:"spend",operator:">",value:0,timeframe:"today"};}
-function fieldEl(label,val,cls,onin){const d=document.createElement("div");d.className="field "+(cls||"");
-  d.innerHTML=`<label>${label}</label>`;const i=document.createElement("input");i.value=val??"";
-  i.oninput=e=>onin(e.target.value);d.appendChild(i);return d;}
-function numField(label,val,onin){const d=document.createElement("div");d.className="field";
-  d.innerHTML=`<label>${label}</label>`;const i=document.createElement("input");i.type="number";i.step="any";
+function numF(label,val,onin){const d=document.createElement("div");d.className="field";
+  d.innerHTML=`<label>${label}</label>`;const i=document.createElement("input");i.type="number";i.step="any";i.style.width="130px";
   i.value=(val===null||val===undefined)?"":val;i.oninput=e=>{const s=e.target.value;onin(s===""?null:Number(s));};
   d.appendChild(i);return d;}
 
-/* ===================== actions ===================== */
-function collect(){
-  CONFIG.settings=CONFIG.settings||{};
+/* ===================== account/folder ops ===================== */
+function addAccount(){CONFIG.accounts=CONFIG.accounts||[];
+  CONFIG.accounts.push({name:"บัญชีใหม่",token:"env:FB_ACCESS_TOKEN",account_id:"",target_level:"campaign",rules:[]});
+  curAcct=CONFIG.accounts.length-1;setDirty(true);renderEditor();}
+function deleteAccount(){if(!CONFIG.accounts.length)return;
+  if(!confirm(`ลบบัญชี "${acc().name}" ทั้งหมด?`))return;
+  CONFIG.accounts.splice(curAcct,1);curAcct=Math.max(0,curAcct-1);setDirty(true);renderEditor();}
+function addFolder(){const name=prompt("ตั้งชื่อโฟลเดอร์ใหม่:","โฟลเดอร์ใหม่");if(!name)return;
+  acc().rules.push({name:"กฎใหม่",action:"PAUSE",enabled:true,group:name,conditions:[newCond()]});
+  openFolders.add(name);setDirty(true);renderFolders(acc());}
+
+/* ===================== save/load ===================== */
+function collect(){CONFIG.settings=CONFIG.settings||{};
   CONFIG.settings.timezone=document.getElementById("tz").value.trim()||"Asia/Bangkok";
   CONFIG.settings.dry_run=document.getElementById("dryRun").checked;
-  return JSON.parse(JSON.stringify(CONFIG,(k,v)=>k==="__open"?undefined:v));
-}
-function save(){
-  requireToken(async()=>{
-    const btn=document.getElementById("saveBtn");btn.disabled=true;btn.textContent="⏳ กำลังบันทึก…";
-    try{await putConfig(collect());setDirty(false);toast("✅ บันทึกแล้ว! คลาวด์จะใช้กฎใหม่รอบถัดไป (~10 นาที)","ok");}
-    catch(e){toast("❌ "+e.message,"err");}
-    btn.disabled=false;btn.textContent="💾 บันทึก";
-  });
-}
-async function reload(){
-  if(dirty&&!confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?"))return;
-  await boot();toast("โหลดล่าสุดแล้ว","ok");
-}
+  return JSON.parse(JSON.stringify(CONFIG,(k,v)=>k==="__open"?undefined:v));}
+function save(){requireToken(async()=>{const btn=document.getElementById("saveBtn");
+  btn.disabled=true;btn.textContent="⏳ กำลังบันทึก…";
+  try{await putConfig(collect());setDirty(false);toast("✅ บันทึกแล้ว! คลาวด์จะใช้กฎใหม่รอบถัดไป (~10 นาที)","ok");}
+  catch(e){toast("❌ "+e.message,"err");}
+  btn.disabled=false;btn.textContent="💾 บันทึก";});}
+async function reload(){if(dirty&&!confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?"))return;await boot();toast("โหลดล่าสุดแล้ว","ok");}
 function runTest(){requireToken(async()=>{try{await dispatchTest();
   toast("▶ สั่งทดสอบบนคลาวด์แล้ว — ผลจะขึ้นในภาพรวมอีกสักครู่","ok");}catch(e){toast("❌ "+e.message,"err");}});}
-function addAccount(){
-  CONFIG.accounts=CONFIG.accounts||[];
-  CONFIG.accounts.push({name:"บัญชีใหม่",token:"env:FB_ACCESS_TOKEN",account_id:"",target_level:"campaign",rules:[],__open:true});
-  showTab("editor");renderEditor();setDirty(true);window.scrollTo(0,document.body.scrollHeight);
-}
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
 /* ===================== boot ===================== */
 async function boot(){
-  banner("⏳ กำลังโหลดข้อมูล…","info");
-  try{
-    CONFIG=await loadConfig();
-    renderEditor();
-    banner("");
-  }catch(e){
-    banner("❌ "+e.message,"err");
-    CONFIG=CONFIG||{settings:{},accounts:[]};
-  }
-  try{ renderOverview(await loadStatus()); }
-  catch(e){ renderOverview(null); }
+  banner("⏳ กำลังโหลดข้อมูล…","info");curAcct=0;openFolders.clear();
+  try{CONFIG=await loadConfig();renderEditor();banner("");}
+  catch(e){banner("❌ "+e.message,"err");CONFIG=CONFIG||{settings:{},accounts:[]};renderEditor();}
+  try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
 }
 boot();
 </script>
