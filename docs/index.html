@@ -138,7 +138,8 @@
   <div class="spacer"></div>
   <span class="dirty-dot" title="มีการแก้ที่ยังไม่บันทึก"></span>
   <button class="btn ghost sm" onclick="reload()">↻ โหลดใหม่</button>
-  <button class="btn ghost sm" onclick="runTest()">▶ ทดสอบ</button>
+  <button class="btn ghost sm" onclick="runTest()" title="รันแบบทดสอบ ไม่แก้แคมเปญจริง">▶ ทดสอบ</button>
+  <button class="btn ghost sm" onclick="runLive()" title="สั่งรันจริงเดี๋ยวนี้ — แก้แคมเปญจริงตามกฎ">⚡ รันจริง</button>
   <button class="btn green" id="saveBtn" onclick="save()">💾 บันทึก</button>
 </header>
 
@@ -748,6 +749,10 @@ function save(){requireToken(async()=>{const btn=document.getElementById("saveBt
 async function reload(){if(dirty&&!confirm("มีการแก้ที่ยังไม่บันทึก จะทิ้งแล้วโหลดใหม่?"))return;await boot();toast("โหลดล่าสุดแล้ว","ok");}
 function runTest(){requireToken(async()=>{try{await dispatchRun(true);
   toast("▶ สั่งทดสอบบนคลาวด์แล้ว — ผลจะขึ้นในภาพรวมอีกสักครู่","ok");}catch(e){toast("❌ "+e.message,"err");}});}
+function runLive(){requireToken(async()=>{
+  if(!confirm("สั่งรันจริงเดี๋ยวนี้?\nระบบจะทำงานกับแคมเปญจริงตามกฎ (เฉพาะบัญชีที่เปิดอยู่)"))return;
+  try{await dispatchRun(false);
+    toast("⚡ สั่งรันจริงแล้ว — ดูผลได้ในแท็บ Log อีก ~1 นาที","ok");}catch(e){toast("❌ "+e.message,"err");}});}
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
 /* ===================== boot ===================== */
