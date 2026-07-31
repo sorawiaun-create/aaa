@@ -1,6 +1,45 @@
 {
   "runs": [
     {
+      "t": "2026-07-31T17:12:43.071289+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 3
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "🕹️ สั่งเอง",
+          "action": "PAUSE",
+          "detail": "สั่งเองไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252227279790359/\n  Params:  {'status': 'PAUSED'}\n\n  Status:  400\n  Response:\n    {\n      \"error\": {\n"
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "🕹️ สั่งเอง",
+          "action": "PAUSE",
+          "detail": "สั่งเองไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252227279790359/\n  Params:  {'status': 'PAUSED'}\n\n  Status:  400\n  Response:\n    {\n      \"error\": {\n"
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "🕹️ สั่งเอง",
+          "action": "PAUSE",
+          "detail": "สั่งเองไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252227279790359/\n  Params:  {'status': 'PAUSED'}\n\n  Status:  400\n  Response:\n    {\n      \"error\": {\n"
+        }
+      ]
+    },
+    {
       "t": "2026-07-31T17:06:46.823678+07:00",
       "dry_run": true,
       "summary": {
