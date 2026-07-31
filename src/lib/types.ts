@@ -79,6 +79,15 @@ export interface AdRow {
   metrics: AdMetrics;
 }
 
+export interface CampaignRow {
+  campaign_id: string;
+  campaign_name: string;
+  objective_type?: string;
+  operation_status: OperationStatus; // ENABLE = running, DISABLE = paused
+  secondary_status?: string;
+  metrics: AdMetrics;
+}
+
 export interface AutomationLog {
   id: string;
   timestamp: string;

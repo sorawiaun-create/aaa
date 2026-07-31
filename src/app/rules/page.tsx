@@ -21,6 +21,7 @@ import {
 
 interface Draft {
   name: string;
+  level: "ad" | "campaign";
   timeWindow: TimeWindow;
   action: OperationStatus;
   conditions: RuleCondition[];
@@ -29,6 +30,7 @@ interface Draft {
 function emptyDraft(): Draft {
   return {
     name: "",
+    level: "campaign",
     timeWindow: "today",
     action: "DISABLE",
     conditions: [{ metric: "roas", operator: "<", value: 1 }],
@@ -65,6 +67,7 @@ export default function RulesPage() {
     setEditingId(r.id);
     setDraft({
       name: r.name,
+      level: r.level === "campaign" ? "campaign" : "ad",
       timeWindow: r.timeWindow,
       action: r.action,
       conditions: r.conditions.map((c) => ({ ...c })),
@@ -100,7 +103,7 @@ export default function RulesPage() {
     setSaving(true);
     setError(null);
     try {
-      const payload = { ...draft, level: "ad", enabled: true };
+      const payload = { ...draft, enabled: true };
       const res = await fetch(
         editingId ? `/api/rules/${editingId}` : "/api/rules",
         {
@@ -160,6 +163,22 @@ export default function RulesPage() {
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="label">ระดับที่ควบคุม</label>
+            <select
+              className="input"
+              value={draft.level}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  level: e.target.value as "ad" | "campaign",
+                })
+              }
+            >
+              <option value="campaign">แคมเปญ (GMV Max/LIVE)</option>
+              <option value="ad">โฆษณา (ad)</option>
+            </select>
           </div>
           <div>
             <label className="label">ช่วงเวลาที่ใช้ประเมิน</label>
@@ -304,6 +323,7 @@ export default function RulesPage() {
                 </span>
               </div>
               <p className="mt-1 text-xs text-neutral-400">
+                {r.level === "campaign" ? "แคมเปญ" : "โฆษณา"} ·{" "}
                 {WINDOW_LABELS[r.timeWindow]} ·{" "}
                 {r.conditions
                   .map(

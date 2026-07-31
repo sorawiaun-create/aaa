@@ -1,6 +1,7 @@
 import {
   AdMetrics,
   AdRow,
+  CampaignRow,
   OperationStatus,
   Settings,
   TimeWindow,
@@ -251,6 +252,133 @@ export async function updateAdStatus(
   await request(s, "POST", "/ad/status/update/", {
     advertiser_id: s.advertiserId,
     ad_ids: adIds,
+    operation_status: status,
+  });
+}
+
+/* ---------------------------- Campaigns ----------------------------- */
+// Campaign-level control is what GMV Max / LIVE GMV Max campaigns need,
+// since those are managed as smart campaigns (no editable ad breakdown).
+
+interface CampaignGetData {
+  list: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    objective_type?: string;
+    operation_status: OperationStatus;
+    secondary_status?: string;
+  }>;
+  page_info?: { total_page: number };
+}
+
+async function listCampaignEntities(
+  s: Settings
+): Promise<CampaignGetData["list"]> {
+  const all: CampaignGetData["list"] = [];
+  let page = 1;
+  for (let i = 0; i < 100; i++) {
+    const data = await request<CampaignGetData>(s, "GET", "/campaign/get/", {
+      advertiser_id: s.advertiserId,
+      page,
+      page_size: 100,
+      fields: [
+        "campaign_id",
+        "campaign_name",
+        "objective_type",
+        "operation_status",
+        "secondary_status",
+      ],
+    });
+    all.push(...(data.list ?? []));
+    const totalPage = data.page_info?.total_page ?? 1;
+    if (page >= totalPage) break;
+    page += 1;
+  }
+  return all;
+}
+
+interface CampaignReportData {
+  list: Array<{
+    dimensions: { campaign_id: string };
+    metrics: Record<string, string>;
+  }>;
+}
+
+async function getCampaignReports(
+  s: Settings,
+  window: TimeWindow
+): Promise<Record<string, AdMetrics>> {
+  const { start, end } = windowToDates(window);
+  const data = await request<CampaignReportData>(
+    s,
+    "GET",
+    "/report/integrated/get/",
+    {
+      advertiser_id: s.advertiserId,
+      report_type: "BASIC",
+      data_level: "AUCTION_CAMPAIGN",
+      dimensions: ["campaign_id"],
+      metrics: REPORT_METRICS,
+      start_date: start,
+      end_date: end,
+      page: 1,
+      page_size: 1000,
+    }
+  );
+
+  const out: Record<string, AdMetrics> = {};
+  for (const row of data.list ?? []) {
+    const m = row.metrics;
+    const spend = num(m.spend);
+    const roas = num(m.complete_payment_roas);
+    out[row.dimensions.campaign_id] = {
+      spend,
+      gmv: roas * spend,
+      roas,
+      complete_payment: num(m.complete_payment),
+      cost_per_conversion: num(m.cost_per_conversion),
+      conversion: num(m.conversion),
+      cpc: num(m.cpc),
+      cpm: num(m.cpm),
+      ctr: num(m.ctr),
+      impressions: num(m.impressions),
+      clicks: num(m.clicks),
+    };
+  }
+  return out;
+}
+
+// Returns every campaign with its metrics for the window (GMV Max included).
+export async function getCampaignsWithMetrics(
+  s: Settings,
+  window: TimeWindow = "today"
+): Promise<CampaignRow[]> {
+  assertConfigured(s);
+  const [entities, reports] = await Promise.all([
+    listCampaignEntities(s),
+    getCampaignReports(s, window),
+  ]);
+  return entities.map((e) => ({
+    campaign_id: e.campaign_id,
+    campaign_name: e.campaign_name,
+    objective_type: e.objective_type,
+    operation_status: e.operation_status,
+    secondary_status: e.secondary_status,
+    metrics: reports[e.campaign_id] ?? { ...ZERO_METRICS },
+  }));
+}
+
+// Enable or disable one or more campaigns.
+export async function updateCampaignStatus(
+  s: Settings,
+  campaignIds: string[],
+  status: OperationStatus
+): Promise<void> {
+  assertConfigured(s);
+  if (campaignIds.length === 0) return;
+  await request(s, "POST", "/campaign/status/update/", {
+    advertiser_id: s.advertiserId,
+    campaign_ids: campaignIds,
     operation_status: status,
   });
 }
