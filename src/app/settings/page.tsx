@@ -38,6 +38,8 @@ export default function SettingsPage() {
   const [connecting, setConnecting] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+  // Authorization link is prefetched so it can be a real <a> (no popup block).
+  const [authUrl, setAuthUrl] = useState<string>("");
 
   async function load() {
     const res = await fetch("/api/settings");
@@ -48,17 +50,18 @@ export default function SettingsPage() {
     setApiBase(s.apiBase);
     setSchedulerEnabled(s.schedulerEnabled);
     setInterval(s.schedulerIntervalMinutes);
-  }
 
-  async function openAuth() {
-    setConnectMsg(null);
-    try {
-      const res = await fetch("/api/auth/url");
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error);
-      window.open(json.url, "_blank", "noopener");
-    } catch (e) {
-      setConnectMsg(`เปิดหน้าอนุญาตไม่ได้: ${e instanceof Error ? e.message : String(e)}`);
+    // Prefetch the TikTok authorize URL (requires a saved App ID).
+    if (s.appId) {
+      try {
+        const r = await fetch("/api/auth/url");
+        const j = await r.json();
+        setAuthUrl(j.ok ? j.url : "");
+      } catch {
+        setAuthUrl("");
+      }
+    } else {
+      setAuthUrl("");
     }
   }
 
@@ -234,14 +237,25 @@ export default function SettingsPage() {
             ขั้นที่ 1 — อนุญาตแอปบนบัญชีโฆษณา
           </div>
           <p className="mb-3 text-xs text-neutral-500">
-            กดปุ่มเพื่อเปิดหน้า TikTok → เลือกบัญชีโฆษณา → กด Authorize
+            กดลิงก์เพื่อเปิดหน้า TikTok → เลือกบัญชีโฆษณา → กด Authorize
             จากนั้นจะถูกพาไปหน้า{" "}
             <span className="text-neutral-300">{view?.redirectUri}</span>{" "}
             ที่แสดง <b>auth_code</b>
           </p>
-          <button type="button" className="btn-secondary" onClick={openAuth}>
-            เปิดหน้าอนุญาต TikTok ↗
-          </button>
+          {authUrl ? (
+            <a
+              className="btn-secondary"
+              href={authUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              เปิดหน้าอนุญาต TikTok ↗
+            </a>
+          ) : (
+            <p className="text-xs text-amber-400">
+              กรุณากรอกและบันทึก App ID ด้านบนก่อน แล้วรีเฟรชหน้านี้
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border border-neutral-800 p-4">
