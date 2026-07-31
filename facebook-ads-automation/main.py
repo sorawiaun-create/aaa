@@ -29,6 +29,7 @@ from fb_automation.logging_setup import setup_logging
 from fb_automation.metrics import compute_metrics
 from fb_automation.rules import plan_campaign
 from fb_automation.state import State
+from fb_automation.status import aggregate_metrics, build_status, write_status
 
 log = setup_logging()
 
@@ -52,9 +53,19 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
              "  [DRY-RUN]" if dry else "")
     log.info("=" * 64)
 
+    status_accounts: list[dict] = []
+
     for account in config.accounts:
         log.info("🏦 บัญชี: %s (act_%s) — %d กฎ",
                  account.name, account.account_id, len(account.rules))
+        acct_stat = {
+            "name": account.name,
+            "account_id": account.account_id,
+            "campaigns": 0,
+            "active_today": 0,
+            "error": None,
+            "spend": 0.0, "revenue": 0.0, "orders": 0, "roas": 0.0, "cost_per_order": 0.0,
+        }
         try:
             client = FacebookClient(account.account_id, account.token)
             campaigns = client.get_campaigns()
@@ -62,10 +73,15 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
         except Exception as e:  # noqa: BLE001
             log.error("  ❌ เชื่อมต่อ/ดึงข้อมูลบัญชีไม่สำเร็จ: %s", e)
             total.errors += 1
+            acct_stat["error"] = str(e)[:200]
+            status_accounts.append(acct_stat)
             continue
 
         log.info("  พบ %d แคมเปญ, %d แคมเปญมียอดวันนี้", len(campaigns), len(insights))
+        acct_stat["campaigns"] = len(campaigns)
+        acct_stat["active_today"] = len(insights)
 
+        account_metrics: list[dict] = []
         for campaign in campaigns:
             if name_re and not name_re.search(campaign.get("name", "")):
                 continue
@@ -75,6 +91,7 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
                 purchase_action_types=account.purchase_action_types,
                 result_action_types=account.result_action_types,
             )
+            account_metrics.append(metrics)
             planned = plan_campaign(account.rules, metrics)
             if planned:
                 execute_campaign(
@@ -82,11 +99,27 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
                     state=state, now=now_local, dry_run=dry, summary=total,
                 )
 
+        acct_stat.update(aggregate_metrics(account_metrics))
+        status_accounts.append(acct_stat)
+
     log.info("-" * 64)
     log.info("สรุป: เปลี่ยนสถานะ %d · ปรับงบ %d · ข้าม(รอบ) %d · error %d%s",
              total.status_changes, total.budget_changes,
              total.skipped_cooldown, total.errors,
              "  [DRY-RUN ไม่ได้แก้จริง]" if dry else "")
+
+    # เขียนไฟล์สรุปให้หน้า Dashboard อ่าน (ไม่ให้พังทั้งรอบถ้าเขียนไม่ได้)
+    try:
+        status_path = os.environ.get("STATUS_PATH", "status.json")
+        write_status(status_path, build_status(
+            updated_at=now_local.isoformat(),
+            timezone=config.settings.timezone,
+            dry_run=dry,
+            accounts=status_accounts,
+        ))
+    except Exception as e:  # noqa: BLE001
+        log.warning("เขียน status.json ไม่สำเร็จ: %s", e)
+
     return total
 
 
