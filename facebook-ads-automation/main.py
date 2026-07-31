@@ -31,6 +31,7 @@ from fb_automation.rules import plan_campaign
 from fb_automation.state import State
 from fb_automation.status import aggregate_metrics, build_status, write_status
 from fb_automation.activity import append_run, load_activity, write_activity
+from fb_automation.notify import maybe_notify
 
 log = setup_logging()
 
@@ -151,6 +152,17 @@ def run_once(config: Config, state: State, now_local: datetime) -> RunSummary:
         write_activity(activity_path, activity)
     except Exception as e:  # noqa: BLE001
         log.warning("เขียน activity.json ไม่สำเร็จ: %s", e)
+
+    # แจ้งเตือน LINE ถ้ามี error (ข้ามถ้าไม่ได้ตั้ง LINE_TOKEN)
+    try:
+        maybe_notify(
+            events, now_local, state,
+            token=os.environ.get("LINE_TOKEN", ""),
+            to=os.environ.get("LINE_TO") or None,
+            throttle_mins=float(os.environ.get("LINE_THROTTLE_MINS", "60") or 60),
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("แจ้งเตือน LINE ไม่สำเร็จ: %s", e)
 
     return total
 

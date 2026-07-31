@@ -55,6 +55,9 @@ jobs:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           FB_DRY_RUN: ${{ github.event.inputs.dry_run }}
           LOG_LEVEL: INFO
+          # แจ้งเตือน LINE (ไม่บังคับ — ไม่ตั้งก็ข้าม)
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_TO: ${{ secrets.LINE_TO }}
         run: python main.py
 
       # บันทึก state กลับ (ทำเสมอ แม้รอบจะ error)
