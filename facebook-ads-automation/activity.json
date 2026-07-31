@@ -1,6 +1,36 @@
 {
   "runs": [
     {
+      "t": "2026-07-31T17:13:56.228509+07:00",
+      "dry_run": true,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "status": "dry-run",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "status": "dry-run",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-07-31T17:12:43.071289+07:00",
       "dry_run": false,
       "summary": {
