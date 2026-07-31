@@ -213,3 +213,34 @@ class TestStatePersistence(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestDescribeConditions(unittest.TestCase):
+    def test_reason_with_actuals(self):
+        from fb_automation.rules import describe_conditions
+        rule = {"conditions": [
+            {"metric": "spend", "operator": ">", "value": 300},
+            {"metric": "roas", "operator": "<", "value": 2.8},
+        ]}
+        metrics = {"spend": 350, "roas": 2.5}
+        r = describe_conditions(rule, metrics)
+        self.assertIn("จ่าย=350 (>300)", r)
+        self.assertIn("ROAS=2.50 (<2.80)", r)
+        self.assertIn("และ", r)
+
+    def test_reason_time_and_inf(self):
+        import math
+        from fb_automation.rules import describe_conditions
+        rule = {"conditions": [
+            {"metric": "time_of_day", "operator": ">", "value": 22},
+            {"metric": "cost_per_purchase", "operator": ">", "value": 80},
+        ]}
+        r = describe_conditions(rule, {"time_of_day": 22.5, "cost_per_purchase": math.inf})
+        self.assertIn("เวลา=22:30", r)
+        self.assertIn("ทุนซื้อ=∞", r)
+
+    def test_reason_flows_into_plan(self):
+        rules = [{"name": "x", "action": "PAUSE",
+                  "conditions": [{"metric": "spend", "operator": ">", "value": 50}]}]
+        plan = plan_campaign(rules, {"spend": 99})
+        self.assertTrue(plan[0].reason.startswith("จ่าย=99"))

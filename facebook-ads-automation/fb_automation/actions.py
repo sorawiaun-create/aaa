@@ -78,7 +78,7 @@ def _apply_budget_sequence(
                  unit_label, pa.action, working, new, pa.rule_name)
         working = new
         changed = True
-        applied.append({"rule": pa.rule_name, "action": pa.action})
+        applied.append({"rule": pa.rule_name, "action": pa.action, "reason": pa.reason})
         state.mark_applied(key, now)
 
     return (working if changed else None), applied
@@ -107,10 +107,10 @@ def execute_campaign(
 
     log.info("  ▶ %s (%s)", cname, cid)
 
-    def _event(rule, action, detail, ok, err=None):
+    def _event(rule, action, detail, ok, err=None, reason=""):
         evs.append({
             "account": account_name, "campaign": cname, "rule": rule,
-            "action": action, "detail": detail,
+            "action": action, "detail": detail, "reason": reason,
             "status": "error" if err else ("dry-run" if dry_run else "applied"),
             "error": err,
         })
@@ -127,14 +127,14 @@ def execute_campaign(
                 try:
                     client.update_campaign_status(cid, final.status)
                     summary.status_changes += 1
-                    _event(final.rule_name, final.action, detail, ok=True)
+                    _event(final.rule_name, final.action, detail, ok=True, reason=final.reason)
                 except Exception as e:  # noqa: BLE001
                     log.error("      ❌ เปลี่ยนสถานะไม่สำเร็จ: %s", e)
                     summary.errors += 1
-                    _event(final.rule_name, final.action, detail, ok=False, err=str(e)[:200])
+                    _event(final.rule_name, final.action, detail, ok=False, err=str(e)[:200], reason=final.reason)
             else:
                 summary.status_changes += 1
-                _event(final.rule_name, final.action, detail, ok=True)
+                _event(final.rule_name, final.action, detail, ok=True, reason=final.reason)
 
     # ---- 2) งบประมาณ ----
     budget_actions = [p for p in planned if p.kind == "BUDGET"]
@@ -151,19 +151,20 @@ def execute_campaign(
             return
         rule = ", ".join(a["rule"] for a in applied)
         action = applied[-1]["action"] if applied else "BUDGET"
+        reason = " · ".join(a["reason"] for a in applied if a.get("reason"))
         detail = f"{disp}งบ {current_major:.0f} → {new_major:.0f} บาท"
         if not dry_run:
             try:
                 setter(client.to_minor(new_major))
                 summary.budget_changes += 1
-                _event(rule, action, detail, ok=True)
+                _event(rule, action, detail, ok=True, reason=reason)
             except Exception as e:  # noqa: BLE001
                 log.error("      ❌ ปรับงบไม่สำเร็จ: %s", e)
                 summary.errors += 1
-                _event(rule, action, detail, ok=False, err=str(e)[:200])
+                _event(rule, action, detail, ok=False, err=str(e)[:200], reason=reason)
         else:
             summary.budget_changes += 1
-            _event(rule, action, detail, ok=True)
+            _event(rule, action, detail, ok=True, reason=reason)
 
     daily_budget_minor = campaign.get("daily_budget")
     if daily_budget_minor:
