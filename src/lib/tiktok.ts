@@ -1,4 +1,5 @@
 import {
+  AdGroupRow,
   AdMetrics,
   AdRow,
   CampaignRow,
@@ -269,6 +270,7 @@ interface CampaignGetData {
     objective_type?: string;
     operation_status: OperationStatus;
     secondary_status?: string;
+    budget?: number;
   }>;
   page_info?: { total_page: number };
 }
@@ -289,6 +291,7 @@ async function listCampaignEntities(
         "objective_type",
         "operation_status",
         "secondary_status",
+        "budget",
       ],
     });
     all.push(...(data.list ?? []));
@@ -366,8 +369,162 @@ export async function getCampaignsWithMetrics(
     objective_type: e.objective_type,
     operation_status: e.operation_status,
     secondary_status: e.secondary_status,
+    budget: e.budget,
     metrics: reports[e.campaign_id] ?? { ...ZERO_METRICS },
   }));
+}
+
+/* ---------------------------- Ad Groups ----------------------------- */
+
+interface AdGroupGetData {
+  list: Array<{
+    adgroup_id: string;
+    adgroup_name: string;
+    campaign_id: string;
+    operation_status: OperationStatus;
+    budget?: number;
+  }>;
+  page_info?: { total_page: number };
+}
+
+async function listAdGroupEntities(s: Settings): Promise<AdGroupGetData["list"]> {
+  const all: AdGroupGetData["list"] = [];
+  let page = 1;
+  for (let i = 0; i < 100; i++) {
+    const data = await request<AdGroupGetData>(s, "GET", "/adgroup/get/", {
+      advertiser_id: s.advertiserId,
+      page,
+      page_size: 100,
+      fields: [
+        "adgroup_id",
+        "adgroup_name",
+        "campaign_id",
+        "operation_status",
+        "budget",
+      ],
+    });
+    all.push(...(data.list ?? []));
+    const totalPage = data.page_info?.total_page ?? 1;
+    if (page >= totalPage) break;
+    page += 1;
+  }
+  return all;
+}
+
+async function getAdGroupReports(
+  s: Settings,
+  window: TimeWindow
+): Promise<Record<string, AdMetrics>> {
+  const { start, end } = windowToDates(window);
+  const data = await request<{
+    list: Array<{ dimensions: { adgroup_id: string }; metrics: Record<string, string> }>;
+  }>(s, "GET", "/report/integrated/get/", {
+    advertiser_id: s.advertiserId,
+    report_type: "BASIC",
+    data_level: "AUCTION_ADGROUP",
+    dimensions: ["adgroup_id"],
+    metrics: REPORT_METRICS,
+    start_date: start,
+    end_date: end,
+    page: 1,
+    page_size: 1000,
+  });
+  const out: Record<string, AdMetrics> = {};
+  for (const row of data.list ?? []) {
+    const m = row.metrics;
+    const spend = num(m.spend);
+    const roas = num(m.complete_payment_roas);
+    out[row.dimensions.adgroup_id] = {
+      spend,
+      gmv: roas * spend,
+      roas,
+      complete_payment: num(m.complete_payment),
+      cost_per_conversion: num(m.cost_per_conversion),
+      conversion: num(m.conversion),
+      cpc: num(m.cpc),
+      cpm: num(m.cpm),
+      ctr: num(m.ctr),
+      impressions: num(m.impressions),
+      clicks: num(m.clicks),
+    };
+  }
+  return out;
+}
+
+export async function getAdGroupsWithMetrics(
+  s: Settings,
+  window: TimeWindow = "today"
+): Promise<AdGroupRow[]> {
+  assertConfigured(s);
+  const [entities, reports] = await Promise.all([
+    listAdGroupEntities(s),
+    getAdGroupReports(s, window),
+  ]);
+  return entities.map((e) => ({
+    adgroup_id: e.adgroup_id,
+    adgroup_name: e.adgroup_name,
+    campaign_id: e.campaign_id,
+    operation_status: e.operation_status,
+    budget: e.budget,
+    metrics: reports[e.adgroup_id] ?? { ...ZERO_METRICS },
+  }));
+}
+
+export async function updateAdGroupStatus(
+  s: Settings,
+  adgroupIds: string[],
+  status: OperationStatus
+): Promise<void> {
+  assertConfigured(s);
+  if (adgroupIds.length === 0) return;
+  await request(s, "POST", "/adgroup/status/update/", {
+    advertiser_id: s.advertiserId,
+    adgroup_ids: adgroupIds,
+    operation_status: status,
+  });
+}
+
+/* ------------------------ Budget (scaling) -------------------------- */
+
+// Sets a new daily budget on a regular campaign.
+export async function updateCampaignBudget(
+  s: Settings,
+  campaignId: string,
+  budget: number
+): Promise<void> {
+  assertConfigured(s);
+  await request(s, "POST", "/campaign/update/", {
+    advertiser_id: s.advertiserId,
+    campaign_id: campaignId,
+    budget,
+  });
+}
+
+// Sets a new budget on a GMV Max campaign.
+export async function updateGmvMaxBudget(
+  s: Settings,
+  campaignId: string,
+  budget: number
+): Promise<void> {
+  assertConfigured(s);
+  await request(s, "POST", "/campaign/gmv_max/update/", {
+    advertiser_id: s.advertiserId,
+    campaign_id: campaignId,
+    budget,
+  });
+}
+
+/* --------------------------- Notifications -------------------------- */
+
+// Posts a plain message to a user-provided webhook (Discord/Telegram/Make/…).
+export async function notifyWebhook(url: string, text: string): Promise<void> {
+  if (!url) return;
+  // Discord expects {content}; many others accept {text}. Send both keys.
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: text, text }),
+  }).catch(() => {});
 }
 
 // Diagnostic: for one advertiser, report how many campaigns /campaign/get

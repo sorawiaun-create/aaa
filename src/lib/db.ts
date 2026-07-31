@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { AutomationLog, AutomationRule, Settings } from "./types";
+import { AlertRule, AutomationLog, AutomationRule, Settings } from "./types";
 
 // Lightweight JSON-file-backed store. Runs in a single Next.js server process
 // (`next start`), so synchronous file writes are safe and race-free enough for
@@ -56,6 +56,7 @@ function defaultSettings(): Settings {
     redirectUri:
       process.env.TIKTOK_REDIRECT_URI ??
       "https://chobtham.org/api/auth/callback",
+    webhookUrl: process.env.ALERT_WEBHOOK_URL ?? "",
     schedulerEnabled: process.env.SCHEDULER_ENABLED !== "false",
     schedulerIntervalMinutes: Number(
       process.env.SCHEDULER_INTERVAL_MINUTES ?? 15
@@ -114,6 +115,31 @@ export function addLogs(entries: AutomationLog[]) {
   // Newest first, capped.
   const next = [...entries, ...existing].slice(0, MAX_LOGS);
   writeJson(LOGS_FILE, next);
+}
+
+/* ------------------------------ Alerts ------------------------------ */
+
+const ALERTS_FILE = path.join(DATA_DIR, "alerts.json");
+
+export function getAlerts(): AlertRule[] {
+  return readJson<AlertRule[]>(ALERTS_FILE, []);
+}
+
+export function saveAlert(alert: AlertRule): AlertRule {
+  const alerts = getAlerts();
+  const idx = alerts.findIndex((a) => a.id === alert.id);
+  if (idx >= 0) alerts[idx] = alert;
+  else alerts.push(alert);
+  writeJson(ALERTS_FILE, alerts);
+  return alert;
+}
+
+export function deleteAlert(id: string): boolean {
+  const alerts = getAlerts();
+  const next = alerts.filter((a) => a.id !== id);
+  if (next.length === alerts.length) return false;
+  writeJson(ALERTS_FILE, next);
+  return true;
 }
 
 export function newId(prefix = ""): string {

@@ -1,6 +1,7 @@
 import cron, { ScheduledTask } from "node-cron";
 import { getSettings } from "./db";
 import { runAutomation } from "./rules-engine";
+import { evaluateAlerts } from "./alerts-engine";
 
 // Background scheduler. Boots from instrumentation.ts and re-reads settings on
 // each tick so interval/enabled changes take effect without a restart.
@@ -48,6 +49,11 @@ async function tick() {
     }
   } catch (e) {
     console.error("[scheduler] run failed:", e);
+  }
+  try {
+    await evaluateAlerts();
+  } catch (e) {
+    console.error("[scheduler] alerts failed:", e);
   } finally {
     st.running = false;
   }

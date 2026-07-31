@@ -51,6 +51,8 @@ export interface Settings {
   apiBase: string;
   // OAuth redirect URI registered in the TikTok app (where auth_code lands).
   redirectUri: string;
+  // Optional webhook (Discord/Telegram/Make/…) for Alerts notifications.
+  webhookUrl: string;
   schedulerEnabled: boolean;
   schedulerIntervalMinutes: number;
 }
@@ -85,7 +87,29 @@ export interface CampaignRow {
   objective_type?: string;
   operation_status: OperationStatus; // ENABLE = running, DISABLE = paused
   secondary_status?: string;
+  budget?: number;
   metrics: AdMetrics;
+}
+
+export interface AdGroupRow {
+  adgroup_id: string;
+  adgroup_name: string;
+  campaign_id: string;
+  operation_status: OperationStatus;
+  budget?: number;
+  metrics: AdMetrics;
+}
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  source: "campaign" | "gmvmax";
+  metric: MetricKey;
+  operator: ComparisonOperator;
+  value: number;
+  timeWindow: TimeWindow;
+  createdAt: string;
 }
 
 // GMV Max / LIVE GMV Max campaign (enumerated via the GMV Max report, with
