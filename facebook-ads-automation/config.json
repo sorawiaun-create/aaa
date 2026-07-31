@@ -1541,12 +1541,12 @@
             }
           ],
           "params": {
-            "resetAmount": 3000,
+            "resetAmount": 1000,
             "frequencyMins": 60
           }
         },
         {
-          "name": "จ่าย 100 ไม่ทัก   ปิด",
+          "name": "จ่าย 150 ไม่ทัก   ปิด",
           "action": "PAUSE",
           "enabled": true,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
@@ -1555,7 +1555,7 @@
               "id": "c_1785494607350_q4gsq",
               "metric": "spend",
               "operator": ">",
-              "value": 100,
+              "value": 150,
               "timeframe": "today"
             },
             {
@@ -1590,7 +1590,7 @@
           ]
         },
         {
-          "name": "จ่าย 150    ซื้อ 0 ปิด",
+          "name": "จ่าย 250    ซื้อ 0 ปิด",
           "action": "PAUSE",
           "enabled": true,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
@@ -1599,7 +1599,7 @@
               "id": "c_1785494607350_pj4zs",
               "metric": "spend",
               "operator": ">",
-              "value": 150,
+              "value": 250,
               "timeframe": "today"
             },
             {
@@ -1612,7 +1612,7 @@
           ]
         },
         {
-          "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "name": "จ่าย 250  ทุนซื้อ > 220 ปิด",
           "action": "PAUSE",
           "enabled": true,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
@@ -1621,20 +1621,20 @@
               "id": "c_1785494607350_jw2fd",
               "metric": "spend",
               "operator": ">",
-              "value": 150,
+              "value": 250,
               "timeframe": "today"
             },
             {
               "id": "c_1785494607350_sezg0",
               "metric": "cost_per_purchase",
               "operator": ">",
-              "value": 75,
+              "value": 220,
               "timeframe": "today"
             }
           ]
         },
         {
-          "name": "ADS ดี เพิ่มงบ 20%",
+          "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
           "enabled": true,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
@@ -1643,7 +1643,7 @@
               "id": "c_1785494607350_aj2bn",
               "metric": "spend",
               "operator": ">",
-              "value": 100,
+              "value": 80,
               "timeframe": "today"
             },
             {
@@ -1657,7 +1657,7 @@
               "id": "c_1785494607350_5j17a",
               "metric": "cost_per_purchase",
               "operator": "<",
-              "value": 60,
+              "value": 180,
               "timeframe": "today"
             },
             {
@@ -1676,13 +1676,13 @@
             }
           ],
           "params": {
-            "percent": 20,
+            "percent": 10,
             "maxBudget": 5000,
             "frequencyMins": 50
           }
         },
         {
-          "name": "ADS ดี เพิ่มงบ 10%",
+          "name": "ADS ดี เพิ่มงบ 5%",
           "action": "INCREASE_BUDGET",
           "enabled": true,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
@@ -1705,7 +1705,7 @@
               "id": "c_1785494607350_sh39a",
               "metric": "cost_per_purchase",
               "operator": "<",
-              "value": 60,
+              "value": 220,
               "timeframe": "today"
             },
             {
@@ -1724,7 +1724,7 @@
             }
           ],
           "params": {
-            "percent": 10,
+            "percent": 5,
             "maxBudget": 5000,
             "frequencyMins": 50
           }
@@ -1746,7 +1746,7 @@
               "id": "c_1785494607350_nh3ky",
               "metric": "cost_per_purchase",
               "operator": ">",
-              "value": 75,
+              "value": 220,
               "timeframe": "today"
             },
             {
@@ -1757,9 +1757,31 @@
               "timeframe": "today"
             }
           ]
+        },
+        {
+          "name": "กฎใหม่",
+          "action": "PAUSE",
+          "enabled": true,
+          "group": "🛡️ กฎความปลอดภัย (Safety)",
+          "conditions": [
+            {
+              "id": "c_1785515907322_pc8di",
+              "metric": "spend",
+              "operator": ">",
+              "value": 300,
+              "timeframe": "today"
+            },
+            {
+              "id": "c_1785515909258_cpe7h",
+              "metric": "roas",
+              "operator": "<",
+              "value": 2.8,
+              "timeframe": "today"
+            }
+          ]
         }
       ],
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "เทส ถุงปลูก",
