@@ -4,16 +4,14 @@ import { getSettings } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// Local debugging helper: authenticated GET proxy to the TikTok Marketing API.
-// Lets us probe endpoints (e.g. /gmv_max/store/list/) to discover the right
-// calls for LIVE GMV Max without re-shipping the app each time.
+// Local debugging helper: authenticated proxy to the TikTok Marketing API.
+// Lets us probe endpoints (incl. POST) to discover the right calls without
+// re-shipping the app each time. GET/POST only, uses the stored token,
+// intended for localhost use.
 //
-// Usage: /api/explore?path=/gmv_max/store/list/&extra=params
-// - `path` is forwarded onto the configured apiBase (TikTok only).
-// - all other query params are passed through as-is.
-// - advertiser_id defaults to the connected account if not supplied.
-// GET only, uses the stored token, intended for localhost use.
-export async function GET(req: NextRequest) {
+// GET probe:  /api/explore?path=/gmv_max/store/list/
+// POST probe: /api/explore?method=POST&path=/campaign/status/update/&body={...json...}
+async function handle(req: NextRequest) {
   const s = getSettings();
   if (!s.accessToken) {
     return NextResponse.json({ ok: false, error: "ยังไม่ได้เชื่อมต่อ" });
@@ -21,27 +19,52 @@ export async function GET(req: NextRequest) {
 
   const params = new URLSearchParams(req.nextUrl.search);
   const path = params.get("path") || "";
+  const method = (params.get("method") || "GET").toUpperCase();
+  const bodyRaw = params.get("body");
   params.delete("path");
+  params.delete("method");
+  params.delete("body");
+
   if (!path.startsWith("/")) {
     return NextResponse.json({
       ok: false,
       error: "ต้องระบุ path ที่ขึ้นต้นด้วย / เช่น ?path=/gmv_max/store/list/",
     });
   }
-  if (!params.has("advertiser_id")) {
-    params.set("advertiser_id", s.advertiserId);
-  }
 
   const base = s.apiBase.replace(/\/$/, "");
-  const url = `${base}${path}?${params.toString()}`;
+  const headers: Record<string, string> = {
+    "Access-Token": s.accessToken,
+    "Content-Type": "application/json",
+  };
 
   try {
-    const res = await fetch(url, {
-      headers: { "Access-Token": s.accessToken, "Content-Type": "application/json" },
-    });
+    let res: Response;
+    if (method === "POST") {
+      let body: Record<string, unknown> = {};
+      if (bodyRaw) {
+        try {
+          body = JSON.parse(bodyRaw);
+        } catch {
+          return NextResponse.json({
+            ok: false,
+            error: "body ต้องเป็น JSON ที่ถูกต้อง",
+          });
+        }
+      }
+      if (!("advertiser_id" in body)) body.advertiser_id = s.advertiserId;
+      res = await fetch(`${base}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+    } else {
+      if (!params.has("advertiser_id"))
+        params.set("advertiser_id", s.advertiserId);
+      res = await fetch(`${base}${path}?${params.toString()}`, { headers });
+    }
     const json = await res.json();
-    // Echo back the request path so it's easy to see what was called.
-    return NextResponse.json({ ok: true, requested: path, response: json });
+    return NextResponse.json({ ok: true, method, requested: path, response: json });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : String(e) },
@@ -49,3 +72,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = handle;
+export const POST = handle;
