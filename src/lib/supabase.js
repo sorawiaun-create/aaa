@@ -1,27 +1,59 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Cloud mode activates only when both env vars are provided at build time.
-// Without them the app runs in local-only mode (localStorage), exactly as before.
-const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const url = typeof rawUrl === 'string' ? rawUrl.trim() : rawUrl;
+// Cloud config can come from build-time env (Vercel) OR from the browser
+// (entered once in the app, saved to localStorage). This lets the app run in
+// cloud mode from a plain HTML file or any host — no env / no Vercel needed.
+const LS_CONFIG = 'tla_supabase_cfg';
+const LS_FORCE_LOCAL = 'tla_force_local';
 
-// True when the user has attempted to configure cloud mode (both vars present).
-export const isConfigured = Boolean(url && anonKey);
+function readConfig() {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL;
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (envUrl && envKey) return { url: String(envUrl).trim(), anonKey: String(envKey).trim() };
+  try {
+    const raw = localStorage.getItem(LS_CONFIG);
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c?.url && c?.anonKey) return { url: String(c.url).trim(), anonKey: String(c.anonKey).trim() };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
-// Validate the config up front so a bad value shows a clear message instead of
-// crashing the whole app to a blank white screen.
+export function saveCloudConfig(url, anonKey) {
+  try {
+    localStorage.setItem(LS_CONFIG, JSON.stringify({ url: String(url).trim(), anonKey: String(anonKey).trim() }));
+    localStorage.removeItem(LS_FORCE_LOCAL);
+  } catch { /* ignore */ }
+}
+export function clearCloudConfig() {
+  try { localStorage.removeItem(LS_CONFIG); localStorage.removeItem(LS_FORCE_LOCAL); } catch { /* ignore */ }
+}
+export function chooseLocalMode() {
+  try { localStorage.setItem(LS_FORCE_LOCAL, '1'); } catch { /* ignore */ }
+}
+export function isForcedLocal() {
+  try { return localStorage.getItem(LS_FORCE_LOCAL) === '1'; } catch { return false; }
+}
+
+const config = readConfig();
+
+// The app needs the user to choose cloud (enter config) or local, unless
+// already configured or they've opted into local mode.
+export const needsSetup = !config && !isForcedLocal();
+export const isConfigured = Boolean(config);
+
 let client = null;
 let initError = null;
 
-if (isConfigured) {
-  if (!/^https:\/\/.+\.supabase\.co\/?$/.test(url)) {
-    initError = `ค่า VITE_SUPABASE_URL ไม่ถูกต้อง: "${url}" — ต้องเป็นรูปแบบ https://xxxx.supabase.co`;
-  } else if (!/^ey[A-Za-z0-9_-]/.test(String(anonKey).trim())) {
-    initError = 'ค่า VITE_SUPABASE_ANON_KEY ไม่ถูกต้อง — ต้องเป็นคีย์ anon public (ขึ้นต้นด้วย "eyJ")';
+if (config) {
+  if (!/^https:\/\/.+\.supabase\.co\/?$/.test(config.url)) {
+    initError = `ค่า Supabase URL ไม่ถูกต้อง: "${config.url}" — ต้องเป็น https://xxxx.supabase.co`;
+  } else if (!/^ey[A-Za-z0-9_-]/.test(config.anonKey)) {
+    initError = 'ค่า anon key ไม่ถูกต้อง — ต้องขึ้นต้นด้วย "eyJ"';
   } else {
     try {
-      client = createClient(url.replace(/\/$/, ''), String(anonKey).trim(), {
+      client = createClient(config.url.replace(/\/$/, ''), config.anonKey, {
         auth: { persistSession: true, autoRefreshToken: true },
       });
     } catch (e) {

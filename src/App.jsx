@@ -4,11 +4,12 @@ import {
   CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
-import { isConfigured, cloudInitError } from './lib/supabase.js';
+import { isConfigured, cloudInitError, needsSetup } from './lib/supabase.js';
 import { monthOptionsFrom } from './lib/payroll.js';
 import { monthLabel } from './lib/format.js';
 import { cn } from './components/ui.jsx';
 import Login from './components/Login.jsx';
+import CloudSetup from './components/CloudSetup.jsx';
 import OverviewView from './views/OverviewView.jsx';
 import RealtimeView from './views/RealtimeView.jsx';
 import ChannelsView from './views/ChannelsView.jsx';
@@ -46,6 +47,9 @@ export default function App() {
   );
 
   const current = NAV.find((n) => n.id === view) || NAV[0];
+
+  // First run with no cloud config — let the owner connect or pick local.
+  if (needsSetup) return <CloudSetup />;
 
   // Cloud configured but failed to initialise (bad URL/key) — show why.
   if (isConfigured && cloudInitError) return <ConfigError message={cloudInitError} />;
