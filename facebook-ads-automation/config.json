@@ -984,7 +984,7 @@
               "id": "c_1785494171750_t2j3r",
               "metric": "spend",
               "operator": ">",
-              "value": 150,
+              "value": 200,
               "timeframe": "today"
             },
             {
@@ -1006,7 +1006,7 @@
               "id": "c_1785494259236_lfhbd",
               "metric": "spend",
               "operator": ">",
-              "value": 170,
+              "value": 200,
               "timeframe": "today"
             },
             {
@@ -1021,21 +1021,21 @@
         {
           "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
               "id": "c_1785494285279_ylxjs",
               "metric": "spend",
               "operator": ">",
-              "value": 170,
+              "value": 200,
               "timeframe": "today"
             },
             {
               "id": "c_1785494295259_154gy",
               "metric": "cost_per_purchase",
               "operator": ">",
-              "value": 75,
+              "value": 100,
               "timeframe": "today"
             }
           ]
