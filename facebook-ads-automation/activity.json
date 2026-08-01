@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-01T23:50:29.735850+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 5%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 1000 → 1050 บาท",
+          "reason": "จ่าย=645.07 (>100) และ ROAS=3.07 (>3) และ ทุนซื้อ=215.02 (<220) และ เวลา=23:50 (>6) และ เวลา=23:50 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-01T23:40:25.586730+07:00",
       "dry_run": false,
       "summary": {
@@ -830,28 +852,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-01T14:30:33.671364+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=315.48 (>200) และ ทุนทัก=105.16 (>50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
