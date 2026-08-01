@@ -43,6 +43,28 @@
     .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:6px; }
     .search { width:100%; margin-bottom:10px; }
     .pill { padding:1px 7px; border-radius:6px; font-size:10px; font-weight:700; }
+    .metrics { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .metric { text-align:center; padding:10px 4px; border:1px solid var(--border); border-radius:10px; background:#fafcfc; }
+    .metric .v { font-size:17px; font-weight:800; color:var(--text); }
+    .metric .l { font-size:10px; color:var(--muted); margin-top:2px; }
+    .kv { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+    .kv:last-child { border-bottom:none; }
+    .kv .k { color:var(--muted); font-size:12px; }
+    .kv .val { font-weight:700; font-size:13px; }
+    .cond { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px; }
+    .cbox { border:1px solid var(--border); border-radius:9px; padding:8px 4px; text-align:center; background:#fafcfc; }
+    .cbox.off { opacity:.4; }
+    .cbox .ct { font-size:10px; color:var(--muted); line-height:1.3; }
+    .cbox .cv { font-size:14px; font-weight:800; margin-top:3px; }
+    .chip { display:inline-flex; align-items:center; gap:4px; background:#eaf7f5; color:#0e8a7c; border-radius:999px; padding:4px 10px; font-size:11px; font-weight:600; margin:0 6px 6px 0; }
+    .chip.act { background:#e7f7ee; color:#16833f; }
+    .bar { height:10px; background:#eef2f2; border-radius:999px; overflow:hidden; position:relative; margin:6px 0; }
+    .bar > span { position:absolute; left:0; top:0; bottom:0; background:var(--teal); border-radius:999px; }
+    .bar > i { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--red); }
+    .clist .crow { display:flex; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; }
+    .clist .crow:last-child { border-bottom:none; }
+    .clist .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+    .clist .cn { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     footer { padding:8px 14px; color:var(--muted); font-size:10px; border-top:1px solid var(--border); }
     a { color:var(--teal); }
   </style>

@@ -23,15 +23,23 @@ function defaultSettings() {
       cost: { on: true, value: 20 },
       spentNoOrder: { on: true, value: 50 },
     },
-    actions: { pause: true, createNew: false, telegram: false },
+    actions: {
+      pause: true,
+      createNew: false,
+      createRoi: 1,
+      createBudget: 300,
+      telegram: false,
+    },
     scaling: {
       enabled: false,
-      mode: "time",
-      type: "add",
+      mode: "percent", // time | percent | order
+      scaleType: "fixed", // percent | fixed (how much to add)
+      whenUsedPercent: 50,
+      amount: 100,
       intervalMin: 15,
-      amount: 50,
       cap: 10000,
     },
+    onlyWhenLive: true,
   };
 }
 
@@ -106,7 +114,19 @@ function go(v, id) {
 function render() {
   if (view === "main") renderMain();
   else if (view === "add") renderAdd();
+  else if (view === "detail") renderDetail();
   else if (view === "settings") renderSettings();
+}
+
+function fmt(n, d = 0) {
+  return Number(n || 0).toLocaleString("th-TH", {
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  });
+}
+function statusLive(s) {
+  const t = String(s).toUpperCase();
+  return t.includes("ENABLE") || t === "1" || t.includes("DELIVER") || t.includes("ACTIVE");
 }
 
 function renderMain() {
@@ -169,7 +189,7 @@ function renderMain() {
   $("addChan").addEventListener("click", () => go("add"));
   $("reload").addEventListener("click", reloadTikTok);
   app.querySelectorAll("[data-edit]").forEach((el) =>
-    el.addEventListener("click", () => go("settings", el.getAttribute("data-edit")))
+    el.addEventListener("click", () => go("detail", el.getAttribute("data-edit")))
   );
   $("tgSave").addEventListener("click", () =>
     save(
@@ -279,6 +299,111 @@ function addChannel(id) {
   save({ channels }, () => go("settings", id));
 }
 
+function renderDetail() {
+  const ch = (STORE.channels || []).find((c) => c.id === editingId);
+  if (!ch) return go("main");
+  const s = ch.settings || defaultSettings();
+  const camps = campaignsOf(ch.id);
+  const live = camps.filter((c) => statusLive(c.status));
+
+  // Aggregate metrics across this channel's campaigns.
+  const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
+  const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
+  const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
+  const roi = cost > 0 ? sales / cost : 0;
+  const cpo = orders > 0 ? cost / orders : 0;
+  const budget = camps.reduce((a, c) => a + (c.budget || 0), 0);
+  const usedPct = budget > 0 ? Math.min(100, (cost / budget) * 100) : 0;
+  const triggerAt = s.scaling?.whenUsedPercent || 50;
+
+  setHeader(
+    ch.name,
+    true,
+    `<span id="dSet" title="ตั้งค่า" style="cursor:pointer">⚙️</span>`
+  );
+
+  const T = s.triggers || {};
+  const app = $("app");
+  app.innerHTML = `
+    <div class="card">
+      <div class="row"><span class="muted">แคมเปญ ${live.length ? "ACTIVE" : "หยุด"} · ${camps.length} ตัว</span>
+        <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
+      <div class="metrics" style="margin-top:10px">
+        <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
+        <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
+        <div class="metric"><div class="v" style="color:var(--teal)">${fmt(roi, 2)}</div><div class="l">ROI</div></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="k">งบใช้ / เพดาน</span><span class="val">${fmt(cost, 0)} / ${fmt(budget, 0)} ฿</span></div>
+        <div class="kv"><span class="k">Orders</span><span class="val">${fmt(orders, 0)}</span></div>
+        <div class="kv"><span class="k">แคมเปญที่ไลฟ์อยู่</span><span class="val">${live.length}</span></div>
+      </div>
+    </div>
+
+    <div class="sec">เงื่อนไขที่ตั้งไว้</div>
+    <div class="card">
+      <div>
+        <span class="chip">🕐 เช็คทุก ${s.checkIntervalMin} นาที</span>
+        ${s.scaling?.enabled ? `<span class="chip">↗ เพิ่มงบ +${fmt(s.scaling.amount, 0)}${s.scaling.scaleType === "percent" ? "%" : "฿"} เมื่อใช้ ${triggerAt}%</span>` : ""}
+        ${s.onlyWhenLive ? `<span class="chip">🔴 เฉพาะตอนไลฟ์</span>` : ""}
+      </div>
+      <div class="cond">
+        <div class="cbox ${T.roi?.on ? "" : "off"}"><div class="ct">เช็คถ้า ROI ต่ำกว่า</div><div class="cv">${fmt(T.roi?.value, 0)}</div></div>
+        <div class="cbox ${T.cost?.on ? "" : "off"}"><div class="ct">ทุน/ซื้อ สูงกว่า</div><div class="cv">${fmt(T.cost?.value, 0)}฿</div></div>
+        <div class="cbox ${T.spentNoOrder?.on ? "" : "off"}"><div class="ct">ใช้งบ ไม่มียอด</div><div class="cv">${fmt(T.spentNoOrder?.value, 0)}฿</div></div>
+      </div>
+      <div style="margin-top:10px">
+        ${s.actions?.pause ? `<span class="chip act">✓ ปิดแคมเปญ</span>` : ""}
+        ${s.actions?.createNew ? `<span class="chip act">✓ สร้างใหม่</span>` : ""}
+        ${s.actions?.telegram ? `<span class="chip act">✓ Telegram</span>` : ""}
+      </div>
+    </div>
+
+    ${
+      s.scaling?.enabled
+        ? `<div class="sec">สเกลงบอัตโนมัติ</div>
+    <div class="card">
+      <div class="muted">ใช้งบครบ ${triggerAt}% → เพิ่มงบอีก +${fmt(s.scaling.amount, 0)}${s.scaling.scaleType === "percent" ? "%" : "฿"}</div>
+      <div class="row" style="margin-top:8px"><span class="k muted">การใช้งบปัจจุบัน</span><span class="val">${fmt(cost, 0)} / ${fmt(budget, 0)} ฿ (${fmt(usedPct, 0)}%)</span></div>
+      <div class="bar"><span style="width:${usedPct}%"></span><i style="left:${triggerAt}%"></i></div>
+      <div class="row"><span class="muted">0 ฿</span><span class="muted">trigger ${triggerAt}% (${fmt(budget * triggerAt / 100, 0)} ฿)</span><span class="muted">${fmt(budget, 0)} ฿</span></div>
+    </div>`
+        : ""
+    }
+
+    <button class="primary" id="dSet2">⚙️ ตั้งค่าการเช็ค และสเกลงบ</button>
+
+    <div class="sec">10 แคมเปญล่าสุด</div>
+    <div class="card clist">
+      ${
+        camps.length
+          ? camps
+              .slice(0, 10)
+              .map(
+                (c) => `<div class="crow">
+        <span class="dot" style="background:${statusLive(c.status) ? "var(--green)" : "#cfd8d7"}"></span>
+        <span class="cn">${esc(c.name)}</span>
+        <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(c.roi, 2)}</span>
+        <span class="muted" style="min-width:52px;text-align:right">${fmt(c.gmv, 0)}฿</span>
+      </div>`
+              )
+              .join("")
+          : `<div class="muted">ยังไม่มีข้อมูลแคมเปญ — กด Sync ในหน้าหลัก</div>`
+      }
+    </div>
+
+    <button class="ghost" id="dDel" style="width:100%;margin-top:4px;color:var(--red)">🗑 ลบช่องนี้</button>`;
+
+  $("dSet").addEventListener("click", () => go("settings", ch.id));
+  $("dSet2").addEventListener("click", () => go("settings", ch.id));
+  $("dDel").addEventListener("click", () => {
+    if (!confirm(`ลบช่อง "${ch.name}"?`)) return;
+    save({ channels: (STORE.channels || []).filter((c) => c.id !== ch.id) }, () =>
+      go("main")
+    );
+  });
+}
+
 function renderSettings() {
   const ch = (STORE.channels || []).find((c) => c.id === editingId);
   if (!ch) return go("main");
@@ -300,21 +425,40 @@ function renderSettings() {
     ${triggerCard("cost", "เช็คถ้า ต้นทุน/ซื้อ สูงกว่า", "ต้นทุน/ซื้อ สูงสุดที่ยอมรับได้ (฿)", s.triggers.cost)}
     ${triggerCard("spentNoOrder", "เช็คถ้า ใช้งบแล้วไม่มียอด", "งบที่ใช้ไปแล้วสูงสุด (฿)", s.triggers.spentNoOrder)}
 
+    <div class="card" style="margin-top:10px">
+      <label class="row" style="cursor:pointer"><span>ทำงานเฉพาะตอนไลฟ์อยู่ <span class="muted">(Only when LIVE)</span></span><input type="checkbox" id="onlyLive" ${s.onlyWhenLive ? "checked" : ""}></label>
+    </div>
+
     <div class="sec">ACTION เมื่อ TRIGGER</div>
     <div class="card">
       <label class="row" style="cursor:pointer"><span>ปิดแคมเปญ</span><input type="checkbox" id="aPause" ${s.actions.pause ? "checked" : ""}></label>
-      <label class="row" style="cursor:pointer;margin-top:8px"><span>สร้างแคมเปญใหม่ <span class="pill" style="background:#eee;color:#999">เร็วๆนี้</span></span><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""} disabled></label>
       <label class="row" style="cursor:pointer;margin-top:8px"><span>แจ้งเตือน Telegram</span><input type="checkbox" id="aTg" ${s.actions.telegram ? "checked" : ""}></label>
     </div>
 
-    <div class="sec">Budget Scaling</div>
+    <div class="sec">สร้างแคมเปญใหม่อัตโนมัติ</div>
     <div class="card">
-      <div class="row"><span>เปิดใช้งาน <span class="pill" style="background:#eee;color:#999">ต้องเรียนรู้ endpoint งบ</span></span>
+      <div class="row"><span><b>เปิดใช้งาน</b></span>
+        <label class="switch"><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""}><span class="slider"></span></label></div>
+      <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
+      <div class="row" style="margin-top:6px"><label>งบเริ่มต้น (฿)</label><input type="number" id="cBudget" value="${s.actions.createBudget}"></div>
+      <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ต้องเรียนรู้ endpoint การสร้างก่อน)</div>
+    </div>
+
+    <div class="sec">Budget Scaling (สเกลงบอัตโนมัติ)</div>
+    <div class="card">
+      <div class="row"><span><b>เปิดใช้งาน</b></span>
         <label class="switch"><input type="checkbox" id="scEn" ${s.scaling.enabled ? "checked" : ""}><span class="slider"></span></label></div>
-      <div class="tabs" id="scMode">
+      <div class="muted" style="margin-top:4px">ตัวอย่าง: ใช้งบครบ ${s.scaling.whenUsedPercent}% → เพิ่มอีก ${s.scaling.amount}${s.scaling.scaleType === "percent" ? "%" : "฿"}</div>
+      <div class="tabs" id="scMode" style="margin-top:8px">
         ${["time:ตามเวลา", "percent:ตาม %", "order:ตามออเดอร์"].map((x) => { const [k, l] = x.split(":"); return `<button data-m="${k}" class="${s.scaling.mode === k ? "on" : ""}">${l}</button>`; }).join("")}
       </div>
-      <div class="row" style="margin-top:6px"><label>เพิ่มครั้งละ (฿)</label><input type="number" id="scAmt" value="${s.scaling.amount}"></div>
+      <div class="row" style="margin-top:8px"><label>เมื่อใช้งบครบ (%)</label><input type="number" id="scWhen" value="${s.scaling.whenUsedPercent}"></div>
+      <div class="row" style="margin-top:6px"><label>วิธีเพิ่มงบ</label>
+        <div class="tabs" id="scType">
+          ${["fixed:คงที่ (฿)", "percent:เปอร์เซ็นต์ (%)"].map((x) => { const [k, l] = x.split(":"); return `<button data-t="${k}" class="${s.scaling.scaleType === k ? "on" : ""}">${l}</button>`; }).join("")}
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px"><label>จำนวนที่เพิ่ม</label><input type="number" id="scAmt" value="${s.scaling.amount}"></div>
       <div class="row" style="margin-top:6px"><label>สเกลทุกๆ</label><select id="scIv">${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${s.scaling.intervalMin === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select></div>
       <div class="row" style="margin-top:6px"><label>เพดานงบสูงสุด/แคมเปญ (฿)</label><input type="number" id="scCap" value="${s.scaling.cap}"></div>
     </div>
@@ -331,11 +475,20 @@ function renderSettings() {
       b.classList.add("on");
     })
   );
+  let scaleType = s.scaling.scaleType || "fixed";
+  app.querySelectorAll("#scType button").forEach((b) =>
+    b.addEventListener("click", () => {
+      scaleType = b.getAttribute("data-t");
+      app.querySelectorAll("#scType button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+    })
+  );
 
   $("saveBtn").addEventListener("click", () => {
     ch.settings = {
       checkIntervalMin: Number($("iv").value),
       minBudgetBeforeCheck: Number($("minb").value),
+      onlyWhenLive: $("onlyLive").checked,
       triggers: {
         roi: readTrigger("roi"),
         cost: readTrigger("cost"),
@@ -343,15 +496,18 @@ function renderSettings() {
       },
       actions: {
         pause: $("aPause").checked,
-        createNew: false,
+        createNew: $("aCreate").checked,
+        createRoi: Number($("cRoi").value),
+        createBudget: Number($("cBudget").value),
         telegram: $("aTg").checked,
       },
       scaling: {
         enabled: $("scEn").checked,
         mode,
-        type: "add",
-        intervalMin: Number($("scIv").value),
+        scaleType,
+        whenUsedPercent: Number($("scWhen").value),
         amount: Number($("scAmt").value),
+        intervalMin: Number($("scIv").value),
         cap: Number($("scCap").value),
       },
     };
@@ -359,7 +515,7 @@ function renderSettings() {
     save({ channels }, () => {
       chrome.runtime.sendMessage({ type: "CGMX_RESCHEDULE" });
       $("msg").textContent = "บันทึกแล้ว ✓ ระบบจะเฝ้าให้ตามนี้";
-      setTimeout(() => go("main"), 700);
+      setTimeout(() => go("detail", ch.id), 700);
     });
   });
   $("delBtn").addEventListener("click", () => {
@@ -388,7 +544,10 @@ function reloadTikTok() {
   });
 }
 
-$("back").addEventListener("click", () => go("main"));
+$("back").addEventListener("click", () => {
+  if (view === "settings" && editingId) go("detail", editingId);
+  else go("main");
+});
 
 chrome.storage.onChanged.addListener(() => loadStore(render));
 loadStore(render);
