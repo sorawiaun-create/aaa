@@ -77,6 +77,11 @@
         ts: Date.now(),
       });
     }
+    // Store a header template + request context from any oec_shopping POST so
+    // the extension can call the internal APIs itself.
+    if (u.includes("oec_shopping") && String(method).toUpperCase() === "POST") {
+      post({ kind: "ctx", url: u, headers, ts: Date.now() });
+    }
     // generic debug capture
     post({
       kind: "capture",

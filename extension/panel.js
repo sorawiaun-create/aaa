@@ -43,8 +43,10 @@ function loadStore(cb) {
       telegramToken: "",
       telegramChatId: "",
       campaigns: [],
+      channelList: [],
       pauseRecipe: null,
       lastRun: 0,
+      syncTs: 0,
     },
     (s) => {
       STORE = s;
@@ -58,6 +60,15 @@ function save(patch, cb) {
 }
 
 function availableChannels() {
+  // Prefer the full channel list fetched via sync (all seller channels).
+  if ((STORE.channelList || []).length) {
+    return STORE.channelList.map((c) => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      count: campaignsOf(c.id).length,
+    }));
+  }
   const map = new Map();
   for (const c of STORE.campaigns || []) {
     const id = c.channelId || "__current__";
@@ -132,6 +143,11 @@ function renderMain() {
         : '<div class="muted" style="padding:4px 2px 10px">ยังไม่มีช่อง — กด “เพิ่มช่องใหม่” ด้านล่าง</div>'
     }
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
+    <div class="card" style="margin-top:10px">
+      <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
+      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์ — เปิดหน้า GMV Max แล้วกดปุ่มนี้"}</div>
+      <div class="msg" id="syncMsg"></div>
+    </div>
     <div class="sec">อื่นๆ</div>
     <div class="card">
       <div class="row"><label>แจ้งเตือน Telegram Token</label></div>
@@ -169,14 +185,36 @@ function renderMain() {
     });
   });
   $("dlDbg").addEventListener("click", downloadDebug);
+  $("syncBtn").addEventListener("click", () => {
+    $("syncMsg").textContent = "กำลังดึงข้อมูล…";
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) {
+        $("syncMsg").textContent = "เปิดแท็บ ads.tiktok.com (หน้า GMV Max) ก่อน";
+        return;
+      }
+      chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, (r) => {
+        if (chrome.runtime.lastError) {
+          $("syncMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message;
+          return;
+        }
+        if (!r || !r.ok) {
+          $("syncMsg").textContent = "ผิดพลาด: " + ((r && r.error) || "?");
+          return;
+        }
+        $("syncMsg").textContent = `ได้ ${r.channels} ช่อง · ${r.campaigns} แคมเปญ${r.errors && r.errors.length ? " (มี error บางส่วน)" : " ✓"}`;
+        loadStore(render);
+      });
+    });
+  });
 }
 
 function downloadDebug() {
   chrome.storage.local.get(null, (all) => {
     const data = {
       campaigns: all.campaigns || [],
+      channelList: all.channelList || [],
       captures: all.captures || [],
-      channelsRaw: all.channelsRaw || null,
+      syncRaw: all.syncRaw || null,
       pauseRecipe: all.pauseRecipe
         ? { url: all.pauseRecipe.url, reqBody: all.pauseRecipe.reqBody }
         : null,
