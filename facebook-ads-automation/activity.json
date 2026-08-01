@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-01T23:10:28.375498+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 3,
+        "skipped_cooldown": 1,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่, ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 2004 → 396 บาท",
+          "reason": "เวลา=23:10 (>23) และ เวลา=23:10 (<23.59) · จ่าย=600.30 (>40) และ ROAS=5.04 (>3.50) และ ทุนซื้อ=75.04 (<80) และ เวลา=23:10 (>6) และ เวลา=23:10 (>=18) · จ่าย=600.30 (>40) และ ROAS=5.04 (>3) และ ทุนซื้อ=75.04 (<80) และ เวลา=23:10 (>6) และ เวลา=23:10 (>=18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 2000 → 1000 บาท",
+          "reason": "เวลา=23:10 (>23) และ เวลา=23:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 1276 → 1000 บาท",
+          "reason": "เวลา=23:10 (>23) และ เวลา=23:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-01T23:00:35.373663+07:00",
       "dry_run": false,
       "summary": {
@@ -839,17 +881,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-01T14:00:34.193383+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
