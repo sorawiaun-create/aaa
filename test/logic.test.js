@@ -4,6 +4,22 @@ import {
   commissionFor, planFor, basePayFor, daysWorkedFor,
   computePayroll, computeChannelStats, computeOverview, computeTeamStats,
 } from '../src/lib/payroll.js';
+import { hoursBetween } from '../src/lib/format.js';
+
+// --- hoursBetween (live duration) ---
+test('hoursBetween: same-day duration', () => {
+  assert.equal(hoursBetween('20:00', '23:30'), 3.5);
+  assert.equal(hoursBetween('18:00', '21:00'), 3);
+});
+test('hoursBetween: crosses midnight', () => {
+  assert.equal(hoursBetween('22:00', '01:00'), 3);
+  assert.equal(hoursBetween('20:00', '00:00'), 4);
+});
+test('hoursBetween: blank/invalid → 0', () => {
+  assert.equal(hoursBetween('', '23:00'), 0);
+  assert.equal(hoursBetween('20:00', ''), 0);
+  assert.equal(hoursBetween(null, null), 0);
+});
 
 // --- commissionFor ---
 test('flat commission = rate% of amount', () => {
