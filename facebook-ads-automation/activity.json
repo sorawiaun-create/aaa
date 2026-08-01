@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-01T18:10:31.113706+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 500 → 660 บาท",
+          "reason": "จ่าย=391.06 (>40) และ ROAS=6.14 (>3.50) และ ทุนซื้อ=65.18 (<80) และ เวลา=18:11 (>6) และ เวลา=18:11 (>=18) · จ่าย=391.06 (>40) และ ROAS=6.14 (>3) และ ทุนซื้อ=65.18 (<80) และ เวลา=18:11 (>6) และ เวลา=18:11 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-01T18:01:52.487842+07:00",
       "dry_run": false,
       "summary": {
@@ -975,45 +997,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-07-31T17:34:00.990498+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
