@@ -166,3 +166,29 @@ export const todayDMY = () => {
   const d = new Date();
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 };
+
+// Hours between two "HH:MM" times. Handles a live that runs past midnight
+// (end earlier than start → treated as next day). Returns a number (2dp) or 0.
+export const hoursBetween = (start, end) => {
+  const toMin = (t) => {
+    if (!t || typeof t !== 'string') return null;
+    const [h, m] = t.split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+  const a = toMin(start);
+  const b = toMin(end);
+  if (a == null || b == null) return 0;
+  let diff = b - a;
+  if (diff < 0) diff += 24 * 60; // crossed midnight
+  return Math.round((diff / 60) * 100) / 100;
+};
+
+// "1.5" -> "1 ชม 30 นาที" (compact Thai duration label). 0/blank -> "—".
+export const formatHours = (h) => {
+  const n = Number(h) || 0;
+  if (n <= 0) return '—';
+  const hh = Math.floor(n);
+  const mm = Math.round((n - hh) * 60);
+  return `${hh > 0 ? `${hh} ชม` : ''}${mm > 0 ? ` ${mm} นาที` : ''}`.trim();
+};

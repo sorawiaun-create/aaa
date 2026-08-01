@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, ClipboardList } from 'lucide-react';
 import {
   SectionCard, Button, EmptyState, Modal, Field, Input, Select, Banner,
 } from '../components/ui.jsx';
-import { formatCurrency0, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
+import { formatCurrency0, todayDMY, dmyToISO, isoToDMY, hoursBetween, formatHours } from '../lib/format.js';
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -11,6 +11,9 @@ const blankSale = () => ({
   date: todayDMY(),
   channelId: '',
   employeeId: '',
+  product: '',
+  startTime: '',
+  endTime: '',
   sales: '',
   adCost: '',
   baseCommission: '',
@@ -47,6 +50,7 @@ export default function SalesView({ store }) {
       adCost: num(d.adCost),
       baseCommission: num(d.baseCommission),
       actualReceived: num(d.actualReceived),
+      hours: hoursBetween(d.startTime, d.endTime),
     };
     if (modal.mode === 'add') store.addSale(payload);
     else store.updateSale(d.id, payload);
@@ -78,6 +82,9 @@ export default function SalesView({ store }) {
                   <th className="px-5 py-3 font-medium">วันที่</th>
                   <th className="px-4 py-3 font-medium">ช่อง</th>
                   <th className="px-4 py-3 font-medium">พนักงาน</th>
+                  <th className="px-4 py-3 font-medium">สินค้า</th>
+                  <th className="px-4 py-3 font-medium">เวลาไลฟ์</th>
+                  <th className="px-4 py-3 font-medium text-right">ชม.</th>
                   <th className="px-4 py-3 font-medium text-right">ยอดขาย</th>
                   <th className="px-4 py-3 font-medium text-right">ค่าแอด</th>
                   <th className="px-4 py-3 font-medium text-right">ค่าคอมฐาน</th>
@@ -91,6 +98,9 @@ export default function SalesView({ store }) {
                     <td className="px-5 py-3 whitespace-nowrap text-slate-600">{s.date}</td>
                     <td className="px-4 py-3 text-slate-800">{chName(s.channelId)}</td>
                     <td className="px-4 py-3 text-slate-600">{empName(s.employeeId)}</td>
+                    <td className="px-4 py-3 text-slate-600 max-w-[10rem] truncate" title={s.product}>{s.product || '—'}</td>
+                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{s.startTime && s.endTime ? `${s.startTime}–${s.endTime}` : '—'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-600 whitespace-nowrap">{s.hours ? formatHours(s.hours) : '—'}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-800">{formatCurrency0(s.sales)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-500">{formatCurrency0(s.adCost)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-500">{formatCurrency0(s.baseCommission)}</td>
@@ -104,6 +114,14 @@ export default function SalesView({ store }) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-100 font-semibold text-slate-700">
+                  <td className="px-5 py-3" colSpan={5}>รวม ({rows.length} รายการ)</td>
+                  <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{formatHours(rows.reduce((a, s) => a + num(s.hours), 0))}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-pink-600">{formatCurrency0(rows.reduce((a, s) => a + num(s.sales), 0))}</td>
+                  <td colSpan={4} />
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
@@ -139,6 +157,23 @@ export default function SalesView({ store }) {
                 {store.employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}{emp.nickname ? ` (${emp.nickname})` : ''}</option>)}
               </Select>
             </Field>
+            <Field label="สินค้าที่ไลฟ์">
+              <Input value={modal.data.product} onChange={(e) => set({ product: e.target.value })} placeholder="เช่น เซรั่ม, ครีมกันแดด, ลิปสติก" />
+            </Field>
+            <div className="grid grid-cols-3 gap-3 items-end">
+              <Field label="เวลาเริ่มไลฟ์">
+                <Input type="time" value={modal.data.startTime} onChange={(e) => set({ startTime: e.target.value })} />
+              </Field>
+              <Field label="เวลาเลิกไลฟ์">
+                <Input type="time" value={modal.data.endTime} onChange={(e) => set({ endTime: e.target.value })} />
+              </Field>
+              <div className="pb-1.5">
+                <span className="block text-xs font-medium text-slate-500 mb-1">รวมเวลาไลฟ์</span>
+                <div className="px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-semibold text-sm text-center tabular-nums">
+                  {hoursBetween(modal.data.startTime, modal.data.endTime) > 0 ? formatHours(hoursBetween(modal.data.startTime, modal.data.endTime)) : '—'}
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="ยอดขาย (฿)">
                 <Input type="number" inputMode="decimal" value={modal.data.sales} onChange={(e) => set({ sales: e.target.value })} placeholder="0" />
