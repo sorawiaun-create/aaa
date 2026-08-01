@@ -221,7 +221,10 @@ function renderMain() {
           $("syncMsg").textContent = "ผิดพลาด: " + ((r && r.error) || "?");
           return;
         }
-        $("syncMsg").textContent = `ได้ ${r.channels} ช่อง · ${r.campaigns} แคมเปญ${r.errors && r.errors.length ? " (มี error บางส่วน)" : " ✓"}`;
+        $("syncMsg").textContent =
+          `ได้ ${r.channels} ช่อง · ${r.campaigns} แคมเปญ` +
+          (r.source ? ` (จาก ${r.source})` : "") +
+          (r.channels === 0 ? " — กด ⬇️ ดาวน์โหลด debug ส่งให้ผมด้วยครับ" : " ✓");
         loadStore(render);
       });
     });

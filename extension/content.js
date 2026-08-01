@@ -135,18 +135,18 @@ window.addEventListener("message", (ev) => {
   }
 });
 
+const CHANNEL_KEYS = [
+  "tt_uid", "tt_account_id", "account_id", "identity_id", "nickname",
+  "store_id", "shop_id", "store_name", "shop_name", "bc_id",
+];
 function findChannelArray(node, depth) {
-  if (!node || depth > 6) return null;
+  if (!node || depth > 7) return null;
   if (Array.isArray(node)) {
     if (
       node.length &&
       typeof node[0] === "object" &&
       node[0] &&
-      ("tt_uid" in node[0] ||
-        "tt_account_id" in node[0] ||
-        "account_id" in node[0] ||
-        "identity_id" in node[0] ||
-        "nickname" in node[0])
+      CHANNEL_KEYS.some((k) => k in node[0])
     )
       return node;
     for (const it of node) {
@@ -164,9 +164,16 @@ function findChannelArray(node, depth) {
 }
 function mapChannel(c) {
   return {
-    id: String(c.tt_uid ?? c.tt_account_id ?? c.account_id ?? c.identity_id ?? c.id ?? ""),
-    name: c.name ?? c.nickname ?? c.account_name ?? c.tt_account_name ?? "(ไม่มีชื่อ)",
-    icon: c.avatar ?? c.avatar_url ?? c.tt_account_avatar_icon ?? c.icon ?? "",
+    id: String(
+      c.tt_uid ?? c.tt_account_id ?? c.account_id ?? c.identity_id ??
+        c.store_id ?? c.shop_id ?? c.id ?? ""
+    ),
+    name:
+      c.name ?? c.nickname ?? c.account_name ?? c.tt_account_name ??
+      c.store_name ?? c.shop_name ?? "(ไม่มีชื่อ)",
+    icon:
+      c.avatar ?? c.avatar_url ?? c.tt_account_avatar_icon ?? c.icon ??
+      c.store_logo ?? c.logo ?? "",
   };
 }
 function sanitizeHeaders(h) {
@@ -192,52 +199,81 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       }
       const hdr = sanitizeHeaders(st.headerTemplate);
       const qs = `locale=th&language=th&oec_seller_id=${ctx.oec_seller_id}&aadvid=${ctx.aadvid}&bc_id=${ctx.bc_id}`;
-      const B = "https://ads.tiktok.com";
-      const out = { channelsRaw: null, campaignsRaw: null, errors: [] };
-      try {
-        const r = await fetch(`${B}/api/oec_shopping/v1/oec/tt_list?${qs}`, {
-          credentials: "include",
-          headers: hdr,
-        });
-        out.channelsRaw = await r.json();
-      } catch (e) {
-        out.errors.push("tt_list: " + e);
+      const B = "https://ads.tiktok.com/api/oec_shopping/v1";
+      const out = { ctxUsed: ctx, probes: {}, errors: [] };
+
+      // Probe several endpoints that may hold the seller's bound channels.
+      const getEps = [
+        ["tt_list", `${B}/oec/tt_list?${qs}`],
+        ["identity_list", `${B}/creation/identity_list?${qs}`],
+        ["get_current_bind_info", `${B}/oec/get_current_bind_info?${qs}`],
+        ["shop_allow_list", `${B}/oec/shop_allow_list?${qs}`],
+      ];
+      for (const [name, url] of getEps) {
+        try {
+          const r = await fetch(url, { credentials: "include", headers: hdr });
+          out.probes[name] = await r.json();
+        } catch (e) {
+          out.errors.push(`${name}: ${e}`);
+        }
       }
+
+      // Campaign list (also a source of channels via per-row account fields).
       try {
         const today = new Date().toISOString().slice(0, 10);
         const body = {
           query_list: [
             "campaign_id", "campaign_name", "campaign_opt_status",
             "campaign_primary_status", "campaign_status", "campaign_budget",
-            "campaign_total_budget", "tt_account_name", "tt_account_avatar_icon",
-            "template_ad_identity_id", "lod_shop_cost", "cost",
-            "onsite_roi2_shopping_value", "onsite_roi2_shopping_sku",
-            "onsite_roi2_shopping", "cost_per_onsite_roi2_shopping_sku",
+            "campaign_total_budget", "tt_account_id", "tt_account_name",
+            "tt_account_avatar_icon", "template_ad_identity_id", "identity_id",
+            "lod_shop_cost", "cost", "onsite_roi2_shopping_value",
+            "onsite_roi2_shopping_sku", "onsite_roi2_shopping",
+            "cost_per_onsite_roi2_shopping_sku", "onsite_roi2_roi",
           ],
           start_time: today, end_time: today, order_field: "lod_shop_cost",
           order_type: 0, page: 1, campaign_shop_automation_type: 2,
           external_type_list: ["307", "304", "305"],
         };
-        const r = await fetch(
-          `${B}/api/oec_shopping/v1/oec/stat/post_campaign_list?${qs}`,
-          { method: "POST", credentials: "include", headers: hdr, body: JSON.stringify(body) }
-        );
-        out.campaignsRaw = await r.json();
+        const r = await fetch(`${B}/oec/stat/post_campaign_list?${qs}`, {
+          method: "POST", credentials: "include", headers: hdr, body: JSON.stringify(body),
+        });
+        out.probes.post_campaign_list = await r.json();
       } catch (e) {
         out.errors.push("post_campaign_list: " + e);
       }
 
+      // Parse: try each probe for a channel array; fall back to campaigns.
       const parsed = {};
-      const chArr = findChannelArray(out.channelsRaw, 0);
-      if (chArr) parsed.channelList = chArr.map(mapChannel).filter((c) => c.id);
-      const cpArr = findCampaignArray(out.campaignsRaw, 0);
+      let chSource = "";
+      for (const name of ["tt_list", "identity_list", "get_current_bind_info", "shop_allow_list"]) {
+        const arr = findChannelArray(out.probes[name], 0);
+        if (arr && arr.length) {
+          const mapped = arr.map(mapChannel).filter((c) => c.id);
+          if (mapped.length) { parsed.channelList = mapped; chSource = name; break; }
+        }
+      }
+      const cpArr = findCampaignArray(out.probes.post_campaign_list, 0);
       if (cpArr) parsed.campaigns = mapCampaigns(cpArr);
 
+      // Fallback: derive channels from campaign rows if no channel endpoint worked.
+      if (!parsed.channelList && parsed.campaigns) {
+        const map = new Map();
+        for (const c of parsed.campaigns) {
+          const id = c.channelId || "__current__";
+          if (!map.has(id))
+            map.set(id, { id, name: c.channelName || "ร้านปัจจุบัน", icon: c.channelIcon || "" });
+        }
+        if (map.size) { parsed.channelList = [...map.values()]; chSource = "campaigns"; }
+      }
+
+      out.channelSource = chSource;
       await chrome.storage.local.set({ syncRaw: out, ...parsed, syncTs: Date.now() });
       sendResponse({
         ok: true,
         channels: parsed.channelList ? parsed.channelList.length : 0,
         campaigns: parsed.campaigns ? parsed.campaigns.length : 0,
+        source: chSource,
         errors: out.errors,
       });
     })();
