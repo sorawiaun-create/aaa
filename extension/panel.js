@@ -1,184 +1,332 @@
-const DEFAULTS = {
-  enabled: false,
-  intervalMinutes: 10,
-  telegramToken: "",
-  telegramChatId: "",
-};
-
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
-  String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
-function load() {
+let STORE = {
+  enabled: false,
+  channels: [], // {id, name, icon, settings}
+  telegramToken: "",
+  telegramChatId: "",
+  campaigns: [],
+  pauseRecipe: null,
+  lastRun: 0,
+};
+let view = "main";
+let editingId = null;
+
+function defaultSettings() {
+  return {
+    checkIntervalMin: 1,
+    minBudgetBeforeCheck: 10,
+    triggers: {
+      roi: { on: true, value: 20 },
+      cost: { on: true, value: 20 },
+      spentNoOrder: { on: true, value: 50 },
+    },
+    actions: { pause: true, createNew: false, telegram: false },
+    scaling: {
+      enabled: false,
+      mode: "time",
+      type: "add",
+      intervalMin: 15,
+      amount: 50,
+      cap: 10000,
+    },
+  };
+}
+
+function loadStore(cb) {
   chrome.storage.local.get(
-    { ...DEFAULTS, captures: [], campaigns: [], pauseRecipe: null },
-    (cfg) => {
-      $("enabled").checked = !!cfg.enabled;
-      $("interval").value = cfg.intervalMinutes;
-      $("tgToken").value = cfg.telegramToken;
-      $("tgChat").value = cfg.telegramChatId;
-      renderCampaigns(cfg.campaigns || [], cfg.pauseRecipe);
-      renderCaptures(cfg.captures || []);
+    {
+      enabled: false,
+      channels: [],
+      telegramToken: "",
+      telegramChatId: "",
+      campaigns: [],
+      pauseRecipe: null,
+      lastRun: 0,
+    },
+    (s) => {
+      STORE = s;
+      cb && cb();
     }
   );
 }
-
-function statusRunning(s) {
-  const t = String(s).toUpperCase();
-  return t.includes("ENABLE") || t === "1" || t.includes("DELIVER") || t.includes("ACTIVE");
+function save(patch, cb) {
+  Object.assign(STORE, patch);
+  chrome.storage.local.set(patch, cb);
 }
 
-function renderCampaigns(list, recipe) {
-  $("learnHint").style.display = recipe ? "none" : "block";
-  const box = $("camps");
-  if (!list.length) {
-    box.innerHTML =
-      '<div class="muted">ยังไม่มีข้อมูล — เปิดหน้า GMV Max บน ads.tiktok.com แล้วกด “โหลดใหม่”</div>';
-    return;
+function availableChannels() {
+  const map = new Map();
+  for (const c of STORE.campaigns || []) {
+    const id = c.channelId || "__current__";
+    if (!map.has(id))
+      map.set(id, {
+        id,
+        name: c.channelName || "ร้านปัจจุบัน",
+        icon: c.channelIcon || "",
+        count: 0,
+      });
+    map.get(id).count++;
   }
-  box.innerHTML = list
-    .slice(0, 100)
-    .map((c) => {
-      const run = statusRunning(c.status);
-      return `<div class="camp">
-        <div class="n">${esc(c.name)}</div>
-        <div class="meta">
-          <span class="pill" style="background:${run ? "#123a2a" : "#2a2a34"};color:${run ? "#34d399" : "#a0a0ad"}">${run ? "กำลังรัน" : "ปิด/อื่นๆ"}</span>
-          ${c.budget != null ? " · งบ " + esc(c.budget) : ""} · ID ${esc(c.id)}
-        </div>
-        <div class="acts">
-          <button class="ghost" data-id="${esc(c.id)}" data-op="1">เปิด</button>
-          <button class="primary" data-id="${esc(c.id)}" data-op="2">ปิด</button>
-        </div>
-      </div>`;
+  return [...map.values()];
+}
+function campaignsOf(channelId) {
+  return (STORE.campaigns || []).filter(
+    (c) => (c.channelId || "__current__") === channelId
+  );
+}
+
+/* ------------------------------ Views ------------------------------- */
+
+function setHeader(title, showBack, right) {
+  $("title").textContent = title;
+  $("back").style.display = showBack ? "inline" : "none";
+  $("headRight").innerHTML = right || "";
+}
+
+function go(v, id) {
+  view = v;
+  editingId = id ?? editingId;
+  render();
+}
+
+function render() {
+  if (view === "main") renderMain();
+  else if (view === "add") renderAdd();
+  else if (view === "settings") renderSettings();
+}
+
+function renderMain() {
+  setHeader(
+    "GMV Max Monitor",
+    false,
+    '<span id="reload" title="โหลดใหม่" style="cursor:pointer">🔄</span>'
+  );
+  const t = STORE.lastRun ? new Date(STORE.lastRun).toLocaleTimeString("th-TH") : "-";
+  const chans = STORE.channels || [];
+  const app = $("app");
+  app.innerHTML = `
+    <div class="card">
+      <div class="row">
+        <div><b>เปิด/ปิดโปรแกรม</b><div class="muted">อัพเดทล่าสุด ${t}</div></div>
+        <label class="switch"><input type="checkbox" id="prog" ${STORE.enabled ? "checked" : ""}><span class="slider"></span></label>
+      </div>
+      <div class="muted" style="margin-top:8px">
+        <span class="status-dot" style="background:${STORE.enabled ? "var(--green)" : "#cfd8d7"}"></span>
+        ${STORE.enabled ? "กำลังมอนิเตอร์ — เปิดคอมและหน้า GMV Max ไว้" : "หยุดชั่วคราว"}
+      </div>
+    </div>
+    <div class="sec">ช่องที่ดูแล (${chans.length})</div>
+    ${
+      chans.length
+        ? chans
+            .map(
+              (c) => `<div class="chan" data-edit="${esc(c.id)}">
+        <div class="av">${c.icon ? `<img src="${esc(c.icon)}">` : esc((c.name || "?")[0])}</div>
+        <div><div class="nm">${esc(c.name)}</div><div class="id">${campaignsOf(c.id).length} แคมเปญ${c.settings?.actions?.pause ? " · ปิดอัตโนมัติ" : ""}</div></div>
+        <span class="chev">›</span></div>`
+            )
+            .join("")
+        : '<div class="muted" style="padding:4px 2px 10px">ยังไม่มีช่อง — กด “เพิ่มช่องใหม่” ด้านล่าง</div>'
+    }
+    <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
+    <div class="sec">อื่นๆ</div>
+    <div class="card">
+      <div class="row"><label>แจ้งเตือน Telegram Token</label></div>
+      <input class="search" id="tgToken" placeholder="123456:ABC…" value="${esc(STORE.telegramToken)}" style="width:100%;margin:6px 0">
+      <input class="search" id="tgChat" placeholder="Chat ID" value="${esc(STORE.telegramChatId)}" style="width:100%">
+      <div class="row" style="margin-top:8px"><button class="ghost" id="tgSave">บันทึก</button><button class="ghost" id="tgTest">ทดสอบส่ง</button></div>
+      <div class="msg" id="msg"></div>
+      <div class="muted" style="margin-top:8px"><a id="dbg" href="#">ดู field ดิบของแคมเปญ (debug)</a></div>
+    </div>`;
+
+  $("prog").addEventListener("change", (e) =>
+    save({ enabled: e.target.checked }, () => {
+      chrome.runtime.sendMessage({ type: "CGMX_RESCHEDULE" });
+      renderMain();
     })
-    .join("");
-  box.querySelectorAll("button[data-id]").forEach((b) => {
-    b.addEventListener("click", () =>
-      setStatus(b.getAttribute("data-id"), Number(b.getAttribute("data-op")), b)
+  );
+  $("addChan").addEventListener("click", () => go("add"));
+  $("reload").addEventListener("click", reloadTikTok);
+  app.querySelectorAll("[data-edit]").forEach((el) =>
+    el.addEventListener("click", () => go("settings", el.getAttribute("data-edit")))
+  );
+  $("tgSave").addEventListener("click", () =>
+    save(
+      { telegramToken: $("tgToken").value.trim(), telegramChatId: $("tgChat").value.trim() },
+      () => ($("msg").textContent = "บันทึกแล้ว ✓")
+    )
+  );
+  $("tgTest").addEventListener("click", () => {
+    save({ telegramToken: $("tgToken").value.trim(), telegramChatId: $("tgChat").value.trim() });
+    $("msg").textContent = "กำลังส่ง…";
+    chrome.runtime.sendMessage({ type: "CGMX_TELEGRAM_TEST" }, (r) => {
+      $("msg").textContent = r && r.ok ? "ส่งสำเร็จ ✓" : `ผิดพลาด: ${(r && r.error) || "?"}`;
+    });
+  });
+  $("dbg").addEventListener("click", (e) => {
+    e.preventDefault();
+    const c = (STORE.campaigns || [])[0];
+    alert(c ? JSON.stringify(c.raw, null, 1).slice(0, 3000) : "ยังไม่มีข้อมูลแคมเปญ");
+  });
+}
+
+function renderAdd() {
+  setHeader("เพิ่มช่อง", true);
+  const added = new Set((STORE.channels || []).map((c) => c.id));
+  const avail = availableChannels().filter((c) => !added.has(c.id));
+  const app = $("app");
+  app.innerHTML = `
+    <input class="search" id="q" placeholder="ค้นหาชื่อช่อง...">
+    <div id="list">${
+      avail.length
+        ? ""
+        : '<div class="note">ยังไม่เห็นช่อง — เปิดหน้า GMV Max บน ads.tiktok.com (และลองสลับร้าน) เพื่อให้ระบบเห็นช่องของคุณ</div>'
+    }</div>`;
+  const render = (f) => {
+    $("list").innerHTML = avail
+      .filter((c) => !f || c.name.toLowerCase().includes(f.toLowerCase()))
+      .map(
+        (c) => `<div class="chan" data-add="${esc(c.id)}">
+        <div class="av">${c.icon ? `<img src="${esc(c.icon)}">` : esc((c.name || "?")[0])}</div>
+        <div><div class="nm">${esc(c.name)}</div><div class="id">${esc(c.id)} · ${c.count} แคมเปญ</div></div>
+        <span class="chev">›</span></div>`
+      )
+      .join("");
+    $("list")
+      .querySelectorAll("[data-add]")
+      .forEach((el) =>
+        el.addEventListener("click", () => addChannel(el.getAttribute("data-add")))
+      );
+  };
+  render("");
+  $("q").addEventListener("input", (e) => render(e.target.value));
+}
+
+function addChannel(id) {
+  const src = availableChannels().find((c) => c.id === id);
+  const ch = {
+    id,
+    name: src ? src.name : id,
+    icon: src ? src.icon : "",
+    settings: defaultSettings(),
+  };
+  const channels = [...(STORE.channels || []), ch];
+  save({ channels }, () => go("settings", id));
+}
+
+function renderSettings() {
+  const ch = (STORE.channels || []).find((c) => c.id === editingId);
+  if (!ch) return go("main");
+  const s = ch.settings;
+  setHeader(`ตั้งค่า · ${ch.name}`, true);
+  const app = $("app");
+  app.innerHTML = `
+    <div class="note">💻 ระบบทำงานบนเครื่องนี้ — เฝ้าแคมเปญตลอดเวลาที่เปิดคอมและ Chrome ไว้ (ปิดเครื่อง/Sleep = พัก)</div>
+
+    <div class="sec">เงื่อนไข TRIGGER (OR)</div>
+    <div class="card">
+      <div class="row"><label>เช็คทุกๆ</label>
+        <select id="iv">${[1, 3, 5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${s.checkIntervalMin === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select>
+      </div>
+      <div class="row" style="margin-top:8px"><label>งบขั้นต่ำก่อนเช็ค (฿)</label><input type="number" id="minb" value="${s.minBudgetBeforeCheck}"></div>
+      <div class="muted">เริ่มเช็คเงื่อนไขหลังใช้งบเกินนี้</div>
+    </div>
+    ${triggerCard("roi", "เช็คถ้า ROI ต่ำกว่า", "ROI ขั้นต่ำที่ยอมรับได้", s.triggers.roi)}
+    ${triggerCard("cost", "เช็คถ้า ต้นทุน/ซื้อ สูงกว่า", "ต้นทุน/ซื้อ สูงสุดที่ยอมรับได้ (฿)", s.triggers.cost)}
+    ${triggerCard("spentNoOrder", "เช็คถ้า ใช้งบแล้วไม่มียอด", "งบที่ใช้ไปแล้วสูงสุด (฿)", s.triggers.spentNoOrder)}
+
+    <div class="sec">ACTION เมื่อ TRIGGER</div>
+    <div class="card">
+      <label class="row" style="cursor:pointer"><span>ปิดแคมเปญ</span><input type="checkbox" id="aPause" ${s.actions.pause ? "checked" : ""}></label>
+      <label class="row" style="cursor:pointer;margin-top:8px"><span>สร้างแคมเปญใหม่ <span class="pill" style="background:#eee;color:#999">เร็วๆนี้</span></span><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""} disabled></label>
+      <label class="row" style="cursor:pointer;margin-top:8px"><span>แจ้งเตือน Telegram</span><input type="checkbox" id="aTg" ${s.actions.telegram ? "checked" : ""}></label>
+    </div>
+
+    <div class="sec">Budget Scaling</div>
+    <div class="card">
+      <div class="row"><span>เปิดใช้งาน <span class="pill" style="background:#eee;color:#999">ต้องเรียนรู้ endpoint งบ</span></span>
+        <label class="switch"><input type="checkbox" id="scEn" ${s.scaling.enabled ? "checked" : ""}><span class="slider"></span></label></div>
+      <div class="tabs" id="scMode">
+        ${["time:ตามเวลา", "percent:ตาม %", "order:ตามออเดอร์"].map((x) => { const [k, l] = x.split(":"); return `<button data-m="${k}" class="${s.scaling.mode === k ? "on" : ""}">${l}</button>`; }).join("")}
+      </div>
+      <div class="row" style="margin-top:6px"><label>เพิ่มครั้งละ (฿)</label><input type="number" id="scAmt" value="${s.scaling.amount}"></div>
+      <div class="row" style="margin-top:6px"><label>สเกลทุกๆ</label><select id="scIv">${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${s.scaling.intervalMin === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select></div>
+      <div class="row" style="margin-top:6px"><label>เพดานงบสูงสุด/แคมเปญ (฿)</label><input type="number" id="scCap" value="${s.scaling.cap}"></div>
+    </div>
+
+    <button class="primary" id="saveBtn">บันทึกการตั้งค่า</button>
+    <button class="ghost" id="delBtn" style="width:100%;margin-top:8px;color:var(--red)">ลบช่องนี้</button>
+    <div class="msg" id="msg"></div>`;
+
+  let mode = s.scaling.mode;
+  app.querySelectorAll("#scMode button").forEach((b) =>
+    b.addEventListener("click", () => {
+      mode = b.getAttribute("data-m");
+      app.querySelectorAll("#scMode button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+    })
+  );
+
+  $("saveBtn").addEventListener("click", () => {
+    ch.settings = {
+      checkIntervalMin: Number($("iv").value),
+      minBudgetBeforeCheck: Number($("minb").value),
+      triggers: {
+        roi: readTrigger("roi"),
+        cost: readTrigger("cost"),
+        spentNoOrder: readTrigger("spentNoOrder"),
+      },
+      actions: {
+        pause: $("aPause").checked,
+        createNew: false,
+        telegram: $("aTg").checked,
+      },
+      scaling: {
+        enabled: $("scEn").checked,
+        mode,
+        type: "add",
+        intervalMin: Number($("scIv").value),
+        amount: Number($("scAmt").value),
+        cap: Number($("scCap").value),
+      },
+    };
+    const channels = (STORE.channels || []).map((c) => (c.id === ch.id ? ch : c));
+    save({ channels }, () => {
+      chrome.runtime.sendMessage({ type: "CGMX_RESCHEDULE" });
+      $("msg").textContent = "บันทึกแล้ว ✓ ระบบจะเฝ้าให้ตามนี้";
+      setTimeout(() => go("main"), 700);
+    });
+  });
+  $("delBtn").addEventListener("click", () => {
+    if (!confirm(`ลบช่อง "${ch.name}"?`)) return;
+    save({ channels: (STORE.channels || []).filter((c) => c.id !== ch.id) }, () =>
+      go("main")
     );
   });
 }
 
-function renderCaptures(list) {
-  const box = $("caps");
-  box.innerHTML = list.length
-    ? list
-        .slice(0, 20)
-        .map(
-          (c) =>
-            `<div class="cap"><span class="m">${esc(c.method)}</span><span class="u">${esc(
-              c.url.split("?")[0]
-            )}</span></div>`
-        )
-        .join("")
-    : '<div class="muted">ยังไม่มี</div>';
+function triggerCard(key, title, sub, t) {
+  return `<div class="trigger">
+    <div class="row"><b>${title}</b>
+      <label class="switch"><input type="checkbox" id="t_${key}_on" ${t.on ? "checked" : ""}><span class="slider"></span></label>
+    </div>
+    <div class="row" style="margin-top:6px"><label>${sub}</label><input type="number" id="t_${key}_v" value="${t.value}"></div>
+  </div>`;
+}
+function readTrigger(key) {
+  return { on: $(`t_${key}_on`).checked, value: Number($(`t_${key}_v`).value) };
 }
 
-function sanitizeHeaders(h) {
-  const out = {};
-  const drop = ["cookie", "content-length", "host", "user-agent", "accept-encoding", "connection"];
-  for (const k of Object.keys(h || {})) {
-    if (drop.includes(k.toLowerCase())) continue;
-    out[k] = h[k];
-  }
-  if (!Object.keys(out).some((k) => k.toLowerCase() === "content-type"))
-    out["Content-Type"] = "application/json";
-  return out;
-}
-
-function buildBody(recipe, campaignId, operation) {
-  try {
-    const obj = JSON.parse(recipe.reqBody);
-    obj.campaign_list = [String(campaignId)];
-    obj.operation = operation;
-    return JSON.stringify(obj);
-  } catch {
-    return JSON.stringify({ campaign_list: [String(campaignId)], operation });
-  }
-}
-
-function execOnTikTok(req, cb) {
-  chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-    if (!tabs.length) {
-      cb({ ok: false, error: "เปิดแท็บ ads.tiktok.com ก่อน" });
-      return;
-    }
-    chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_EXEC", req }, (resp) => {
-      if (chrome.runtime.lastError)
-        cb({ ok: false, error: chrome.runtime.lastError.message });
-      else cb(resp);
-    });
-  });
-}
-
-function setStatus(campaignId, operation, btn) {
-  chrome.storage.local.get({ pauseRecipe: null }, (s) => {
-    if (!s.pauseRecipe) {
-      $("msg").textContent =
-        "ยังไม่ได้เรียนรู้คำสั่ง — ปิดแคมเปญ 1 ตัวในหน้า TikTok ด้วยมือก่อน 1 ครั้ง";
-      return;
-    }
-    const r = s.pauseRecipe;
-    const req = {
-      method: "POST",
-      url: r.url,
-      headers: sanitizeHeaders(r.headers),
-      body: buildBody(r, campaignId, operation),
-    };
-    const old = btn.textContent;
-    btn.textContent = "…";
-    execOnTikTok(req, (resp) => {
-      btn.textContent = old;
-      if (resp && resp.ok) {
-        $("msg").textContent = `${operation === 2 ? "ปิด" : "เปิด"}แคมเปญแล้ว ✓ (${resp.status})`;
-      } else {
-        $("msg").textContent = `ผิดพลาด: ${(resp && resp.error) || "?"}`;
-      }
-    });
-  });
-}
-
-function save() {
-  const cfg = {
-    enabled: $("enabled").checked,
-    intervalMinutes: Math.max(1, Number($("interval").value) || 10),
-    telegramToken: $("tgToken").value.trim(),
-    telegramChatId: $("tgChat").value.trim(),
-  };
-  chrome.storage.local.set(cfg, () => {
-    chrome.runtime.sendMessage({
-      type: "CGMX_RESCHEDULE",
-      intervalMinutes: cfg.intervalMinutes,
-    });
-    $("msg").textContent = "บันทึกแล้ว ✓";
-    setTimeout(() => ($("msg").textContent = ""), 2000);
-  });
-}
-
-$("save").addEventListener("click", save);
-$("enabled").addEventListener("change", save);
-$("testTg").addEventListener("click", () => {
-  save();
-  $("msg").textContent = "กำลังส่ง…";
-  chrome.runtime.sendMessage({ type: "CGMX_TELEGRAM_TEST" }, (r) => {
-    $("msg").textContent =
-      r && r.ok ? "ส่งสำเร็จ ✓ เช็ค Telegram" : `ผิดพลาด: ${(r && r.error) || "?"}`;
-  });
-});
-$("clearCap").addEventListener("click", () =>
-  chrome.storage.local.set({ captures: [] }, load)
-);
-$("reloadTt").addEventListener("click", () => {
+function reloadTikTok() {
   chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
     if (tabs.length) chrome.tabs.reload(tabs[0].id);
-    $("msg").textContent = "สั่งโหลดหน้า TikTok ใหม่แล้ว รอสักครู่…";
   });
-});
+}
 
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.campaigns || changes.pauseRecipe) load();
-  else if (changes.captures) renderCaptures(changes.captures.newValue || []);
-});
+$("back").addEventListener("click", () => go("main"));
 
-load();
+chrome.storage.onChanged.addListener(() => loadStore(render));
+loadStore(render);

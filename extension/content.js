@@ -33,13 +33,25 @@ function findCampaignArray(node, depth) {
   return null;
 }
 
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function mapCampaigns(arr) {
   return arr.map((c) => ({
     id: String(c.campaign_id ?? c.campaign_id_str ?? c.id ?? ""),
     name: c.campaign_name ?? "(ไม่มีชื่อ)",
     status: String(c.campaign_opt_status ?? c.campaign_primary_status ?? ""),
-    budget: c.campaign_budget ?? c.lod_shop_budget ?? null,
-    cost: c.lod_shop_cost ?? null,
+    budget: num(c.campaign_budget ?? c.lod_shop_budget),
+    cost: num(c.lod_shop_cost ?? c.campaign_cost),
+    roi: num(c.roi ?? c.campaign_roi ?? c.complete_payment_roas ?? c.lod_roi),
+    orders: num(c.orders ?? c.order_cnt ?? c.lod_order_cnt ?? c.sku_orders),
+    channelId: String(
+      c.tt_account_id ?? c.identity_id ?? c.template_ad_identity_id ?? ""
+    ),
+    channelName: c.tt_account_name ?? "",
+    channelIcon: c.tt_account_avatar_icon ?? "",
     raw: c,
   }));
 }

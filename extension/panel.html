@@ -3,93 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <style>
-    :root { --bg:#0f0f14; --panel:#1a1a22; --border:#2a2a34; --text:#f2f2f5; --muted:#a0a0ad; --brand:#fe2c55; --ok:#34d399; }
-    * { box-sizing: border-box; }
+    :root { --teal:#12a594; --teal-d:#0e8a7c; --bg:#f4f6f7; --card:#fff; --border:#e3e8ea; --text:#1a2b2a; --muted:#7a8a89; --green:#16b364; --red:#e5484d; }
+    * { box-sizing:border-box; }
     body { margin:0; font-family:-apple-system,"Segoe UI","Sarabun",sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
-    header { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:2; }
-    .mark { width:26px; height:26px; border-radius:7px; background:linear-gradient(135deg,var(--brand),#c9224a); display:grid; place-items:center; font-weight:800; }
-    h1 { font-size:14px; margin:0; }
-    .body { padding:12px 14px; }
-    .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:12px; }
-    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; }
-    label { font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
-    input { width:100%; background:#0c0c11; border:1px solid var(--border); border-radius:8px; padding:8px; color:var(--text); font-size:13px; }
-    button { border:none; border-radius:8px; padding:7px 10px; font-size:12px; font-weight:600; cursor:pointer; }
-    .primary { background:var(--brand); color:#fff; }
-    .ghost { background:#22222c; color:var(--text); border:1px solid var(--border); }
-    .ok { background:var(--ok); color:#04120c; }
-    .switch { position:relative; width:42px; height:24px; }
+    header { background:var(--teal); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px; position:sticky; top:0; z-index:3; }
+    header .back { cursor:pointer; opacity:.9; font-weight:600; }
+    header h1 { font-size:15px; margin:0; font-weight:700; }
+    .app { padding:12px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    label { font-size:12px; color:var(--muted); }
+    input, select { background:#fff; border:1px solid var(--border); border-radius:8px; padding:7px 9px; color:var(--text); font-size:13px; }
+    input[type=number]{ width:88px; text-align:right; }
+    button { border:none; border-radius:9px; padding:9px 12px; font-size:13px; font-weight:700; cursor:pointer; }
+    .primary { background:var(--teal); color:#fff; width:100%; }
+    .ghost { background:#eef2f2; color:var(--text); }
+    .switch { position:relative; width:44px; height:25px; flex:none; }
     .switch input { display:none; }
-    .slider { position:absolute; inset:0; background:#3a3a44; border-radius:999px; transition:.2s; }
-    .slider:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
-    input:checked + .slider { background:var(--ok); }
-    input:checked + .slider:before { transform:translateX(18px); }
+    .slider { position:absolute; inset:0; background:#cfd8d7; border-radius:999px; transition:.2s; }
+    .slider:before { content:""; position:absolute; height:19px; width:19px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+    input:checked + .slider { background:var(--green); }
+    input:checked + .slider:before { transform:translateX(19px); }
     .muted { color:var(--muted); font-size:11px; line-height:1.5; }
-    .title { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:0 0 8px; }
-    .msg { font-size:12px; color:var(--ok); min-height:16px; }
-    .camp { border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:6px; }
-    .camp .n { font-weight:600; font-size:12px; word-break:break-word; }
-    .camp .meta { color:var(--muted); font-size:11px; margin:2px 0 6px; }
-    .camp .acts { display:flex; gap:6px; }
-    .cap { border:1px solid var(--border); border-radius:8px; padding:6px 8px; margin-bottom:5px; font-size:10px; }
-    .cap .m { display:inline-block; padding:1px 5px; border-radius:4px; background:#22222c; font-weight:700; margin-right:5px; }
-    .cap .u { word-break:break-all; color:#cfe; }
-    .pill { display:inline-block; padding:1px 6px; border-radius:5px; font-size:10px; }
-    .learn { border:1px solid #7a5; background:#12200f; color:#bdf5a8; border-radius:8px; padding:8px; font-size:11px; }
+    .sec { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:14px 2px 8px; }
+    .chan { display:flex; align-items:center; gap:10px; padding:11px 12px; background:#fff; border:1px solid var(--border); border-radius:12px; margin-bottom:8px; cursor:pointer; }
+    .chan:hover { border-color:var(--teal); }
+    .av { width:34px; height:34px; border-radius:50%; background:#dfeceb; flex:none; overflow:hidden; display:grid; place-items:center; font-weight:700; color:var(--teal); }
+    .av img { width:100%; height:100%; object-fit:cover; }
+    .chan .nm { font-weight:600; font-size:13px; }
+    .chan .id { color:var(--muted); font-size:11px; }
+    .chev { margin-left:auto; color:#bcc7c6; }
+    .addbtn { border:1px dashed var(--teal); color:var(--teal); background:#f2fbfa; border-radius:12px; padding:12px; text-align:center; font-weight:700; cursor:pointer; }
+    .note { background:#eef7f6; border:1px solid #cfe9e5; border-radius:10px; padding:10px; font-size:11px; color:#2b615b; margin-bottom:10px; }
+    .trigger { border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; }
+    .tabs { display:flex; gap:4px; background:#eef2f2; border-radius:9px; padding:3px; margin:6px 0; }
+    .tabs button { flex:1; background:transparent; color:var(--muted); padding:6px; font-size:12px; }
+    .tabs button.on { background:var(--teal); color:#fff; }
+    .msg { font-size:12px; color:var(--teal); min-height:16px; margin-top:6px; }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:6px; }
+    .search { width:100%; margin-bottom:10px; }
+    .pill { padding:1px 7px; border-radius:6px; font-size:10px; font-weight:700; }
+    footer { padding:8px 14px; color:var(--muted); font-size:10px; border-top:1px solid var(--border); }
+    a { color:var(--teal); }
   </style>
 </head>
 <body>
   <header>
-    <div class="mark">G</div>
-    <h1>GMV Max Controller</h1>
+    <span class="back" id="back" style="display:none">‹ กลับ</span>
+    <h1 id="title">GMV Max Monitor</h1>
+    <span id="headRight" style="margin-left:auto"></span>
   </header>
-  <div class="body">
-    <div class="card">
-      <div class="row" style="margin-top:0">
-        <div>
-          <div style="font-weight:600">เปิดใช้งานบอท</div>
-          <div class="muted">เปิด ads.tiktok.com ค้างไว้</div>
-        </div>
-        <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
-      </div>
-      <div class="row">
-        <label style="margin:0">รอบตรวจ (นาที)</label>
-        <input id="interval" type="number" min="1" style="width:80px" />
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="margin-top:0">
-        <p class="title" style="margin:0">แคมเปญ GMV Max</p>
-        <button class="ghost" id="reloadTt" style="padding:4px 8px">โหลดใหม่</button>
-      </div>
-      <div id="learnHint" class="learn" style="display:none;margin-bottom:8px">
-        ⚡ เพื่อให้ปุ่ม เปิด/ปิด ทำงาน: ในหน้า TikTok ให้ <b>ปิดแคมเปญ 1 ตัวด้วยมือ 1 ครั้ง</b>
-        เพื่อให้ระบบเรียนรู้คำสั่ง แล้วปุ่มที่นี่จะใช้ได้ทุกตัว
-      </div>
-      <div id="camps"><div class="muted">เปิดหน้า GMV Max บน ads.tiktok.com แล้วรอโหลด…</div></div>
-    </div>
-
-    <div class="card">
-      <p class="title">แจ้งเตือน Telegram</p>
-      <label>Bot Token</label>
-      <input id="tgToken" placeholder="123456:ABC-DEF…" />
-      <div style="height:8px"></div>
-      <label>Chat ID</label>
-      <input id="tgChat" placeholder="123456789" />
-      <div style="height:10px"></div>
-      <div class="row"><button class="primary" id="save">บันทึก</button><button class="ghost" id="testTg">ทดสอบส่ง</button></div>
-      <div class="msg" id="msg"></div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="margin-top:0">
-        <p class="title" style="margin:0">API ภายในที่จับได้ (debug)</p>
-        <button class="ghost" id="clearCap" style="padding:4px 8px">ล้าง</button>
-      </div>
-      <div id="caps" style="margin-top:6px"></div>
-    </div>
-  </div>
+  <div class="app" id="app"></div>
+  <footer id="foot">● พร้อมทำงาน</footer>
   <script src="panel.js"></script>
 </body>
 </html>
