@@ -165,7 +165,8 @@ function renderMain() {
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
     <div class="card" style="margin-top:10px">
       <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
-      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์ — เปิดหน้า GMV Max แล้วกดปุ่มนี้"}</div>
+      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}</div>
+      <div class="muted" style="margin-top:2px">ไม่เจอช่อง? → ไปหน้า <b>สร้างแคมเปญ</b> กดช่อง “ค้นหาชื่อผู้ใช้ TikTok” ให้ลิสต์เด้ง แล้วกด Sync</div>
       <div class="msg" id="syncMsg"></div>
     </div>
     <div class="sec">อื่นๆ</div>
@@ -214,7 +215,8 @@ function renderMain() {
       }
       chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, (r) => {
         if (chrome.runtime.lastError) {
-          $("syncMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message;
+          $("syncMsg").textContent =
+            "เชื่อมต่อแท็บไม่ได้ — กรุณา รีเฟรช (F5) หน้า ads.tiktok.com แล้วกด Sync ใหม่";
           return;
         }
         if (!r || !r.ok) {
@@ -264,8 +266,9 @@ function renderAdd() {
   const avail = availableChannels().filter((c) => !added.has(c.id));
   const app = $("app");
   app.innerHTML = `
-    <div class="note">💡 เห็นเฉพาะช่องที่โหลดข้อมูลแล้ว — เปิดหน้า GMV Max และ
-      <b>สลับร้าน/ช่องใน TikTok</b> ให้ครบ เพื่อให้ระบบเห็นทุกช่อง</div>
+    <div class="note">💡 <b>วิธีให้เห็นครบทุกช่อง:</b> ไปหน้า <b>สร้างแคมเปญ</b> บน TikTok →
+      กดช่อง <b>“แหล่งที่มาของ LIVE / ค้นหาชื่อผู้ใช้ TikTok”</b> ให้รายชื่อช่องเด้งขึ้นมา
+      (เลื่อนดูให้ครบ) — ระบบจะดักรายชื่อทั้งหมดอัตโนมัติ แล้วกลับมากด Sync</div>
     <input class="search" id="q" placeholder="ค้นหาชื่อช่อง...">
     <div id="list">${
       avail.length ? "" : '<div class="muted">ยังไม่เห็นช่อง — เปิดหน้า GMV Max ก่อน</div>'

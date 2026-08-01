@@ -5,6 +5,13 @@
   const TAG = "__CGMX__";
   const LIST_EP = "/oec/stat/post_campaign_list";
   const STATUS_EP = "/creation/campaign/update_status";
+  // Endpoints that carry the seller's LIVE/TikTok-account (channel) list —
+  // e.g. the "แหล่งที่มาของ LIVE / ค้นหาตามชื่อผู้ใช้" dropdown on the
+  // create-campaign page. Capture their full response so we can list channels.
+  const CHAN_EPS = [
+    "identity_list", "tt_list", "get_current_bind_info", "shop_allow_list",
+    "identity", "author", "anchor", "tt_account", "account_list", "creator",
+  ];
 
   function isInteresting(url) {
     try {
@@ -64,8 +71,12 @@
 
   function classify(url, method, headers, reqBody, resText) {
     const u = String(url);
+    const ul = u.toLowerCase();
     if (u.includes(LIST_EP) && resText) {
       post({ kind: "list", url: u, resFull: resText.slice(0, 200000), ts: Date.now() });
+    }
+    if (resText && CHAN_EPS.some((ep) => ul.includes(ep))) {
+      post({ kind: "channels", url: u, resFull: resText.slice(0, 200000), ts: Date.now() });
     }
     if (u.includes(STATUS_EP)) {
       post({

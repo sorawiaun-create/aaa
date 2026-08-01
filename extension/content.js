@@ -85,6 +85,31 @@ window.addEventListener("message", (ev) => {
     return;
   }
 
+  if (e.kind === "channels" && e.resFull) {
+    try {
+      const json = JSON.parse(e.resFull);
+      const arr = findChannelArray(json, 0);
+      if (arr && arr.length) {
+        const mapped = arr.map(mapChannel).filter((c) => c.id && c.id !== "undefined");
+        if (mapped.length) {
+          // Merge with existing discovered channels (dedupe by id).
+          chrome.storage.local.get({ channelList: [] }, (res) => {
+            const byId = new Map();
+            for (const c of res.channelList || []) byId.set(c.id, c);
+            for (const c of mapped) byId.set(c.id, { ...byId.get(c.id), ...c });
+            chrome.storage.local.set({
+              channelList: [...byId.values()],
+              channelListTs: e.ts,
+            });
+          });
+        }
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+    return;
+  }
+
   if (e.kind === "recipe") {
     chrome.storage.local.set({
       pauseRecipe: {
@@ -188,94 +213,103 @@ function sanitizeHeaders(h) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "CGMX_SYNC") {
     (async () => {
-      const st = await chrome.storage.local.get({ ctx: null, headerTemplate: {} });
-      const ctx = st.ctx;
-      if (!ctx || !ctx.aadvid) {
-        sendResponse({
-          ok: false,
-          error: "ยังไม่มี context — เปิดหน้า GMV Max แล้วกดปุ่มในหน้าสัก 1 ครั้งก่อน",
-        });
-        return;
-      }
-      const hdr = sanitizeHeaders(st.headerTemplate);
-      const qs = `locale=th&language=th&oec_seller_id=${ctx.oec_seller_id}&aadvid=${ctx.aadvid}&bc_id=${ctx.bc_id}`;
-      const B = "https://ads.tiktok.com/api/oec_shopping/v1";
-      const out = { ctxUsed: ctx, probes: {}, errors: [] };
-
-      // Probe several endpoints that may hold the seller's bound channels.
-      const getEps = [
-        ["tt_list", `${B}/oec/tt_list?${qs}`],
-        ["identity_list", `${B}/creation/identity_list?${qs}`],
-        ["get_current_bind_info", `${B}/oec/get_current_bind_info?${qs}`],
-        ["shop_allow_list", `${B}/oec/shop_allow_list?${qs}`],
-      ];
-      for (const [name, url] of getEps) {
-        try {
-          const r = await fetch(url, { credentials: "include", headers: hdr });
-          out.probes[name] = await r.json();
-        } catch (e) {
-          out.errors.push(`${name}: ${e}`);
-        }
-      }
-
-      // Campaign list (also a source of channels via per-row account fields).
       try {
-        const today = new Date().toISOString().slice(0, 10);
-        const body = {
-          query_list: [
-            "campaign_id", "campaign_name", "campaign_opt_status",
-            "campaign_primary_status", "campaign_status", "campaign_budget",
-            "campaign_total_budget", "tt_account_id", "tt_account_name",
-            "tt_account_avatar_icon", "template_ad_identity_id", "identity_id",
-            "lod_shop_cost", "cost", "onsite_roi2_shopping_value",
-            "onsite_roi2_shopping_sku", "onsite_roi2_shopping",
-            "cost_per_onsite_roi2_shopping_sku", "onsite_roi2_roi",
-          ],
-          start_time: today, end_time: today, order_field: "lod_shop_cost",
-          order_type: 0, page: 1, campaign_shop_automation_type: 2,
-          external_type_list: ["307", "304", "305"],
-        };
-        const r = await fetch(`${B}/oec/stat/post_campaign_list?${qs}`, {
-          method: "POST", credentials: "include", headers: hdr, body: JSON.stringify(body),
+        const st = await chrome.storage.local.get({
+          ctx: null, headerTemplate: {}, channelList: [],
         });
-        out.probes.post_campaign_list = await r.json();
-      } catch (e) {
-        out.errors.push("post_campaign_list: " + e);
-      }
+        const ctx = st.ctx;
+        // Channels already discovered live from the create-campaign dropdown.
+        const discovered = st.channelList || [];
 
-      // Parse: try each probe for a channel array; fall back to campaigns.
-      const parsed = {};
-      let chSource = "";
-      for (const name of ["tt_list", "identity_list", "get_current_bind_info", "shop_allow_list"]) {
-        const arr = findChannelArray(out.probes[name], 0);
-        if (arr && arr.length) {
-          const mapped = arr.map(mapChannel).filter((c) => c.id);
-          if (mapped.length) { parsed.channelList = mapped; chSource = name; break; }
+        const hdr = sanitizeHeaders(st.headerTemplate);
+        const out = { ctxUsed: ctx, probes: {}, errors: [] };
+        const parsed = {};
+        let chSource = discovered.length ? "หน้าสร้างแคมเปญ" : "";
+
+        if (ctx && ctx.aadvid) {
+          const qs = `locale=th&language=th&oec_seller_id=${ctx.oec_seller_id}&aadvid=${ctx.aadvid}&bc_id=${ctx.bc_id}`;
+          const B = "https://ads.tiktok.com/api/oec_shopping/v1";
+
+          const getEps = [
+            ["tt_list", `${B}/oec/tt_list?${qs}`],
+            ["identity_list", `${B}/creation/identity_list?${qs}`],
+            ["get_current_bind_info", `${B}/oec/get_current_bind_info?${qs}`],
+            ["shop_allow_list", `${B}/oec/shop_allow_list?${qs}`],
+          ];
+          for (const [name, url] of getEps) {
+            try {
+              const r = await fetch(url, { credentials: "include", headers: hdr });
+              out.probes[name] = await r.json();
+            } catch (e) {
+              out.errors.push(`${name}: ${e}`);
+            }
+          }
+
+          try {
+            const today = new Date().toISOString().slice(0, 10);
+            const body = {
+              query_list: [
+                "campaign_id", "campaign_name", "campaign_opt_status",
+                "campaign_primary_status", "campaign_status", "campaign_budget",
+                "campaign_total_budget", "tt_account_id", "tt_account_name",
+                "tt_account_avatar_icon", "template_ad_identity_id", "identity_id",
+                "lod_shop_cost", "cost", "onsite_roi2_shopping_value",
+                "onsite_roi2_shopping_sku", "onsite_roi2_shopping",
+                "cost_per_onsite_roi2_shopping_sku", "onsite_roi2_roi",
+              ],
+              start_time: today, end_time: today, order_field: "lod_shop_cost",
+              order_type: 0, page: 1, campaign_shop_automation_type: 2,
+              external_type_list: ["307", "304", "305"],
+            };
+            const r = await fetch(`${B}/oec/stat/post_campaign_list?${qs}`, {
+              method: "POST", credentials: "include", headers: hdr, body: JSON.stringify(body),
+            });
+            out.probes.post_campaign_list = await r.json();
+          } catch (e) {
+            out.errors.push("post_campaign_list: " + e);
+          }
+
+          const cpArr = findCampaignArray(out.probes.post_campaign_list, 0);
+          if (cpArr) parsed.campaigns = mapCampaigns(cpArr);
+        } else {
+          out.errors.push("ไม่มี ctx (aadvid) — โหลดได้เฉพาะช่องที่ดักจากหน้าเว็บ");
         }
-      }
-      const cpArr = findCampaignArray(out.probes.post_campaign_list, 0);
-      if (cpArr) parsed.campaigns = mapCampaigns(cpArr);
 
-      // Fallback: derive channels from campaign rows if no channel endpoint worked.
-      if (!parsed.channelList && parsed.campaigns) {
-        const map = new Map();
-        for (const c of parsed.campaigns) {
-          const id = c.channelId || "__current__";
-          if (!map.has(id))
-            map.set(id, { id, name: c.channelName || "ร้านปัจจุบัน", icon: c.channelIcon || "" });
+        // Merge channels from all sources (dedupe by id), starting with the
+        // ones the interceptor already grabbed from the create-campaign page.
+        const byId = new Map();
+        for (const c of discovered) if (c.id) byId.set(c.id, c);
+        for (const name of ["tt_list", "identity_list", "get_current_bind_info", "shop_allow_list"]) {
+          const arr = findChannelArray(out.probes[name], 0);
+          if (arr) for (const c of arr.map(mapChannel)) {
+            if (c.id && c.id !== "undefined") {
+              byId.set(c.id, { ...byId.get(c.id), ...c });
+              if (!chSource) chSource = name;
+            }
+          }
         }
-        if (map.size) { parsed.channelList = [...map.values()]; chSource = "campaigns"; }
-      }
+        if (byId.size === 0 && parsed.campaigns) {
+          for (const c of parsed.campaigns) {
+            const id = c.channelId || "__current__";
+            if (!byId.has(id))
+              byId.set(id, { id, name: c.channelName || "ร้านปัจจุบัน", icon: c.channelIcon || "" });
+          }
+          if (byId.size) chSource = "campaigns";
+        }
+        if (byId.size) parsed.channelList = [...byId.values()];
 
-      out.channelSource = chSource;
-      await chrome.storage.local.set({ syncRaw: out, ...parsed, syncTs: Date.now() });
-      sendResponse({
-        ok: true,
-        channels: parsed.channelList ? parsed.channelList.length : 0,
-        campaigns: parsed.campaigns ? parsed.campaigns.length : 0,
-        source: chSource,
-        errors: out.errors,
-      });
+        out.channelSource = chSource;
+        await chrome.storage.local.set({ syncRaw: out, ...parsed, syncTs: Date.now() });
+        sendResponse({
+          ok: true,
+          channels: parsed.channelList ? parsed.channelList.length : 0,
+          campaigns: parsed.campaigns ? parsed.campaigns.length : 0,
+          source: chSource,
+          errors: out.errors,
+        });
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+      }
     })();
     return true;
   }
