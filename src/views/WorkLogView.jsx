@@ -4,7 +4,7 @@ import {
   SectionCard, Button, EmptyState, Modal, Field, Input, Select, Badge, KpiCard,
 } from '../components/ui.jsx';
 import { computePayroll } from '../lib/payroll.js';
-import { formatCurrency, formatCurrency0, formatBahtCompact, monthLabel, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
+import { formatCurrency, formatCurrency0, formatBahtCompact, formatHours, monthLabel, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
 
 const STATUS = {
   present: { label: 'มาทำงาน', color: 'green' },
@@ -42,15 +42,17 @@ function Payroll({ store, month }) {
 
   const totals = useMemo(() => rows.reduce((a, r) => ({
     base: a.base + r.base, commission: a.commission + r.commission,
-    bonus: a.bonus + r.kpiBonus, adjust: a.adjust + r.adjust, total: a.total + r.total, sales: a.sales + r.salesTotal,
-  }), { base: 0, commission: 0, bonus: 0, adjust: 0, total: 0, sales: 0 }), [rows]);
+    bonus: a.bonus + r.kpiBonus, adjust: a.adjust + r.adjust, total: a.total + r.total,
+    sales: a.sales + r.salesTotal, hours: a.hours + r.liveHours,
+  }), { base: 0, commission: 0, bonus: 0, adjust: 0, total: 0, sales: 0, hours: 0 }), [rows]);
 
   const exportCsv = () => {
-    const head = ['พนักงาน', 'ทีม', 'ยอดขาย', 'วันทำงาน', 'ฐาน', 'คอมมิชชั่น', 'โบนัสKPI', 'ปรับเพิ่ม/หัก', 'รวมรับ'];
+    const head = ['พนักงาน', 'ทีม', 'ยอดขาย', 'ชม.ไลฟ์', 'บาท/ชม', 'วันทำงาน', 'ฐาน', 'คอมมิชชั่น', 'โบนัสKPI', 'ปรับเพิ่ม/หัก', 'รวมรับ'];
     const lines = rows.map((r) => [
       r.employee.name,
       store.teams.find((t) => t.id === r.employee.teamId)?.name || '',
-      r.salesTotal, r.daysWorked, r.base, r.commission.toFixed(2), r.kpiBonus, r.adjust, r.total.toFixed(2),
+      r.salesTotal, r.liveHours, r.salesPerHour ? Math.round(r.salesPerHour) : '', r.daysWorked,
+      r.base, r.commission.toFixed(2), r.kpiBonus, r.adjust, r.total.toFixed(2),
     ]);
     const csv = [head, ...lines].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -85,6 +87,7 @@ function Payroll({ store, month }) {
               <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
                 <th className="px-5 py-3 font-medium">พนักงาน</th>
                 <th className="px-4 py-3 font-medium text-right">ยอดขาย</th>
+                <th className="px-4 py-3 font-medium text-right">ชม.ไลฟ์</th>
                 <th className="px-4 py-3 font-medium text-right">วันทำงาน</th>
                 <th className="px-4 py-3 font-medium text-right">ฐาน</th>
                 <th className="px-4 py-3 font-medium text-right">คอมมิชชั่น</th>
@@ -101,6 +104,10 @@ function Payroll({ store, month }) {
                     <div className="text-[11px] text-slate-400">{r.employee.role || '—'}{r.kpiHit ? ' · ✓ ถึงเป้า KPI' : ''}</div>
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency0(r.salesTotal)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
+                    <div className="text-slate-700">{r.liveHours ? formatHours(r.liveHours) : '—'}</div>
+                    {r.salesPerHour ? <div className="text-[11px] text-slate-400">{formatCurrency0(r.salesPerHour)}/ชม</div> : null}
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-500">{r.daysWorked || '—'}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency0(r.base)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency0(r.commission)}</td>
@@ -114,6 +121,7 @@ function Payroll({ store, month }) {
               <tr className="border-t-2 border-slate-100 font-semibold text-slate-700">
                 <td className="px-5 py-3">รวม</td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.sales)}</td>
+                <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">{totals.hours ? formatHours(totals.hours) : '—'}</td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.base)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.commission)}</td>

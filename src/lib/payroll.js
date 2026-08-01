@@ -81,6 +81,8 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
         (s) => s.employeeId === emp.id && (!monthKey || monthKeyOf(s.date) === monthKey)
       );
       const salesTotal = sumBy(empSales, 'sales');
+      const liveHours = Math.round(sumBy(empSales, 'hours') * 100) / 100;
+      const salesPerHour = liveHours > 0 ? salesTotal / liveHours : null;
       const daysWorked = daysWorkedFor(emp.id, workLogs, monthKey);
       const base = basePayFor(emp, daysWorked);
       const plan = planFor(emp, settings);
@@ -97,6 +99,8 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
         employee: emp,
         salesTotal,
         records: empSales.length,
+        liveHours,
+        salesPerHour,
         daysWorked,
         base,
         commission,
