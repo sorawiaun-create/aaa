@@ -92,7 +92,8 @@ window.addEventListener("message", (ev) => {
       if (arr && arr.length) {
         const mapped = arr.map(mapChannel).filter((c) => c.id && c.id !== "undefined");
         if (mapped.length) {
-          // Merge with existing discovered channels (dedupe by id).
+          // Merge with existing discovered channels (dedupe by id) AND remember
+          // how this list was requested so we can replay it automatically.
           chrome.storage.local.get({ channelList: [] }, (res) => {
             const byId = new Map();
             for (const c of res.channelList || []) byId.set(c.id, c);
@@ -100,6 +101,13 @@ window.addEventListener("message", (ev) => {
             chrome.storage.local.set({
               channelList: [...byId.values()],
               channelListTs: e.ts,
+              channelRecipe: {
+                url: e.url,
+                method: e.method || "GET",
+                headers: e.headers || {},
+                reqBody: e.reqBody || null,
+                ts: e.ts,
+              },
             });
           });
         }
@@ -215,16 +223,58 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     (async () => {
       try {
         const st = await chrome.storage.local.get({
-          ctx: null, headerTemplate: {}, channelList: [],
+          ctx: null, headerTemplate: {}, channelList: [], channelRecipe: null,
         });
         const ctx = st.ctx;
         // Channels already discovered live from the create-campaign dropdown.
         const discovered = st.channelList || [];
 
         const hdr = sanitizeHeaders(st.headerTemplate);
-        const out = { ctxUsed: ctx, probes: {}, errors: [] };
+        const out = { ctxUsed: ctx, probes: {}, errors: [], recipePages: 0 };
         const parsed = {};
         let chSource = discovered.length ? "หน้าสร้างแคมเปญ" : "";
+
+        // Auto-replay the learned channel-list request (from the create-campaign
+        // dropdown). Once captured, this fetches ALL channels with no manual step.
+        const recipeChannels = [];
+        if (st.channelRecipe && st.channelRecipe.url) {
+          const rec = st.channelRecipe;
+          const rHdr = sanitizeHeaders(rec.headers);
+          let bodyObj = null;
+          try { bodyObj = rec.reqBody ? JSON.parse(rec.reqBody) : null; } catch { bodyObj = null; }
+          const pageKey = bodyObj
+            ? ["page", "page_no", "cursor", "offset"].find((k) => k in bodyObj)
+            : null;
+          for (let p = 1; p <= 20; p++) {
+            let url = rec.url;
+            let body = rec.reqBody;
+            if (bodyObj && pageKey) {
+              bodyObj[pageKey] = pageKey === "offset" ? (p - 1) * (bodyObj.count || bodyObj.limit || 20) : p;
+              body = JSON.stringify(bodyObj);
+            }
+            try {
+              const r = await fetch(url, {
+                method: rec.method || "GET",
+                credentials: "include",
+                headers: rHdr,
+                body: rec.method && rec.method !== "GET" ? body : undefined,
+              });
+              const j = await r.json();
+              if (p === 1) out.probes.channelRecipe = j;
+              const arr = findChannelArray(j, 0) || [];
+              const mapped = arr.map(mapChannel).filter((c) => c.id && c.id !== "undefined");
+              out.recipePages = p;
+              recipeChannels.push(...mapped);
+              // Stop when a page returns nothing new / no pagination available.
+              if (!pageKey || arr.length === 0) break;
+              if (mapped.length === 0) break;
+            } catch (e) {
+              out.errors.push(`channelRecipe p${p}: ${e}`);
+              break;
+            }
+          }
+          if (recipeChannels.length && !discovered.length) chSource = "auto (จำจากหน้าสร้าง)";
+        }
 
         if (ctx && ctx.aadvid) {
           const qs = `locale=th&language=th&oec_seller_id=${ctx.oec_seller_id}&aadvid=${ctx.aadvid}&bc_id=${ctx.bc_id}`;
@@ -279,6 +329,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         // ones the interceptor already grabbed from the create-campaign page.
         const byId = new Map();
         for (const c of discovered) if (c.id) byId.set(c.id, c);
+        for (const c of recipeChannels) byId.set(c.id, { ...byId.get(c.id), ...c });
         for (const name of ["tt_list", "identity_list", "get_current_bind_info", "shop_allow_list"]) {
           const arr = findChannelArray(out.probes[name], 0);
           if (arr) for (const c of arr.map(mapChannel)) {

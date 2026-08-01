@@ -52,6 +52,7 @@ function loadStore(cb) {
       telegramChatId: "",
       campaigns: [],
       channelList: [],
+      channelRecipe: null,
       pauseRecipe: null,
       lastRun: 0,
       syncTs: 0,
@@ -165,8 +166,8 @@ function renderMain() {
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
     <div class="card" style="margin-top:10px">
       <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
-      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}</div>
-      <div class="muted" style="margin-top:2px">ไม่เจอช่อง? → ไปหน้า <b>สร้างแคมเปญ</b> กดช่อง “ค้นหาชื่อผู้ใช้ TikTok” ให้ลิสต์เด้ง แล้วกด Sync</div>
+      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}${STORE.channelRecipe ? " · 🟢 auto พร้อม" : ""}</div>
+      <div class="muted" style="margin-top:2px">${STORE.channelRecipe ? "✅ ระบบจำวิธีดึงช่องแล้ว — จากนี้ดึงเองอัตโนมัติทุกครั้ง" : "ครั้งแรกครั้งเดียว: ไปหน้า <b>สร้างแคมเปญ</b> กดช่อง “ค้นหาชื่อผู้ใช้ TikTok” ให้ลิสต์เด้ง 1 ครั้ง — หลังจากนั้นไม่ต้องทำอีก"}</div>
       <div class="msg" id="syncMsg"></div>
     </div>
     <div class="sec">อื่นๆ</div>
@@ -240,6 +241,9 @@ function downloadDebug() {
       channelList: all.channelList || [],
       captures: all.captures || [],
       syncRaw: all.syncRaw || null,
+      channelRecipe: all.channelRecipe
+        ? { url: all.channelRecipe.url, method: all.channelRecipe.method, reqBody: all.channelRecipe.reqBody }
+        : null,
       pauseRecipe: all.pauseRecipe
         ? { url: all.pauseRecipe.url, reqBody: all.pauseRecipe.reqBody }
         : null,
@@ -557,3 +561,16 @@ $("back").addEventListener("click", () => {
 
 chrome.storage.onChanged.addListener(() => loadStore(render));
 loadStore(render);
+
+// Auto-sync silently when the panel opens (if a TikTok tab is present), so the
+// user rarely has to press Sync manually.
+function autoSyncOnOpen() {
+  chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+    if (!tabs.length) return;
+    chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, () => {
+      void chrome.runtime.lastError; // ignore; user can press Sync manually
+      loadStore(render);
+    });
+  });
+}
+autoSyncOnOpen();

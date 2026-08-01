@@ -64,6 +64,18 @@ function execOnTikTok(req) {
   });
 }
 
+// Ask the content script to refresh channels + campaigns from TikTok.
+function tabSync() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
+      chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, (r) =>
+        resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
+      );
+    });
+  });
+}
+
 function buildPauseBody(recipe, id) {
   try {
     const o = JSON.parse(recipe.reqBody);
@@ -84,8 +96,11 @@ function sanitize(h) {
 }
 
 async function runRules() {
-  const s = await chrome.storage.local.get(KEYS);
+  let s = await chrome.storage.local.get(KEYS);
   if (!s.enabled) return;
+  // Auto-refresh data from TikTok first so decisions use live numbers.
+  await tabSync();
+  s = await chrome.storage.local.get(KEYS);
   const acted = s.actedIds || {};
   const now = Date.now();
   const actions = [];

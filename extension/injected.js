@@ -76,7 +76,15 @@
       post({ kind: "list", url: u, resFull: resText.slice(0, 200000), ts: Date.now() });
     }
     if (resText && CHAN_EPS.some((ep) => ul.includes(ep))) {
-      post({ kind: "channels", url: u, resFull: resText.slice(0, 200000), ts: Date.now() });
+      post({
+        kind: "channels",
+        url: u,
+        method: String(method).toUpperCase(),
+        headers,
+        reqBody,
+        resFull: resText.slice(0, 200000),
+        ts: Date.now(),
+      });
     }
     if (u.includes(STATUS_EP)) {
       post({
