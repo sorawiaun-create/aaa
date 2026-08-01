@@ -42,17 +42,18 @@ function Payroll({ store, month }) {
 
   const totals = useMemo(() => rows.reduce((a, r) => ({
     base: a.base + r.base, commission: a.commission + r.commission,
-    bonus: a.bonus + r.kpiBonus, adjust: a.adjust + r.adjust, total: a.total + r.total,
-    sales: a.sales + r.salesTotal, hours: a.hours + r.liveHours,
-  }), { base: 0, commission: 0, bonus: 0, adjust: 0, total: 0, sales: 0, hours: 0 }), [rows]);
+    bonus: a.bonus + r.kpiBonus, adjust: a.adjust + r.adjust, deduction: a.deduction + r.deduction,
+    total: a.total + r.total, sales: a.sales + r.salesTotal, hours: a.hours + r.liveHours,
+  }), { base: 0, commission: 0, bonus: 0, adjust: 0, deduction: 0, total: 0, sales: 0, hours: 0 }), [rows]);
 
   const exportCsv = () => {
-    const head = ['พนักงาน', 'ทีม', 'ยอดขาย', 'ชม.ไลฟ์', 'บาท/ชม', 'วันทำงาน', 'ฐาน', 'คอมมิชชั่น', 'โบนัสKPI', 'ปรับเพิ่ม/หัก', 'รวมรับ'];
+    const head = ['พนักงาน', 'ทีม', 'ยอดขาย', 'ชม.ไลฟ์', 'บาท/ชม', 'วันทำงาน', 'ขาด/ลา(วัน)', 'ฐาน', 'คอมมิชชั่น', 'โบนัสKPI', 'หักลา/ขาด', 'ปรับเพิ่ม/หัก', 'รวมรับ'];
     const lines = rows.map((r) => [
       r.employee.name,
       store.teams.find((t) => t.id === r.employee.teamId)?.name || '',
       r.salesTotal, r.liveHours, r.salesPerHour ? Math.round(r.salesPerHour) : '', r.daysWorked,
-      r.base, r.commission.toFixed(2), r.kpiBonus, r.adjust, r.total.toFixed(2),
+      r.absentDays + r.halfDays * 0.5, r.base, r.commission.toFixed(2), r.kpiBonus,
+      r.deduction ? -r.deduction : 0, r.adjust, r.total.toFixed(2),
     ]);
     const csv = [head, ...lines].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -92,6 +93,7 @@ function Payroll({ store, month }) {
                 <th className="px-4 py-3 font-medium text-right">ฐาน</th>
                 <th className="px-4 py-3 font-medium text-right">คอมมิชชั่น</th>
                 <th className="px-4 py-3 font-medium text-right">โบนัส KPI</th>
+                <th className="px-4 py-3 font-medium text-right">หัก ลา/ขาด</th>
                 <th className="px-4 py-3 font-medium text-right">ปรับ</th>
                 <th className="px-5 py-3 font-medium text-right">รวมรับ</th>
               </tr>
@@ -112,6 +114,14 @@ function Payroll({ store, month }) {
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency0(r.base)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatCurrency0(r.commission)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-emerald-600">{r.kpiBonus ? formatCurrency0(r.kpiBonus) : '—'}</td>
+                  <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
+                    {r.deduction ? (
+                      <>
+                        <div className="text-red-500">-{formatCurrency0(r.deduction)}</div>
+                        <div className="text-[11px] text-slate-400">{r.absentDays ? `ขาด ${r.absentDays} ` : ''}{r.halfDays ? `ครึ่ง ${r.halfDays}` : ''}วัน</div>
+                      </>
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-500">{r.adjust ? formatCurrency0(r.adjust) : '—'}</td>
                   <td className="px-5 py-3 text-right tabular-nums font-bold text-slate-800">{formatCurrency0(r.total)}</td>
                 </tr>
@@ -126,6 +136,7 @@ function Payroll({ store, month }) {
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.base)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.commission)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.bonus)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-red-500">{totals.deduction ? `-${formatCurrency0(totals.deduction)}` : formatCurrency0(0)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatCurrency0(totals.adjust)}</td>
                 <td className="px-5 py-3 text-right tabular-nums text-pink-600">{formatCurrency0(totals.total)}</td>
               </tr>

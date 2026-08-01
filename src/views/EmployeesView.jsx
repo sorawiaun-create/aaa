@@ -8,7 +8,7 @@ import { formatCurrency0, formatPercent } from '../lib/format.js';
 
 const blankEmployee = () => ({
   name: '', nickname: '', role: '', teamId: '', active: true, kpiTarget: '',
-  pay: { baseType: 'monthly', baseAmount: '', commission: { type: 'flat', rate: '', tiers: [] }, kpiBonus: '', adjust: '' },
+  pay: { baseType: 'monthly', baseAmount: '', commission: { type: 'flat', rate: '', tiers: [] }, kpiBonus: '', adjust: '', deductPerDay: '' },
 });
 
 const planLabel = (plan) => {
@@ -42,6 +42,7 @@ export default function EmployeesView({ store, month }) {
         baseAmount: Number(d.pay.baseAmount) || 0,
         kpiBonus: Number(d.pay.kpiBonus) || 0,
         adjust: Number(d.pay.adjust) || 0,
+        deductPerDay: Number(d.pay.deductPerDay) || 0,
         commission: {
           type: d.pay.commission.type,
           rate: Number(d.pay.commission.rate) || 0,
@@ -205,6 +206,15 @@ function EmployeeModal({ modal, setModal, store, set, setPay, setCommission, sav
           {d.pay.baseType === 'daily' && (
             <p className="text-[11px] text-slate-400">* จำนวนวันทำงานนับจากเมนู “บันทึกงานรายวัน” (ไม่รวมวันที่ทำเครื่องหมาย “ขาด”)</p>
           )}
+          {d.pay.baseType === 'monthly' && (
+            <Field
+              label="หักเงินต่อวัน เมื่อลา/ขาด (฿)"
+              hint={`เว้นว่าง = คิดจากเงินเดือน ÷ ${store.settings.workDaysPerMonth || 26} วัน (${d.pay.baseAmount ? `≈ ${Math.round((Number(d.pay.baseAmount) || 0) / (store.settings.workDaysPerMonth || 26))} บาท/วัน` : 'ใส่เงินเดือนก่อน'}) · ขาด=หัก 1 วัน, ครึ่งวัน=หัก 0.5`}
+              className="max-w-xs"
+            >
+              <Input type="number" value={d.pay.deductPerDay} onChange={(e) => setPay({ deductPerDay: e.target.value })} placeholder="อัตโนมัติ" />
+            </Field>
+          )}
         </div>
 
         {/* Commission */}
@@ -255,7 +265,7 @@ function EmployeeModal({ modal, setModal, store, set, setPay, setCommission, sav
         </div>
 
         <Banner tone="info">
-          ยอดรับจริงต่อเดือนจะถูกคำนวณอัตโนมัติ = ฐาน + คอมมิชชั่น + โบนัส KPI + ปรับเพิ่ม/หัก — ดูสรุปคิดเงินทั้งหมดได้ที่เมนู “บันทึกงานรายวัน”
+          ยอดรับจริงต่อเดือนจะถูกคำนวณอัตโนมัติ = ฐาน + คอมมิชชั่น + โบนัส KPI − หัก(ลา/ขาด) + ปรับเพิ่ม/หัก — ดูสรุปคิดเงินทั้งหมดได้ที่เมนู “บันทึกงานรายวัน”
         </Banner>
       </div>
     </Modal>

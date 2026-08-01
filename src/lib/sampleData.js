@@ -80,9 +80,12 @@ export function buildSampleData() {
   // Attendance for the same three days (drives daily-rate base pay).
   const workLogs = [];
   let wid = 1;
+  // A couple of demo leaves so the deduction column is visible.
+  const leaves = { 'emp-3|03/07/2026': 'absent', 'emp-5|02/07/2026': 'half' };
   ['01/07/2026', '02/07/2026', '03/07/2026'].forEach((date) => {
     employees.forEach((emp) => {
-      workLogs.push({ id: `wl-${wid++}`, employeeId: emp.id, channelId: '', date, shift: 'บ่าย-ค่ำ', status: 'present', note: '' });
+      const status = leaves[`${emp.id}|${date}`] || 'present';
+      workLogs.push({ id: `wl-${wid++}`, employeeId: emp.id, channelId: '', date, shift: 'บ่าย-ค่ำ', status, note: status === 'absent' ? 'ลากิจ' : '' });
     });
   });
 

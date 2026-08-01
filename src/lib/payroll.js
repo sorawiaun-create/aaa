@@ -72,6 +72,20 @@ export function daysWorkedFor(employeeId, workLogs, monthKey) {
   return days.size;
 }
 
+// Leave/absence tally for an employee in the (optional) month.
+// absent → 1 day, half → 0.5 day. Returns { absentDays, halfDays, units }.
+export function absenceUnitsFor(employeeId, workLogs, monthKey) {
+  let absentDays = 0;
+  let halfDays = 0;
+  workLogs.forEach((w) => {
+    if (w.employeeId !== employeeId) return;
+    if (monthKey && monthKeyOf(w.date) !== monthKey) return;
+    if (w.status === 'absent') absentDays += 1;
+    else if (w.status === 'half') halfDays += 1;
+  });
+  return { absentDays, halfDays, units: absentDays + 0.5 * halfDays };
+}
+
 // Full payroll for a month (monthKey = 'YYYY-MM', or null for all-time).
 // Returns one row per employee with the pay breakdown.
 export function computePayroll({ employees, sales, workLogs, settings, monthKey }) {
@@ -94,7 +108,16 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
       const kpiBonus = kpiHit ? num(emp.pay?.kpiBonus) : 0;
       const adjust = num(emp.pay?.adjust); // manual +/- (deductions, extras)
 
-      const total = base + commission + kpiBonus + adjust;
+      // Leave/absence deduction — only for monthly-salary staff (daily staff
+      // already lose pay for days not worked). Absent = 1 day, half = 0.5 day.
+      const monthly = emp.pay?.baseType === 'monthly';
+      const absence = absenceUnitsFor(emp.id, workLogs, monthKey);
+      const perDayDeduct = num(emp.pay?.deductPerDay) > 0
+        ? num(emp.pay.deductPerDay)
+        : num(emp.pay?.baseAmount) / (num(settings?.workDaysPerMonth) || 26);
+      const deduction = monthly ? Math.round(perDayDeduct * absence.units * 100) / 100 : 0;
+
+      const total = base + commission + kpiBonus + adjust - deduction;
       return {
         employee: emp,
         salesTotal,
@@ -110,6 +133,10 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
         kpiHit,
         kpiBonus,
         adjust,
+        absentDays: absence.absentDays,
+        halfDays: absence.halfDays,
+        perDayDeduct: monthly ? Math.round(perDayDeduct * 100) / 100 : 0,
+        deduction,
         total,
       };
     })
