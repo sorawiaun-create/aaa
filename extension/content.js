@@ -100,8 +100,9 @@ window.addEventListener("message", (ev) => {
       );
       const rec = {
         method: e.method,
-        url: e.url,
+        url: e.url.split("?")[0],
         reqBody: e.reqBody || null,
+        resSample: e.resSample || "",
         ts: e.ts,
       };
       if (idx >= 0) list[idx] = rec;

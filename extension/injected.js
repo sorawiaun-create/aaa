@@ -14,7 +14,12 @@
         u.includes("campaign") ||
         u.includes("/report") ||
         u.includes("smart_plus") ||
-        u.includes("oec_shopping")
+        u.includes("oec_shopping") ||
+        u.includes("store") ||
+        u.includes("/shop") ||
+        u.includes("identity") ||
+        u.includes("seller") ||
+        u.includes("account")
       );
     } catch {
       return false;

@@ -139,7 +139,9 @@ function renderMain() {
       <input class="search" id="tgChat" placeholder="Chat ID" value="${esc(STORE.telegramChatId)}" style="width:100%">
       <div class="row" style="margin-top:8px"><button class="ghost" id="tgSave">บันทึก</button><button class="ghost" id="tgTest">ทดสอบส่ง</button></div>
       <div class="msg" id="msg"></div>
-      <div class="muted" style="margin-top:8px"><a id="dbg" href="#">ดู field ดิบของแคมเปญ (debug)</a></div>
+      <div class="muted" style="margin-top:8px">
+        <button class="ghost" id="dlDbg" style="width:100%">⬇️ ดาวน์โหลด debug ทั้งไฟล์ (ส่งให้ผม)</button>
+      </div>
     </div>`;
 
   $("prog").addEventListener("change", (e) =>
@@ -166,10 +168,32 @@ function renderMain() {
       $("msg").textContent = r && r.ok ? "ส่งสำเร็จ ✓" : `ผิดพลาด: ${(r && r.error) || "?"}`;
     });
   });
-  $("dbg").addEventListener("click", (e) => {
-    e.preventDefault();
-    const c = (STORE.campaigns || [])[0];
-    alert(c ? JSON.stringify(c.raw, null, 1).slice(0, 3000) : "ยังไม่มีข้อมูลแคมเปญ");
+  $("dlDbg").addEventListener("click", downloadDebug);
+}
+
+function downloadDebug() {
+  chrome.storage.local.get(null, (all) => {
+    const data = {
+      campaigns: all.campaigns || [],
+      captures: all.captures || [],
+      channelsRaw: all.channelsRaw || null,
+      pauseRecipe: all.pauseRecipe
+        ? { url: all.pauseRecipe.url, reqBody: all.pauseRecipe.reqBody }
+        : null,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gmvmax-debug.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    $("msg").textContent = "ดาวน์โหลดแล้ว — ส่งไฟล์ gmvmax-debug.json ให้ผม";
   });
 }
 
@@ -179,11 +203,11 @@ function renderAdd() {
   const avail = availableChannels().filter((c) => !added.has(c.id));
   const app = $("app");
   app.innerHTML = `
+    <div class="note">💡 เห็นเฉพาะช่องที่โหลดข้อมูลแล้ว — เปิดหน้า GMV Max และ
+      <b>สลับร้าน/ช่องใน TikTok</b> ให้ครบ เพื่อให้ระบบเห็นทุกช่อง</div>
     <input class="search" id="q" placeholder="ค้นหาชื่อช่อง...">
     <div id="list">${
-      avail.length
-        ? ""
-        : '<div class="note">ยังไม่เห็นช่อง — เปิดหน้า GMV Max บน ads.tiktok.com (และลองสลับร้าน) เพื่อให้ระบบเห็นช่องของคุณ</div>'
+      avail.length ? "" : '<div class="muted">ยังไม่เห็นช่อง — เปิดหน้า GMV Max ก่อน</div>'
     }</div>`;
   const render = (f) => {
     $("list").innerHTML = avail
