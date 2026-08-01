@@ -1,6 +1,46 @@
 {
   "runs": [
     {
+      "t": "2026-08-01T14:03:40.354115+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 3,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "🕹️ สั่งเอง",
+          "action": "ACTIVATE",
+          "detail": "สั่งเปิดเอง",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "🕹️ สั่งเอง",
+          "action": "ACTIVATE",
+          "detail": "สั่งเปิดเอง",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=311.65 (>200) และ ทุนทัก=103.88 (>50)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-01T14:00:34.193383+07:00",
       "dry_run": false,
       "summary": {
