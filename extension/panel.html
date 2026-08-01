@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    :root { --bg:#0f0f14; --panel:#1a1a22; --border:#2a2a34; --text:#f2f2f5; --muted:#a0a0ad; --brand:#fe2c55; --ok:#34d399; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,"Segoe UI","Sarabun",sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+    header { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:2; }
+    .mark { width:26px; height:26px; border-radius:7px; background:linear-gradient(135deg,var(--brand),#c9224a); display:grid; place-items:center; font-weight:800; }
+    h1 { font-size:14px; margin:0; }
+    .body { padding:12px 14px; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:12px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; }
+    label { font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+    input { width:100%; background:#0c0c11; border:1px solid var(--border); border-radius:8px; padding:8px; color:var(--text); font-size:13px; }
+    button { border:none; border-radius:8px; padding:7px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+    .primary { background:var(--brand); color:#fff; }
+    .ghost { background:#22222c; color:var(--text); border:1px solid var(--border); }
+    .ok { background:var(--ok); color:#04120c; }
+    .switch { position:relative; width:42px; height:24px; }
+    .switch input { display:none; }
+    .slider { position:absolute; inset:0; background:#3a3a44; border-radius:999px; transition:.2s; }
+    .slider:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+    input:checked + .slider { background:var(--ok); }
+    input:checked + .slider:before { transform:translateX(18px); }
+    .muted { color:var(--muted); font-size:11px; line-height:1.5; }
+    .title { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:0 0 8px; }
+    .msg { font-size:12px; color:var(--ok); min-height:16px; }
+    .camp { border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:6px; }
+    .camp .n { font-weight:600; font-size:12px; word-break:break-word; }
+    .camp .meta { color:var(--muted); font-size:11px; margin:2px 0 6px; }
+    .camp .acts { display:flex; gap:6px; }
+    .cap { border:1px solid var(--border); border-radius:8px; padding:6px 8px; margin-bottom:5px; font-size:10px; }
+    .cap .m { display:inline-block; padding:1px 5px; border-radius:4px; background:#22222c; font-weight:700; margin-right:5px; }
+    .cap .u { word-break:break-all; color:#cfe; }
+    .pill { display:inline-block; padding:1px 6px; border-radius:5px; font-size:10px; }
+    .learn { border:1px solid #7a5; background:#12200f; color:#bdf5a8; border-radius:8px; padding:8px; font-size:11px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">G</div>
+    <h1>GMV Max Controller</h1>
+  </header>
+  <div class="body">
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <div>
+          <div style="font-weight:600">เปิดใช้งานบอท</div>
+          <div class="muted">เปิด ads.tiktok.com ค้างไว้</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
+      </div>
+      <div class="row">
+        <label style="margin:0">รอบตรวจ (นาที)</label>
+        <input id="interval" type="number" min="1" style="width:80px" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <p class="title" style="margin:0">แคมเปญ GMV Max</p>
+        <button class="ghost" id="reloadTt" style="padding:4px 8px">โหลดใหม่</button>
+      </div>
+      <div id="learnHint" class="learn" style="display:none;margin-bottom:8px">
+        ⚡ เพื่อให้ปุ่ม เปิด/ปิด ทำงาน: ในหน้า TikTok ให้ <b>ปิดแคมเปญ 1 ตัวด้วยมือ 1 ครั้ง</b>
+        เพื่อให้ระบบเรียนรู้คำสั่ง แล้วปุ่มที่นี่จะใช้ได้ทุกตัว
+      </div>
+      <div id="camps"><div class="muted">เปิดหน้า GMV Max บน ads.tiktok.com แล้วรอโหลด…</div></div>
+    </div>
+
+    <div class="card">
+      <p class="title">แจ้งเตือน Telegram</p>
+      <label>Bot Token</label>
+      <input id="tgToken" placeholder="123456:ABC-DEF…" />
+      <div style="height:8px"></div>
+      <label>Chat ID</label>
+      <input id="tgChat" placeholder="123456789" />
+      <div style="height:10px"></div>
+      <div class="row"><button class="primary" id="save">บันทึก</button><button class="ghost" id="testTg">ทดสอบส่ง</button></div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <p class="title" style="margin:0">API ภายในที่จับได้ (debug)</p>
+        <button class="ghost" id="clearCap" style="padding:4px 8px">ล้าง</button>
+      </div>
+      <div id="caps" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <script src="panel.js"></script>
+</body>
+</html>

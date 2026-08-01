@@ -10,6 +10,13 @@ const DEFAULTS = {
   rules: [], // future: [{metric, op, value, action}]
 };
 
+// Open the side panel when the toolbar icon is clicked (stays docked).
+if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch(() => {});
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(DEFAULTS, (cfg) => {
     chrome.storage.local.set(cfg);

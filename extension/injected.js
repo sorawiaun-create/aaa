@@ -1,15 +1,11 @@
-// Runs in the PAGE (MAIN world) on ads.tiktok.com so it shares the site's
-// logged-in session. It patches fetch/XHR to observe the internal APIs the
-// TikTok Ads Manager UI calls (especially GMV Max), and forwards a summary to
-// the extension's isolated content script via window.postMessage.
-//
-// This is the "learn" mechanism: use the TikTok UI normally (list, pause,
-// change budget, create) and the extension records the exact endpoints so we
-// can replay them for automation.
+// MAIN-world interceptor on ads.tiktok.com. Observes the internal APIs the
+// GMV Max UI calls, capturing the exact request (incl. headers) so we can
+// replay them for automation, and stashing the campaign-list response.
 (function () {
   const TAG = "__CGMX__";
+  const LIST_EP = "/oec/stat/post_campaign_list";
+  const STATUS_EP = "/creation/campaign/update_status";
 
-  // Which requests we care about (TikTok internal ad APIs).
   function isInteresting(url) {
     try {
       const u = String(url).toLowerCase();
@@ -17,7 +13,8 @@
         u.includes("gmv") ||
         u.includes("campaign") ||
         u.includes("/report") ||
-        u.includes("smart_plus")
+        u.includes("smart_plus") ||
+        u.includes("oec_shopping")
       );
     } catch {
       return false;
@@ -32,15 +29,59 @@
     }
   }
 
-  function summarizeBody(body) {
+  function headersToObj(h) {
+    const out = {};
+    try {
+      if (!h) return out;
+      if (h instanceof Headers) {
+        h.forEach((v, k) => (out[k] = v));
+      } else if (Array.isArray(h)) {
+        for (const [k, v] of h) out[k] = v;
+      } else if (typeof h === "object") {
+        for (const k of Object.keys(h)) out[k] = h[k];
+      }
+    } catch {
+      /* ignore */
+    }
+    return out;
+  }
+
+  function bodyToStr(body) {
     try {
       if (!body) return null;
-      if (typeof body === "string") return body.slice(0, 2000);
-      if (body instanceof URLSearchParams) return body.toString().slice(0, 2000);
+      if (typeof body === "string") return body;
+      if (body instanceof URLSearchParams) return body.toString();
       return null;
     } catch {
       return null;
     }
+  }
+
+  function classify(url, method, headers, reqBody, resText) {
+    const u = String(url);
+    if (u.includes(LIST_EP) && resText) {
+      post({ kind: "list", url: u, resFull: resText.slice(0, 200000), ts: Date.now() });
+    }
+    if (u.includes(STATUS_EP)) {
+      post({
+        kind: "recipe",
+        url: u,
+        method: String(method).toUpperCase(),
+        headers,
+        reqBody,
+        ts: Date.now(),
+      });
+    }
+    // generic debug capture
+    post({
+      kind: "capture",
+      via: "net",
+      method: String(method).toUpperCase(),
+      url: u,
+      reqBody: reqBody ? String(reqBody).slice(0, 500) : null,
+      resSample: resText ? resText.slice(0, 800) : "",
+      ts: Date.now(),
+    });
   }
 
   // --- patch fetch ---
@@ -48,33 +89,18 @@
   window.fetch = async function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
     const method =
-      (init && init.method) ||
-      (typeof input === "object" && input && input.method) ||
-      "GET";
+      (init && init.method) || (input && input.method) || "GET";
     const interesting = isInteresting(url);
-    let reqBody = null;
-    if (interesting && init && init.body) reqBody = summarizeBody(init.body);
+    const headers = interesting ? headersToObj(init && init.headers) : {};
+    const reqBody = interesting && init ? bodyToStr(init.body) : null;
 
     const res = await origFetch.apply(this, arguments);
     if (interesting) {
-      try {
-        const clone = res.clone();
-        clone
-          .text()
-          .then((t) =>
-            post({
-              via: "fetch",
-              method: String(method).toUpperCase(),
-              url: String(url),
-              reqBody,
-              resSample: t.slice(0, 1500),
-              ts: Date.now(),
-            })
-          )
-          .catch(() => {});
-      } catch {
-        post({ via: "fetch", method, url: String(url), reqBody, ts: Date.now() });
-      }
+      res
+        .clone()
+        .text()
+        .then((t) => classify(url, method, headers, reqBody, t))
+        .catch(() => classify(url, method, headers, reqBody, ""));
     }
     return res;
   };
@@ -85,31 +111,34 @@
     const xhr = new OrigXHR();
     let _url = "";
     let _method = "GET";
+    const _headers = {};
     const open = xhr.open;
     xhr.open = function (m, u) {
       _method = m;
       _url = u;
       return open.apply(xhr, arguments);
     };
+    const setH = xhr.setRequestHeader;
+    xhr.setRequestHeader = function (k, v) {
+      try {
+        _headers[k] = v;
+      } catch {
+        /* ignore */
+      }
+      return setH.apply(xhr, arguments);
+    };
     const send = xhr.send;
     xhr.send = function (body) {
       if (isInteresting(_url)) {
-        const reqBody = summarizeBody(body);
+        const reqBody = bodyToStr(body);
         xhr.addEventListener("load", function () {
-          let resSample = "";
+          let resText = "";
           try {
-            resSample = String(xhr.responseText || "").slice(0, 1500);
+            resText = String(xhr.responseText || "");
           } catch {
             /* ignore */
           }
-          post({
-            via: "xhr",
-            method: String(_method).toUpperCase(),
-            url: String(_url),
-            reqBody,
-            resSample,
-            ts: Date.now(),
-          });
+          classify(_url, _method, _headers, reqBody, resText);
         });
       }
       return send.apply(xhr, arguments);
@@ -118,6 +147,4 @@
   }
   PatchedXHR.prototype = OrigXHR.prototype;
   window.XMLHttpRequest = PatchedXHR;
-
-  post({ via: "system", url: "__ready__", method: "-", ts: Date.now() });
 })();
