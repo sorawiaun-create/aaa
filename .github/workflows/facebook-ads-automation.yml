@@ -6,10 +6,17 @@ on:
     # ทุก 10 นาที (GitHub ต่ำสุด = ทุก 5 นาที: '*/5 * * * *')
     # หมายเหตุ: เวลาของ cron เป็น UTC และอาจดีเลย์บ้างช่วง GitHub โหลดหนัก
     - cron: "*/10 * * * *"
+  # ยิงจากภายนอก (cron-job.org ฯลฯ) ผ่าน API นี้เพื่อความตรงเวลา
+  repository_dispatch:
+    types: [run-now]
   workflow_dispatch:
     inputs:
       dry_run:
         description: "จำลอง (ไม่แก้ไขจริง)"
+        type: boolean
+        default: false
+      force:
+        description: "บังคับรันเต็มรอบ (ไม่สนความถี่ที่ตั้งไว้)"
         type: boolean
         default: false
 
@@ -55,8 +62,9 @@ jobs:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           FB_DRY_RUN: ${{ github.event.inputs.dry_run }}
           LOG_LEVEL: INFO
-          # กดรันเอง (workflow_dispatch / สั่งทำเดี๋ยวนี้) = บังคับรันเต็มรอบ ไม่สนความถี่
-          RUN_FORCE: ${{ github.event_name == 'workflow_dispatch' }}
+          # บังคับรันเต็มรอบเมื่อกดจาก Dashboard (force=true) เท่านั้น
+          # ตัวยิงภายนอก/ตารางเวลา ปล่อยให้ engine เช็คความถี่ (interval) เอง
+          RUN_FORCE: ${{ github.event.inputs.force }}
           # แจ้งเตือน LINE (ไม่บังคับ — ไม่ตั้งก็ข้าม)
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_TO: ${{ secrets.LINE_TO }}

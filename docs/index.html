@@ -366,7 +366,7 @@ async function putConfig(obj){
 }
 async function dispatchRun(dry){
   const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
-  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:String(!!dry)}})});
+  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:String(!!dry),force:"true"}})});
   if(!r.ok) throw new Error("สั่งรันไม่ได้ (HTTP "+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
 }
 async function loadBoard(){
