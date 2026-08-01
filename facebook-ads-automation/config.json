@@ -611,7 +611,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
@@ -632,12 +633,13 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "รีเซตงบ ",
           "conditions": [
             {
@@ -663,7 +665,7 @@
         {
           "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -685,7 +687,7 @@
         {
           "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -707,7 +709,7 @@
         {
           "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -729,7 +731,7 @@
         {
           "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -751,7 +753,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 20%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -799,7 +801,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -847,7 +849,7 @@
         {
           "name": "กฎใหม่",
           "action": "ACTIVATE",
-          "enabled": true,
+          "enabled": false,
           "group": "ADS ดี - เปิด",
           "conditions": [
             {
@@ -874,7 +876,7 @@
           ]
         }
       ],
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "ถุงปลูกหลัก",
@@ -1190,7 +1192,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
@@ -1211,12 +1214,13 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "รีเซตงบ ",
           "conditions": [
             {
@@ -1242,7 +1246,7 @@
         {
           "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1264,7 +1268,7 @@
         {
           "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1286,7 +1290,7 @@
         {
           "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1308,7 +1312,7 @@
         {
           "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1330,7 +1334,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 20%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -1378,7 +1382,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -1426,7 +1430,7 @@
         {
           "name": "กฎใหม่",
           "action": "ACTIVATE",
-          "enabled": true,
+          "enabled": false,
           "group": "ADS ดี - เปิด",
           "conditions": [
             {
@@ -1453,7 +1457,7 @@
           ]
         }
       ],
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "กระบะบิช",
@@ -1488,7 +1492,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
@@ -1509,12 +1514,13 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "รีเซตงบ ",
           "conditions": [
             {
@@ -1540,7 +1546,7 @@
         {
           "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1562,7 +1568,7 @@
         {
           "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1584,7 +1590,7 @@
         {
           "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1606,7 +1612,7 @@
         {
           "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -1628,7 +1634,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 20%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -1676,7 +1682,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -1724,7 +1730,7 @@
         {
           "name": "กฎใหม่",
           "action": "ACTIVATE",
-          "enabled": true,
+          "enabled": false,
           "group": "ADS ดี - เปิด",
           "conditions": [
             {
@@ -1751,7 +1757,7 @@
           ]
         }
       ],
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "กระบะหลัก",
@@ -2090,7 +2096,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
@@ -2111,12 +2118,13 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
           "action": "RESET_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "รีเซตงบ ",
           "conditions": [
             {
@@ -2142,7 +2150,7 @@
         {
           "name": "จ่าย 100 ไม่ทัก   ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -2164,7 +2172,7 @@
         {
           "name": "จ่าย 150 ทุนทัก < 40 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -2186,7 +2194,7 @@
         {
           "name": "จ่าย 150    ซื้อ 0 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -2208,7 +2216,7 @@
         {
           "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "action": "PAUSE",
-          "enabled": true,
+          "enabled": false,
           "group": "🛡️ กฎความปลอดภัย (Safety)",
           "conditions": [
             {
@@ -2230,7 +2238,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 20%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -2278,7 +2286,7 @@
         {
           "name": "ADS ดี เพิ่มงบ 10%",
           "action": "INCREASE_BUDGET",
-          "enabled": true,
+          "enabled": false,
           "group": "🚀 กฎเพิ่มงบ (Scaling)",
           "conditions": [
             {
@@ -2326,7 +2334,7 @@
         {
           "name": "กฎใหม่",
           "action": "ACTIVATE",
-          "enabled": true,
+          "enabled": false,
           "group": "ADS ดี - เปิด",
           "conditions": [
             {
@@ -2353,7 +2361,15 @@
           ]
         }
       ],
-      "enabled": false
+      "enabled": true
+    },
+    {
+      "name": "ขุยมะพร้าว",
+      "token": "env:FB_ACCESS_TOKEN",
+      "account_id": "744793814183081",
+      "target_level": "campaign",
+      "enabled": true,
+      "rules": []
     }
   ]
 }
