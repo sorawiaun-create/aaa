@@ -114,36 +114,40 @@ test('payroll: base + commission + KPI bonus, sorted by total', () => {
   assert.equal(rows[0].employee.id, 'e1');
 });
 
-test('payroll deducts leave/absence for monthly staff (absent=1, half=0.5)', () => {
+test('payroll sums manual per-day deductions from work logs', () => {
   const employees = [
     { id: 'm1', name: 'Monthly', pay: { baseType: 'monthly', baseAmount: 26000, commission: { type: 'none' } } },
     { id: 'd1', name: 'Daily', pay: { baseType: 'daily', baseAmount: 500, commission: { type: 'none' } } },
   ];
   const workLogs = [
-    { employeeId: 'm1', date: '01/07/2026', status: 'present' },
-    { employeeId: 'm1', date: '02/07/2026', status: 'absent' },
-    { employeeId: 'm1', date: '03/07/2026', status: 'absent' },
-    { employeeId: 'm1', date: '04/07/2026', status: 'half' },
-    { employeeId: 'd1', date: '01/07/2026', status: 'absent' }, // daily: no separate deduction
-    { employeeId: 'd1', date: '02/07/2026', status: 'present' },
+    { employeeId: 'm1', date: '02/07/2026', status: 'personal', deductAmount: 1000 },
+    { employeeId: 'm1', date: '03/07/2026', status: 'sick', deductAmount: 1000 },
+    { employeeId: 'm1', date: '04/07/2026', status: 'half', deductAmount: 500 },
+    { employeeId: 'm1', date: '05/07/2026', status: 'present' },
+    { employeeId: 'd1', date: '01/07/2026', status: 'present' },
+    { employeeId: 'd1', date: '02/07/2026', status: 'sick' }, // leave day: not a worked day, no manual deduction
   ];
-  const rows = computePayroll({ employees, sales: [], workLogs, settings: { workDaysPerMonth: 26 }, monthKey: '2026-07' });
+  const rows = computePayroll({ employees, sales: [], workLogs, settings: {}, monthKey: '2026-07' });
   const m1 = rows.find((r) => r.employee.id === 'm1');
-  // perDay = 26000/26 = 1000; units = 2 + 0.5 = 2.5 → deduction 2500
-  assert.equal(m1.perDayDeduct, 1000);
-  assert.equal(m1.deduction, 2500);
+  assert.equal(m1.deduction, 2500); // 1000 + 1000 + 500
+  assert.equal(m1.leaveDays, 3);
+  assert.equal(m1.daysWorked, 2); // present(05) + half(04); personal/sick excluded
   assert.equal(m1.total, 23500); // 26000 - 2500
   const d1 = rows.find((r) => r.employee.id === 'd1');
-  assert.equal(d1.deduction, 0); // daily staff: absence already reflected in base (1 present day)
+  assert.equal(d1.deduction, 0);
+  assert.equal(d1.daysWorked, 1); // only the present day; leave day not paid
   assert.equal(d1.base, 500);
 });
 
-test('payroll deduction honours a custom per-day rate', () => {
-  const employees = [{ id: 'm1', name: 'M', pay: { baseType: 'monthly', baseAmount: 30000, deductPerDay: 800, commission: { type: 'none' } } }];
-  const workLogs = [{ employeeId: 'm1', date: '05/07/2026', status: 'absent' }];
-  const [r] = computePayroll({ employees, sales: [], workLogs, settings: {}, monthKey: '2026-07' });
-  assert.equal(r.deduction, 800);
-  assert.equal(r.total, 29200);
+test('payroll deductions are isolated per month', () => {
+  const employees = [{ id: 'm1', name: 'M', pay: { baseType: 'monthly', baseAmount: 30000, commission: { type: 'none' } } }];
+  const workLogs = [
+    { employeeId: 'm1', date: '15/06/2026', status: 'personal', deductAmount: 1000 },
+    { employeeId: 'm1', date: '15/07/2026', status: 'personal', deductAmount: 1200 },
+  ];
+  const [jul] = computePayroll({ employees, sales: [], workLogs, settings: {}, monthKey: '2026-07' });
+  assert.equal(jul.deduction, 1200);
+  assert.equal(jul.total, 28800);
 });
 
 test('payroll month filter isolates a month', () => {

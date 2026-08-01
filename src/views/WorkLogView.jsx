@@ -7,9 +7,22 @@ import { computePayroll } from '../lib/payroll.js';
 import { formatCurrency, formatCurrency0, formatBahtCompact, formatHours, monthLabel, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
 
 const STATUS = {
-  present: { label: 'มาทำงาน', color: 'green' },
-  half: { label: 'ครึ่งวัน', color: 'amber' },
-  absent: { label: 'ขาด', color: 'red' },
+  present: { label: 'มาทำงาน', color: 'green', leave: false },
+  half: { label: 'ครึ่งวัน', color: 'amber', leave: false },
+  absent: { label: 'ขาดงาน', color: 'red', leave: true },
+  personal: { label: 'ลากิจ', color: 'blue', leave: true },
+  sick: { label: 'ลาป่วย', color: 'blue', leave: true },
+  vacation: { label: 'ลาพักร้อน', color: 'slate', leave: true },
+};
+
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+// Suggested per-day deduction for an employee (their set rate, else salary/workdays).
+const suggestedPerDay = (emp, settings) => {
+  if (!emp) return 0;
+  if (num(emp.pay?.deductPerDay) > 0) return num(emp.pay.deductPerDay);
+  if (emp.pay?.baseType === 'monthly') return Math.round(num(emp.pay?.baseAmount) / (num(settings?.workDaysPerMonth) || 26));
+  return 0;
 };
 
 export default function WorkLogView({ store, month }) {
@@ -52,7 +65,7 @@ function Payroll({ store, month }) {
       r.employee.name,
       store.teams.find((t) => t.id === r.employee.teamId)?.name || '',
       r.salesTotal, r.liveHours, r.salesPerHour ? Math.round(r.salesPerHour) : '', r.daysWorked,
-      r.absentDays + r.halfDays * 0.5, r.base, r.commission.toFixed(2), r.kpiBonus,
+      r.leaveDays, r.base, r.commission.toFixed(2), r.kpiBonus,
       r.deduction ? -r.deduction : 0, r.adjust, r.total.toFixed(2),
     ]);
     const csv = [head, ...lines].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -118,7 +131,7 @@ function Payroll({ store, month }) {
                     {r.deduction ? (
                       <>
                         <div className="text-red-500">-{formatCurrency0(r.deduction)}</div>
-                        <div className="text-[11px] text-slate-400">{r.absentDays ? `ขาด ${r.absentDays} ` : ''}{r.halfDays ? `ครึ่ง ${r.halfDays}` : ''}วัน</div>
+                        {r.leaveDays ? <div className="text-[11px] text-slate-400">ลา/ขาด {r.leaveDays} วัน</div> : null}
                       </>
                     ) : <span className="text-slate-300">—</span>}
                   </td>
@@ -161,9 +174,21 @@ function WorkLog({ store, month }) {
   const save = () => {
     const d = modal.data;
     if (!d.employeeId) return;
-    store.addWorkLog(d);
+    store.addWorkLog({ ...d, deductAmount: num(d.deductAmount) });
     setModal(null);
   };
+
+  // Prefill a suggested deduction when a leave status / employee is chosen
+  // (owner can still type any amount).
+  const suggestFor = (status, employeeId, current) => {
+    const isLeave = STATUS[status]?.leave || status === 'half';
+    if (!isLeave) return '';
+    if (num(current)) return current; // keep a typed value
+    const per = suggestedPerDay(store.employees.find((e) => e.id === employeeId), store.settings);
+    return per ? (status === 'half' ? Math.round(per / 2) : per) : current;
+  };
+  const onStatus = (status) => set({ status, deductAmount: suggestFor(status, modal.data.employeeId, STATUS[status]?.leave || status === 'half' ? modal.data.deductAmount : '') });
+  const onEmployee = (employeeId) => set({ employeeId, deductAmount: suggestFor(modal.data.status, employeeId, modal.data.deductAmount) });
 
   const empName = (id) => { const e = store.employees.find((x) => x.id === id); return e ? e.name : '—'; };
   const chName = (id) => store.channels.find((c) => c.id === id)?.name || '';
@@ -171,7 +196,7 @@ function WorkLog({ store, month }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button icon={Plus} disabled={store.employees.length === 0} onClick={() => setModal({ data: { date: todayDMY(), employeeId: '', channelId: '', shift: '', status: 'present', note: '' } })} className="bg-pink-600 hover:bg-pink-700">
+        <Button icon={Plus} disabled={store.employees.length === 0} onClick={() => setModal({ data: { date: todayDMY(), employeeId: '', channelId: '', shift: '', status: 'present', deductAmount: '', note: '' } })} className="bg-pink-600 hover:bg-pink-700">
           บันทึกงาน
         </Button>
       </div>
@@ -189,6 +214,7 @@ function WorkLog({ store, month }) {
                   <th className="px-4 py-3 font-medium">ช่อง</th>
                   <th className="px-4 py-3 font-medium">กะ</th>
                   <th className="px-4 py-3 font-medium">สถานะ</th>
+                  <th className="px-4 py-3 font-medium text-right">หักเงิน</th>
                   <th className="px-4 py-3 font-medium">หมายเหตุ</th>
                   <th className="px-5 py-3 font-medium text-right">จัดการ</th>
                 </tr>
@@ -201,6 +227,7 @@ function WorkLog({ store, month }) {
                     <td className="px-4 py-3 text-slate-500">{chName(w.channelId) || '—'}</td>
                     <td className="px-4 py-3 text-slate-500">{w.shift || '—'}</td>
                     <td className="px-4 py-3"><Badge color={STATUS[w.status]?.color || 'slate'}>{STATUS[w.status]?.label || w.status}</Badge></td>
+                    <td className="px-4 py-3 text-right tabular-nums">{num(w.deductAmount) ? <span className="text-red-500">-{formatCurrency0(w.deductAmount)}</span> : <span className="text-slate-300">—</span>}</td>
                     <td className="px-4 py-3 text-slate-500">{w.note || '—'}</td>
                     <td className="px-5 py-3 text-right">
                       <button onClick={() => { if (confirm('ลบบันทึกนี้?')) store.removeWorkLog(w.id); }} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 size={15} /></button>
@@ -229,19 +256,25 @@ function WorkLog({ store, month }) {
             <div className="grid grid-cols-2 gap-3">
               <Field label="วันที่"><Input type="date" value={dmyToISO(modal.data.date)} onChange={(e) => set({ date: isoToDMY(e.target.value) })} /></Field>
               <Field label="สถานะ">
-                <Select value={modal.data.status} onChange={(e) => set({ status: e.target.value })}>
-                  <option value="present">มาทำงาน</option>
-                  <option value="half">ครึ่งวัน</option>
-                  <option value="absent">ขาด</option>
+                <Select value={modal.data.status} onChange={(e) => onStatus(e.target.value)}>
+                  {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </Select>
               </Field>
             </div>
             <Field label="พนักงาน">
-              <Select value={modal.data.employeeId} onChange={(e) => set({ employeeId: e.target.value })}>
+              <Select value={modal.data.employeeId} onChange={(e) => onEmployee(e.target.value)}>
                 <option value="">— เลือกพนักงาน —</option>
                 {store.employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
               </Select>
             </Field>
+            {(STATUS[modal.data.status]?.leave || modal.data.status === 'half') && (
+              <Field
+                label="หักเงินวันนี้ (฿)"
+                hint={`ใส่จำนวนเงินที่จะหักสำหรับวันนี้ (0 = ไม่หัก)${modal.data.employeeId ? ` · แนะนำ ≈ ${suggestedPerDay(store.employees.find((e) => e.id === modal.data.employeeId), store.settings) || 0}/วัน` : ''}`}
+              >
+                <Input type="number" value={modal.data.deductAmount} onChange={(e) => set({ deductAmount: e.target.value })} placeholder="0" className="max-w-xs" />
+              </Field>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="ช่อง (ถ้ามี)">
                 <Select value={modal.data.channelId} onChange={(e) => set({ channelId: e.target.value })}>

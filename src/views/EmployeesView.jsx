@@ -208,8 +208,8 @@ function EmployeeModal({ modal, setModal, store, set, setPay, setCommission, sav
           )}
           {d.pay.baseType === 'monthly' && (
             <Field
-              label="หักเงินต่อวัน เมื่อลา/ขาด (฿)"
-              hint={`เว้นว่าง = คิดจากเงินเดือน ÷ ${store.settings.workDaysPerMonth || 26} วัน (${d.pay.baseAmount ? `≈ ${Math.round((Number(d.pay.baseAmount) || 0) / (store.settings.workDaysPerMonth || 26))} บาท/วัน` : 'ใส่เงินเดือนก่อน'}) · ขาด=หัก 1 วัน, ครึ่งวัน=หัก 0.5`}
+              label="อัตราหักต่อวัน — ตัวเลขแนะนำ (฿)"
+              hint={`ใช้เติมให้อัตโนมัติตอนบันทึก “ลา/ขาด” รายวัน (แก้ตัวเลขตอนนั้นได้) · เว้นว่าง = คิดจากเงินเดือน ÷ ${store.settings.workDaysPerMonth || 26} วัน${d.pay.baseAmount ? ` ≈ ${Math.round((Number(d.pay.baseAmount) || 0) / (store.settings.workDaysPerMonth || 26))}/วัน` : ''}`}
               className="max-w-xs"
             >
               <Input type="number" value={d.pay.deductPerDay} onChange={(e) => setPay({ deductPerDay: e.target.value })} placeholder="อัตโนมัติ" />

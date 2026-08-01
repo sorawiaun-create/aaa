@@ -8,6 +8,9 @@ const num = (v) => {
 };
 const sumBy = (rows, key) => rows.reduce((acc, r) => acc + num(r[key]), 0);
 
+// Work-log statuses that count as leave/absence (not a worked day).
+export const LEAVE_STATUSES = new Set(['absent', 'personal', 'sick', 'vacation']);
+
 // A commission plan:
 //   { type: 'none' }                              → no commission
 //   { type: 'flat',   rate }                      → rate% of the whole amount
@@ -66,24 +69,10 @@ export function daysWorkedFor(employeeId, workLogs, monthKey) {
   workLogs.forEach((w) => {
     if (w.employeeId !== employeeId) return;
     if (monthKey && monthKeyOf(w.date) !== monthKey) return;
-    if (w.status === 'absent') return;
+    if (LEAVE_STATUSES.has(w.status)) return; // leave/absent → not a worked day
     days.add(w.date);
   });
   return days.size;
-}
-
-// Leave/absence tally for an employee in the (optional) month.
-// absent → 1 day, half → 0.5 day. Returns { absentDays, halfDays, units }.
-export function absenceUnitsFor(employeeId, workLogs, monthKey) {
-  let absentDays = 0;
-  let halfDays = 0;
-  workLogs.forEach((w) => {
-    if (w.employeeId !== employeeId) return;
-    if (monthKey && monthKeyOf(w.date) !== monthKey) return;
-    if (w.status === 'absent') absentDays += 1;
-    else if (w.status === 'half') halfDays += 1;
-  });
-  return { absentDays, halfDays, units: absentDays + 0.5 * halfDays };
 }
 
 // Full payroll for a month (monthKey = 'YYYY-MM', or null for all-time).
@@ -108,14 +97,13 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
       const kpiBonus = kpiHit ? num(emp.pay?.kpiBonus) : 0;
       const adjust = num(emp.pay?.adjust); // manual +/- (deductions, extras)
 
-      // Leave/absence deduction — only for monthly-salary staff (daily staff
-      // already lose pay for days not worked). Absent = 1 day, half = 0.5 day.
-      const monthly = emp.pay?.baseType === 'monthly';
-      const absence = absenceUnitsFor(emp.id, workLogs, monthKey);
-      const perDayDeduct = num(emp.pay?.deductPerDay) > 0
-        ? num(emp.pay.deductPerDay)
-        : num(emp.pay?.baseAmount) / (num(settings?.workDaysPerMonth) || 26);
-      const deduction = monthly ? Math.round(perDayDeduct * absence.units * 100) / 100 : 0;
+      // Deductions are entered per work-log day (leave/absence) and summed —
+      // no implicit rate, so what the owner typed is exactly what's deducted.
+      const empLogs = workLogs.filter(
+        (w) => w.employeeId === emp.id && (!monthKey || monthKeyOf(w.date) === monthKey)
+      );
+      const deduction = Math.round(sumBy(empLogs, 'deductAmount') * 100) / 100;
+      const leaveDays = empLogs.filter((w) => num(w.deductAmount) > 0 || LEAVE_STATUSES.has(w.status)).length;
 
       const total = base + commission + kpiBonus + adjust - deduction;
       return {
@@ -133,9 +121,7 @@ export function computePayroll({ employees, sales, workLogs, settings, monthKey 
         kpiHit,
         kpiBonus,
         adjust,
-        absentDays: absence.absentDays,
-        halfDays: absence.halfDays,
-        perDayDeduct: monthly ? Math.round(perDayDeduct * 100) / 100 : 0,
+        leaveDays,
         deduction,
         total,
       };
