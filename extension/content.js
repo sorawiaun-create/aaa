@@ -42,9 +42,17 @@ function num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
+let CSRF_FALLBACK = "";
+function setCsrfFallback(headerTemplate) {
+  for (const k of Object.keys(headerTemplate || {}))
+    if (k.toLowerCase() === "x-csrftoken" && headerTemplate[k]) {
+      CSRF_FALLBACK = headerTemplate[k];
+      return;
+    }
+}
 function getCsrf() {
   const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : "";
+  return (m ? decodeURIComponent(m[1]) : "") || CSRF_FALLBACK;
 }
 function bangkokDateStr() {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -171,6 +179,41 @@ function findCampaignArray(node, depth) {
     }
   return null;
 }
+
+/* --------------------- context from the page URL --------------------- */
+
+// The GMV Max page URL carries the context params, e.g.
+//   ads.tiktok.com/i18n/gmv-max/?aadvid=...&bc_id=...&oec_seller_id=...
+// Read them directly so Sync works without waiting for an intercepted call.
+function ctxFromLocation() {
+  const href = location.href;
+  const grab = (k) => {
+    const m = href.match(new RegExp("[?&#]" + k + "=([^&#/]+)"));
+    return m ? decodeURIComponent(m[1]) : "";
+  };
+  return {
+    aadvid: grab("aadvid"),
+    oec_seller_id: grab("oec_seller_id"),
+    bc_id: grab("bc_id"),
+  };
+}
+function captureCtxFromLocation() {
+  const loc = ctxFromLocation();
+  if (!loc.aadvid) return;
+  chrome.storage.local.get({ ctx: null }, (st) => {
+    const prev = st.ctx || {};
+    const ctx = {
+      aadvid: loc.aadvid || prev.aadvid || "",
+      oec_seller_id: loc.oec_seller_id || prev.oec_seller_id || "",
+      bc_id: loc.bc_id || prev.bc_id || "",
+    };
+    if (ctx.aadvid && JSON.stringify(ctx) !== JSON.stringify(prev))
+      chrome.storage.local.set({ ctx });
+  });
+}
+captureCtxFromLocation();
+// TikTok is a SPA — re-check when the URL changes.
+setInterval(captureCtxFromLocation, 3000);
 
 /* --------------------- passive capture (context) --------------------- */
 
@@ -299,7 +342,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "CGMX_SYNC") {
     (async () => {
       try {
-        const st = await chrome.storage.local.get({ ctx: null });
+        const st = await chrome.storage.local.get({ ctx: null, headerTemplate: {} });
+        setCsrfFallback(st.headerTemplate);
         const ctx = st.ctx;
         if (!ctx || !ctx.aadvid) {
           sendResponse({
@@ -333,7 +377,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "CGMX_STATUS") {
     (async () => {
       try {
-        const st = await chrome.storage.local.get({ ctx: null });
+        const st = await chrome.storage.local.get({ ctx: null, headerTemplate: {} });
+        setCsrfFallback(st.headerTemplate);
         if (!st.ctx || !st.ctx.aadvid) {
           sendResponse({ ok: false, error: "no ctx" });
           return;
