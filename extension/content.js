@@ -155,6 +155,23 @@ function mapCampaigns(arr) {
     };
   });
 }
+// Build a channel list from campaign rows (each carries the account name +
+// avatar + template_ad_identity_id).
+function channelsFromCampaigns(campaigns) {
+  const byId = new Map();
+  for (const cp of campaigns || []) {
+    const id = String(cp.channelId || "");
+    if (id && !byId.has(id))
+      byId.set(id, {
+        id,
+        name: cp.channelName || id,
+        icon: cp.channelIcon || "",
+        identityId: id,
+        raw: { from: "campaign" },
+      });
+  }
+  return [...byId.values()];
+}
 // Recursively find a campaign-looking array (fallback for interceptor captures).
 function findCampaignArray(node, depth) {
   if (!node || depth > 6) return null;
@@ -226,7 +243,22 @@ window.addEventListener("message", (ev) => {
   if (e.kind === "list" && e.resFull) {
     try {
       const arr = findCampaignArray(JSON.parse(e.resFull), 0);
-      if (arr) chrome.storage.local.set({ campaigns: mapCampaigns(arr), campaignsTs: e.ts });
+      if (arr) {
+        const campaigns = mapCampaigns(arr);
+        // Derive channels from the campaign rows and merge them into the stored
+        // channel list — this works passively, without pressing Sync.
+        const derived = channelsFromCampaigns(campaigns);
+        chrome.storage.local.get({ channelList: [] }, (st) => {
+          const byId = new Map();
+          for (const c of st.channelList || []) if (c.id) byId.set(c.id, c);
+          for (const c of derived) byId.set(c.id, { ...byId.get(c.id), ...c });
+          chrome.storage.local.set({
+            campaigns,
+            campaignsTs: e.ts,
+            channelList: [...byId.values()],
+          });
+        });
+      }
     } catch {
       /* ignore */
     }
