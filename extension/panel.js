@@ -129,6 +129,7 @@ function render() {
   else if (view === "add") renderAdd();
   else if (view === "detail") renderDetail();
   else if (view === "settings") renderSettings();
+  else if (view === "report") renderReport();
 }
 
 function fmt(n, d = 0) {
@@ -176,6 +177,7 @@ function renderMain() {
         : '<div class="muted" style="padding:4px 2px 10px">ยังไม่มีช่อง — กด “เพิ่มช่องใหม่” ด้านล่าง</div>'
     }
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
+    <button class="ghost" id="reportBtn" style="width:100%;margin-top:10px">📊 รายงานรวมทุกช่อง</button>
     <div class="card" style="margin-top:10px">
       <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
       <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}</div>
@@ -201,6 +203,7 @@ function renderMain() {
     })
   );
   $("addChan").addEventListener("click", () => go("add"));
+  $("reportBtn").addEventListener("click", () => go("report"));
   $("reload").addEventListener("click", reloadTikTok);
   app.querySelectorAll("[data-edit]").forEach((el) =>
     el.addEventListener("click", () => go("detail", el.getAttribute("data-edit")))
@@ -320,6 +323,77 @@ function addChannel(id) {
   };
   const channels = [...(STORE.channels || []), ch];
   save({ channels }, () => go("settings", id));
+}
+
+function renderReport() {
+  setHeader("รายงานรวม", true, '<span id="reload" title="โหลดใหม่" style="cursor:pointer">🔄</span>');
+  const chans = (STORE.channelList || []).length ? STORE.channelList : STORE.channels || [];
+  const rows = chans
+    .map((ch) => {
+      const camps = campaignsOf(ch.id).filter((c) => statusLive(c.status));
+      const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
+      const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
+      const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
+      return {
+        name: ch.name,
+        icon: ch.icon,
+        running: camps.length,
+        sales,
+        cost,
+        orders,
+        roi: cost > 0 ? sales / cost : 0,
+      };
+    })
+    .filter((r) => r.running > 0 || r.sales > 0);
+  rows.sort((a, b) => b.sales - a.sales);
+
+  const tSales = rows.reduce((a, r) => a + r.sales, 0);
+  const tCost = rows.reduce((a, r) => a + r.cost, 0);
+  const tOrders = rows.reduce((a, r) => a + r.orders, 0);
+  const tRoi = tCost > 0 ? tSales / tCost : 0;
+
+  const app = $("app");
+  app.innerHTML = `
+    <div class="muted" style="margin-bottom:8px">รวมเฉพาะแคมเปญที่กำลังรัน · ${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่ซิงค์"}</div>
+    <div class="card">
+      <div class="metrics">
+        <div class="metric"><div class="v">${fmt(tSales, 0)}</div><div class="l">ยอดขายรวม (฿)</div></div>
+        <div class="metric"><div class="v">${fmt(tCost, 0)}</div><div class="l">ค่าโฆษณา (฿)</div></div>
+        <div class="metric"><div class="v" style="color:var(--teal)">${fmt(tRoi, 2)}</div><div class="l">ROI รวม</div></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="k">Orders รวม</span><span class="val">${fmt(tOrders, 0)}</span></div>
+        <div class="kv"><span class="k">ช่องที่กำลังรัน</span><span class="val">${rows.filter((r) => r.running > 0).length} / ${chans.length}</span></div>
+        <div class="kv"><span class="k">กำไรคร่าวๆ (ยอด − ค่าแอด)</span><span class="val" style="color:${tSales - tCost >= 0 ? "var(--green)" : "var(--red)"}">${fmt(tSales - tCost, 0)} ฿</span></div>
+      </div>
+    </div>
+
+    <div class="sec">แยกตามช่อง (${rows.length})</div>
+    ${
+      rows.length
+        ? rows
+            .map(
+              (r) => `<div class="card" style="padding:10px 12px">
+        <div class="row">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+            <div class="av" style="width:28px;height:28px">${r.icon ? `<img src="${esc(r.icon)}">` : esc((r.name || "?")[0])}</div>
+            <div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</div>
+          </div>
+          <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(r.roi, 2)}</span>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <span class="muted">🟢 รัน ${r.running}</span>
+          <span class="muted">ยอด ${fmt(r.sales, 0)}฿</span>
+          <span class="muted">แอด ${fmt(r.cost, 0)}฿</span>
+          <span class="muted">${fmt(r.orders, 0)} ออร์เดอร์</span>
+        </div>
+      </div>`
+            )
+            .join("")
+        : '<div class="muted" style="padding:6px 2px">ยังไม่มีแคมเปญที่รันอยู่ — เปิดหน้า GMV Max ให้โหลดข้อมูลก่อน</div>'
+    }`;
+
+  $("reload").addEventListener("click", reloadTikTok);
 }
 
 function renderDetail() {
