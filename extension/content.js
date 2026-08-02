@@ -430,20 +430,22 @@ function riskInfo() {
   };
 }
 
-// Change a campaign's daily budget. Reads the existing ad data and re-posts it
-// through all_ad_data/update with the new budget (mirrors the official edit).
-async function updateCampaignBudget(ctx, campaignId, newBudget, campaignName) {
+// Update a campaign's budget and/or ROI target. Reads the existing ad data and
+// re-posts it through all_ad_data/update (mirrors the official edit). Pass only
+// the fields you want to change; the rest are kept from the current campaign.
+async function updateCampaign(ctx, campaignId, opts) {
   const detail = await getCampaignDetail(ctx, campaignId);
   if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญไม่ได้" };
   const ad = detail.ad_info;
-  const bud = Math.round(Number(newBudget));
+  const bud = opts.budget != null ? Math.round(Number(opts.budget)) : Math.round(Number(ad.budget) || 0);
   const budStr = bud + ".00";
+  const roasBid = opts.roi != null ? parseFloat(Number(opts.roi).toFixed(1)) : ad.roas_bid;
   const pds = ad.promotion_days_setting || {};
   const mult = pds.budget_multiplier || 150;
   const payload = {
     campaign_info: {
       campaign_id: campaignId,
-      campaign_name: (detail.campaign_info && detail.campaign_info.campaign_name) || campaignName || ad.campaign_name || "",
+      campaign_name: (detail.campaign_info && detail.campaign_info.campaign_name) || opts.campaignName || ad.campaign_name || "",
       budget_mode: -1,
       budget: budStr,
       shop_automation_type: 2,
@@ -455,6 +457,7 @@ async function updateCampaignBudget(ctx, campaignId, newBudget, campaignName) {
       ad_id: ad.ad_id || "",
       budget_mode: 0,
       budget: budStr,
+      roas_bid: roasBid,
       shop_id: ctx.oec_seller_id,
       shop_authorized_bc: ad.shop_authorized_bc || ctx.bc_id,
       promotion_days_setting: { ...pds, adjusted_budget: Math.round((bud * mult) / 100) },
@@ -665,7 +668,24 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           sendResponse({ ok: false, error: "no ctx" });
           return;
         }
-        sendResponse(await updateCampaignBudget(st.ctx, msg.campaignId, msg.budget, msg.campaignName));
+        sendResponse(await updateCampaign(st.ctx, msg.campaignId, { budget: msg.budget, campaignName: msg.campaignName }));
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg && msg.type === "CGMX_ROI") {
+    (async () => {
+      try {
+        const st = await chrome.storage.local.get({ ctx: null, headerTemplate: {} });
+        setCsrfFallback(st.headerTemplate);
+        if (!st.ctx || !st.ctx.aadvid) {
+          sendResponse({ ok: false, error: "no ctx" });
+          return;
+        }
+        sendResponse(await updateCampaign(st.ctx, msg.campaignId, { roi: msg.roi, campaignName: msg.campaignName }));
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }

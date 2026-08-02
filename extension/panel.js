@@ -44,6 +44,14 @@ function defaultSettings() {
       enabled: false,
       budget: 300, // reset every running campaign's budget to this at 00:00 (Bangkok)
     },
+    roiAuto: {
+      enabled: false,
+      step: 0.1, // adjust the ROI target by this each time
+      margin: 1, // only adjust when actual ROI is this far from target
+      min: 1,
+      max: 5,
+      intervalMin: 30,
+    },
   };
 }
 
@@ -60,6 +68,8 @@ function loadStore(cb) {
       pauseRecipe: null,
       createRecipe: null,
       budgetRecipe: null,
+      logs: [],
+      dailySummary: { enabled: false, hour: 20 },
       lastRun: 0,
       syncTs: 0,
     },
@@ -134,6 +144,7 @@ function render() {
   else if (view === "detail") renderDetail();
   else if (view === "settings") renderSettings();
   else if (view === "report") renderReport();
+  else if (view === "log") renderLog();
 }
 
 function fmt(n, d = 0) {
@@ -181,7 +192,10 @@ function renderMain() {
         : '<div class="muted" style="padding:4px 2px 10px">ยังไม่มีช่อง — กด “เพิ่มช่องใหม่” ด้านล่าง</div>'
     }
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
-    <button class="ghost" id="reportBtn" style="width:100%;margin-top:10px">📊 รายงานรวมทุกช่อง</button>
+    <div class="row" style="margin-top:10px;gap:8px">
+      <button class="ghost" id="reportBtn" style="flex:1">📊 รายงานรวม</button>
+      <button class="ghost" id="logBtn" style="flex:1">📜 ประวัติการทำงาน</button>
+    </div>
     <div class="card" style="margin-top:10px">
       <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
       <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}</div>
@@ -195,6 +209,21 @@ function renderMain() {
       <input class="search" id="tgChat" placeholder="Chat ID" value="${esc(STORE.telegramChatId)}" style="width:100%">
       <div class="row" style="margin-top:8px"><button class="ghost" id="tgSave">บันทึก</button><button class="ghost" id="tgTest">ทดสอบส่ง</button></div>
       <div class="msg" id="msg"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+      <label class="row" style="cursor:pointer"><span>สรุปยอดรายวันทาง Telegram</span>
+        <input type="checkbox" id="dsEn" ${STORE.dailySummary?.enabled ? "checked" : ""}></label>
+      <div class="row" style="margin-top:8px"><label>ส่งเวลา (น.)</label>
+        <select id="dsHour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${(STORE.dailySummary?.hour ?? 20) === h ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("")}</select></div>
+      <div class="row" style="margin-top:8px"><button class="ghost" id="dsSave">บันทึกสรุปรายวัน</button><button class="ghost" id="dsTest">ทดสอบส่งสรุป</button></div>
+      <div class="msg" id="dsMsg"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="gap:8px">
+        <button class="ghost" id="exportBtn" style="flex:1">⬆️ Export ตั้งค่า</button>
+        <button class="ghost" id="importBtn" style="flex:1">⬇️ Import ตั้งค่า</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+      <div class="msg" id="ioMsg"></div>
       <div class="muted" style="margin-top:8px">
         <button class="ghost" id="dlDbg" style="width:100%">⬇️ ดาวน์โหลด debug ทั้งไฟล์ (ส่งให้ผม)</button>
       </div>
@@ -208,6 +237,7 @@ function renderMain() {
   );
   $("addChan").addEventListener("click", () => go("add"));
   $("reportBtn").addEventListener("click", () => go("report"));
+  $("logBtn").addEventListener("click", () => go("log"));
   $("reload").addEventListener("click", reloadTikTok);
   app.querySelectorAll("[data-edit]").forEach((el) =>
     el.addEventListener("click", () => go("detail", el.getAttribute("data-edit")))
@@ -225,6 +255,24 @@ function renderMain() {
       $("msg").textContent = r && r.ok ? "ส่งสำเร็จ ✓" : `ผิดพลาด: ${(r && r.error) || "?"}`;
     });
   });
+  $("dsSave").addEventListener("click", () =>
+    save(
+      { dailySummary: { enabled: $("dsEn").checked, hour: Number($("dsHour").value) } },
+      () => {
+        chrome.runtime.sendMessage({ type: "CGMX_RESCHEDULE" });
+        $("dsMsg").textContent = "บันทึกแล้ว ✓";
+      }
+    )
+  );
+  $("dsTest").addEventListener("click", () => {
+    $("dsMsg").textContent = "กำลังส่ง…";
+    chrome.runtime.sendMessage({ type: "CGMX_DAILY_TEST" }, () => {
+      $("dsMsg").textContent = "ส่งแล้ว — เช็ค Telegram";
+    });
+  });
+  $("exportBtn").addEventListener("click", exportSettings);
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", importSettings);
   $("dlDbg").addEventListener("click", downloadDebug);
   $("syncBtn").addEventListener("click", () => {
     $("syncMsg").textContent = "กำลังดึงข้อมูล…";
@@ -251,6 +299,58 @@ function renderMain() {
       });
     });
   });
+}
+
+function exportSettings() {
+  const data = {
+    _type: "chobtham-gmvmax-settings",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    channels: STORE.channels || [],
+    telegramToken: STORE.telegramToken || "",
+    telegramChatId: STORE.telegramChatId || "",
+    dailySummary: STORE.dailySummary || { enabled: false, hour: 20 },
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "chobtham-gmvmax-settings.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  $("ioMsg").textContent = "Export แล้ว — เก็บไฟล์ chobtham-gmvmax-settings.json ไว้";
+}
+
+function importSettings(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if (d._type !== "chobtham-gmvmax-settings" || !Array.isArray(d.channels))
+        throw new Error("ไฟล์ไม่ถูกต้อง");
+      if (!confirm(`นำเข้า ${d.channels.length} ช่อง? (ทับการตั้งค่าเดิม)`)) return;
+      save(
+        {
+          channels: d.channels,
+          telegramToken: d.telegramToken || STORE.telegramToken || "",
+          telegramChatId: d.telegramChatId || STORE.telegramChatId || "",
+          dailySummary: d.dailySummary || STORE.dailySummary || { enabled: false, hour: 20 },
+        },
+        () => {
+          chrome.runtime.sendMessage({ type: "CGMX_RESCHEDULE" });
+          $("ioMsg").textContent = "นำเข้าสำเร็จ ✓";
+          render();
+        }
+      );
+    } catch (e) {
+      $("ioMsg").textContent = "ผิดพลาด: " + (e.message || e);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function downloadDebug() {
@@ -327,6 +427,33 @@ function addChannel(id) {
   };
   const channels = [...(STORE.channels || []), ch];
   save({ channels }, () => go("settings", id));
+}
+
+function renderLog() {
+  setHeader("ประวัติการทำงาน", true, '<span id="clearLog" title="ล้าง" style="cursor:pointer">🗑</span>');
+  const logs = STORE.logs || [];
+  const app = $("app");
+  app.innerHTML = `
+    <div class="muted" style="margin-bottom:8px">บันทึกการปิด / สร้าง / สเกลงบ / ปรับ ROI / รีเซต (ล่าสุด ${logs.length})</div>
+    <div class="card clist">
+      ${
+        logs.length
+          ? logs
+              .map(
+                (l) => `<div class="crow">
+        <span class="dot" style="background:${l.ok ? "var(--green)" : "var(--red)"}"></span>
+        <span class="cn" style="white-space:normal">${esc(l.text)}</span>
+        <span class="muted" style="min-width:70px;text-align:right">${new Date(l.ts).toLocaleString("th-TH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+      </div>`
+              )
+              .join("")
+          : '<div class="muted">ยังไม่มีประวัติ — เมื่อระบบปิด/สร้าง/สเกลงบ จะบันทึกไว้ที่นี่</div>'
+      }
+    </div>`;
+  $("clearLog").addEventListener("click", () => {
+    if (!confirm("ล้างประวัติทั้งหมด?")) return;
+    save({ logs: [] }, () => renderLog());
+  });
 }
 
 function renderReport() {
@@ -560,6 +687,17 @@ function renderSettings() {
       <div class="muted" style="margin-top:6px">ทุกเที่ยงคืน (เวลาไทย) ตั้งงบของแคมที่รันอยู่กลับเป็นค่านี้ — ใช้คู่กับสเกลงบ (กลางวันงบโต กลางคืนรีเซต)</div>
     </div>
 
+    <div class="sec">ปรับ ROI เป้าอัตโนมัติ</div>
+    <div class="card">
+      <div class="row"><span><b>เปิดใช้งาน</b></span>
+        <label class="switch"><input type="checkbox" id="raEn" ${s.roiAuto?.enabled ? "checked" : ""}><span class="slider"></span></label></div>
+      <div class="row" style="margin-top:8px"><label>ปรับทีละ (ROI)</label><input type="number" step="0.1" id="raStep" value="${s.roiAuto?.step ?? 0.1}"></div>
+      <div class="row" style="margin-top:6px"><label>ปรับเมื่อ ROI ห่างเป้าเกิน</label><input type="number" step="0.1" id="raMargin" value="${s.roiAuto?.margin ?? 1}"></div>
+      <div class="row" style="margin-top:6px"><label>ROI เป้าต่ำสุด</label><input type="number" step="0.1" id="raMin" value="${s.roiAuto?.min ?? 1}"></div>
+      <div class="row" style="margin-top:6px"><label>ROI เป้าสูงสุด</label><input type="number" step="0.1" id="raMax" value="${s.roiAuto?.max ?? 5}"></div>
+      <div class="muted" style="margin-top:6px">ROI จริงดีกว่าเป้ามาก → ดันเป้าขึ้น (รีดกำไร) · แย่กว่าเป้า → ลดเป้าลง (ให้ยิงได้)</div>
+    </div>
+
     <div class="sec">Budget Scaling (สเกลงบอัตโนมัติ)</div>
     <div class="card">
       <div class="row"><span><b>เปิดใช้งาน</b></span>
@@ -608,6 +746,14 @@ function renderSettings() {
       midnightReset: {
         enabled: $("mrEn").checked,
         budget: Number($("mrBudget").value),
+      },
+      roiAuto: {
+        enabled: $("raEn").checked,
+        step: Number($("raStep").value),
+        margin: Number($("raMargin").value),
+        min: Number($("raMin").value),
+        max: Number($("raMax").value),
+        intervalMin: s.roiAuto?.intervalMin || 30,
       },
       triggers: {
         roi: readTrigger("roi"),
