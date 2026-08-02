@@ -180,7 +180,12 @@
 
   <!-- ===== ภาพรวม ===== -->
   <section id="overview">
-    <div id="ovMeta" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
+    <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px">
+      <div id="ovMeta" class="muted" style="font-size:12.5px"></div>
+      <div>
+        <select id="ovPeriod" onchange="setOvPeriod(this.value)" style="min-width:130px"></select>
+      </div>
+    </div>
     <div id="kpis" class="kpis"></div>
     <div class="card" style="padding:6px 16px 16px">
       <h3 style="margin:14px 4px 6px;font-size:15px">รายละเอียดรายบัญชี</h3>
@@ -406,22 +411,32 @@ function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.tog
   ["overview","board","editor","logs"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
 
 /* ===================== OVERVIEW ===================== */
+let OV_ST=null, ovPeriod="today";
+const PERIOD_LABELS=[["today","วันนี้"],["yesterday","เมื่อวาน"],["last_3d","3 วัน"],["last_7d","7 วัน"],["last_30d","30 วัน"]];
+function setOvPeriod(v){ovPeriod=v;renderOverview();}
 function renderOverview(st){
+  if(st!==undefined)OV_ST=st;
+  st=OV_ST;
   const meta=document.getElementById("ovMeta"),kpis=document.getElementById("kpis"),tb=document.querySelector("#ovTable tbody");
+  const sel=document.getElementById("ovPeriod");
+  if(sel&&!sel.options.length){sel.innerHTML=PERIOD_LABELS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");sel.value=ovPeriod;}
   if(!st){meta.textContent="";kpis.innerHTML="";
-    tb.innerHTML=`<tr><td colspan="7" class="muted" style="text-align:center;padding:26px">ยังไม่มีข้อมูลภาพรวม — รอรอบแรกของคลาวด์ (~10 นาที) หรือกด ▶ ทดสอบ</td></tr>`;return;}
+    tb.innerHTML=`<tr><td colspan="7" class="muted" style="text-align:center;padding:26px">ยังไม่มีข้อมูลภาพรวม — รอรอบแรกของคลาวด์ หรือกด ▶ ทดสอบ</td></tr>`;return;}
   const when=st.updated_at?new Date(st.updated_at):null;
-  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"-"}</b> ${st.dry_run?'· <span class="tag">โหมดทดสอบ</span>':''} · ข้อมูลจากรอบที่คลาวด์รันจริง`;
-  const T=st.totals||{};
+  const plabel=(PERIOD_LABELS.find(x=>x[0]===ovPeriod)||["","วันนี้"])[1];
+  meta.innerHTML=`ช่วง <b>${plabel}</b> · อัปเดต ${when?when.toLocaleString("th-TH"):"-"} ${st.dry_run?'· <span class="tag">โหมดทดสอบ</span>':''}`;
+  const T=(st.period_totals&&st.period_totals[ovPeriod])||{};
   kpis.innerHTML=[["Spend","ยอดใช้จ่ายรวม",money(T.spend)],["Revenue","ยอดขายรวม",money(T.revenue)],
     ["ROAS","ผลตอบแทนเฉลี่ย",(T.roas||0).toFixed(2)+"x"],["Orders","จำนวนออเดอร์",Number(T.orders||0).toLocaleString("th-TH")]]
     .map(([lbl,sub,val])=>`<div class="kpi"><div class="lbl"><span>${sub}</span><span class="tag">${lbl}</span></div><div class="val">${val}</div></div>`).join("");
   tb.innerHTML=(st.accounts||[]).map(a=>{
     if(a.error)return `<tr><td>${esc(a.name)}</td><td colspan="5" class="muted">—</td><td><span class="tag err">ผิดพลาด</span></td></tr>`;
-    const roas=Number(a.roas||0);
-    return `<tr><td>${esc(a.name)}</td><td>${money(a.spend)}</td><td class="pos">${money(a.revenue)}</td>
-      <td class="${roas>=1?'pos':'neg'}">${roas.toFixed(2)}x</td><td>${a.orders>0?money(a.cost_per_order):'-'}</td>
-      <td>${Number(a.orders||0).toLocaleString("th-TH")}</td><td><span class="tag">${a.active_today||0}/${a.campaigns||0} แคมเปญ</span></td></tr>`;
+    if(a.disabled)return `<tr style="opacity:.5"><td>${esc(a.name)}</td><td colspan="5" class="muted">—</td><td><span class="tag">ปิดอยู่</span></td></tr>`;
+    const pd=(a.periods&&a.periods[ovPeriod])||{};
+    const roas=Number(pd.roas||0);
+    return `<tr><td>${esc(a.name)}</td><td>${money(pd.spend)}</td><td class="pos">${money(pd.revenue)}</td>
+      <td class="${roas>=1?'pos':'neg'}">${roas.toFixed(2)}x</td><td>${pd.orders>0?money(pd.cost_per_order):'-'}</td>
+      <td>${Number(pd.orders||0).toLocaleString("th-TH")}</td><td><span class="tag">${a.active_today||0}/${a.campaigns||0} แคมเปญ</span></td></tr>`;
   }).join("")||`<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">ไม่มีบัญชี</td></tr>`;
 }
 
