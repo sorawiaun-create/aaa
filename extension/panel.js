@@ -467,11 +467,9 @@ function renderSettings() {
       <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
       <div class="row" style="margin-top:6px"><label>งบเริ่มต้น (฿)</label><input type="number" id="cBudget" value="${s.actions.createBudget}"></div>
       <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ROI + งบ)</div>
-      <div class="note" style="margin-top:8px;margin-bottom:0">
-        ${STORE.createRecipe
-          ? "✅ จำแม่แบบการสร้างแล้ว — พร้อมสร้างอัตโนมัติ"
-          : "⚠️ ยังไม่มีแม่แบบ — <b>สร้างแคมเปญ GMV Max ด้วยมือ 1 ครั้ง</b> (เปิดหน้านี้ค้างไว้) ระบบจะจำวิธีสร้างเอง จากนั้นสร้างอัตโนมัติได้เลย"}
-      </div>
+      <div class="muted" style="margin-top:6px">โคลนจากแคมเปญเดิมของช่องนี้อัตโนมัติ (ไม่ต้องสร้างมือก่อน)</div>
+      <button class="ghost" id="testCreate" style="width:100%;margin-top:8px">🧪 ทดสอบสร้าง 1 ตัวเลย (ใช้ค่าด้านบน)</button>
+      <div class="msg" id="createMsg"></div>
     </div>
 
     <div class="sec">Budget Scaling (สเกลงบอัตโนมัติ)</div>
@@ -553,6 +551,32 @@ function renderSettings() {
     save({ channels: (STORE.channels || []).filter((c) => c.id !== ch.id) }, () =>
       go("main")
     );
+  });
+  $("testCreate").addEventListener("click", () => {
+    const roi = Number($("cRoi").value);
+    const budget = Number($("cBudget").value);
+    if (!confirm(`สร้างแคมเปญ GMV Max Live ใหม่จริงบนช่อง "${ch.name}"?\nROI ${roi} · งบ ${budget}฿`)) return;
+    $("createMsg").textContent = "กำลังสร้าง…";
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) {
+        $("createMsg").textContent = "เปิดแท็บ ads.tiktok.com ก่อน";
+        return;
+      }
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { type: "CGMX_CREATE", channelId: ch.id, roi, budget },
+        (r) => {
+          if (chrome.runtime.lastError) {
+            $("createMsg").textContent = "รีเฟรชหน้า TikTok แล้วลองใหม่: " + chrome.runtime.lastError.message;
+            return;
+          }
+          $("createMsg").textContent =
+            r && r.ok
+              ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
+              : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
+        }
+      );
+    });
   });
 }
 

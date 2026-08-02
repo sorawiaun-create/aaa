@@ -85,14 +85,14 @@ function tabSync() {
   });
 }
 
-// Replay the recorded "create campaign" request with a new ROI + budget.
-function execCreate(roi, budget) {
+// Create a new campaign by cloning a template campaign, with a new ROI + budget.
+function execCreate(templateCampaignId, channelId, roi, budget) {
   return new Promise((resolve) => {
     chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
       if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
       chrome.tabs.sendMessage(
         tabs[0].id,
-        { type: "CGMX_CREATE", roi, budget },
+        { type: "CGMX_CREATE", templateCampaignId, channelId, roi, budget },
         (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
       );
     });
@@ -138,9 +138,10 @@ async function runRules() {
       acted[c.id] = now;
       actions.push({ ok: res && res.ok, name: c.name, reason });
 
-      // Optionally create a fresh campaign to replace the paused one.
+      // Optionally create a fresh campaign to replace the paused one, cloning
+      // the campaign we just paused as the template.
       if (res && res.ok && st.actions?.createNew) {
-        const cr = await execCreate(st.actions.createRoi, st.actions.createBudget);
+        const cr = await execCreate(c.id, ch.id, st.actions.createRoi, st.actions.createBudget);
         actions.push({
           ok: cr && cr.ok,
           name: `↳ สร้างใหม่ (ROI ${st.actions.createRoi}, งบ ${st.actions.createBudget}฿)`,

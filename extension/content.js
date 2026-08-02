@@ -18,6 +18,9 @@ const EP = {
   CHANNEL_LIST_NOSHOP: "/api/oec_shopping/v1/creation/creator_identity_list",
   CAMPAIGN_LIST: "/api/oec_shopping/v1/oec/stat/post_campaign_list",
   UPDATE_STATUS: "/api/oec_shopping/v1/creation/campaign/update_status",
+  CAMPAIGN_DETAIL: "/api/oec_shopping/v1/creation/all_ad_data/detail",
+  CREATE_CAMPAIGN: "/api/oec_shopping/v1/creation/all_ad_data/create",
+  UPDATE_CAMPAIGN: "/api/oec_shopping/v1/creation/all_ad_data/update",
 };
 
 // Campaign fields to request — mirrors the official UI's query_list.
@@ -403,6 +406,131 @@ async function fetchCampaigns(ctx, out) {
   }
 }
 
+// Read an existing campaign's full ad data (used as the create template).
+async function getCampaignDetail(ctx, campaignId) {
+  const url = buildUrl(EP.CAMPAIGN_DETAIL, { ...ctxParams(ctx, false), campaign_id: campaignId });
+  const j = await apiFetch(url, { method: "GET" });
+  return j && j.data ? j.data : null;
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+// Build a GMV Max Live create payload by cloning an existing campaign's ad_info
+// and swapping in the new name, budget and ROI. Field names/values mirror what
+// the TikTok create API expects (with-shop / LIVE GMV Max).
+function buildCreatePayload(detail, ctx, roi, budget, accountName) {
+  const ad = (detail && detail.ad_info) || {};
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2);
+  const MM = pad2(now.getMonth() + 1);
+  const dd = pad2(now.getDate());
+  const hh = pad2(now.getHours());
+  const mm = pad2(now.getMinutes());
+  const ss = pad2(now.getSeconds());
+  const startTime = `${now.getFullYear()}-${MM}-${dd} ${hh}:${mm}:${ss}`;
+  const campaignName = `${yy}/${MM}/${dd} - ${accountName || "ช่อง"} - ${hh}${mm}`;
+  const roasBid = parseFloat(Number(roi).toFixed(1));
+  const adjustedRoas = (Number(roi) * 0.9).toFixed(1);
+  const bud = Number(budget);
+
+  const identityList =
+    ad.identity_list && ad.identity_list.length
+      ? ad.identity_list
+      : [{ tt_uid: ad.template_ad_identity_id || "", identity_type: 8 }];
+
+  return {
+    campaign_info: {
+      campaign_id: "",
+      campaign_name: campaignName,
+      budget_mode: 0,
+      budget: bud,
+      shop_automation_type: 2,
+      shop_image_aigc_mode: 0,
+    },
+    ad_info: {
+      name: `adgroup_${now.getFullYear()}${MM}${dd}_${hh}${mm}${ss}`,
+      campaign_id: "",
+      ad_id: "",
+      inventory_flow_type: ad.inventory_flow_type || 1,
+      inventory_flow: ad.inventory_flow || [3000],
+      shopping_inventory_type: ad.shopping_inventory_type || 1,
+      external_type: ad.external_type ?? 0,
+      is_comment_disable: 0,
+      schedule_type: 1,
+      start_time: startTime,
+      flow_control_mode: ad.flow_control_mode || 0,
+      budget_mode: 0,
+      budget: bud,
+      product_video_selection_type: 1,
+      pricing: ad.pricing || 9,
+      cpa_skip_first_phrase: ad.cpa_skip_first_phrase || 0,
+      optimize_goal: ad.optimize_goal || 111,
+      external_action: ad.external_action ?? 0,
+      deep_bid_type: ad.deep_bid_type || 108,
+      roas_bid: roasBid,
+      product_platform_id: "",
+      country: "TH",
+      shop_id: ctx.oec_seller_id,
+      ...(ad.shop_type ? { shop_type: ad.shop_type } : {}),
+      shop_authorized_bc: ad.shop_authorized_bc || ctx.bc_id,
+      promotion_flow_type: 2,
+      product_source: ad.product_source ?? 0,
+      product_bid_type: ad.product_bid_type ?? 0,
+      custom_tz_id: ad.custom_tz_id || "7473426712694374408",
+      custom_tz_type: ad.custom_tz_type ?? 2,
+      promotion_days_setting: {
+        is_enable: false,
+        automode_enable: true,
+        custom_schedules: [],
+        roas_bid_multiplier: 90,
+        budget_multiplier: 150,
+        adjusted_roas_bid: adjustedRoas,
+        adjusted_budget: (bud * 1.5).toFixed(2),
+        benchmark_roas_bid: Number(roi),
+      },
+      compensation_activity_type: ad.compensation_activity_type ?? 3,
+      gmax_budget_adjust_setting: {
+        strategy: ad.gmax_budget_adjust_setting?.strategy || 2,
+        auto_budget_switch: ad.gmax_budget_adjust_setting?.auto_budget_switch ?? false,
+        auto_budget_adjust_config:
+          ad.gmax_budget_adjust_setting?.auto_budget_adjust_config || { adjust_ratio: 0.5, max_daily_adjust_times: 10 },
+        promotion_day_adjust_config:
+          ad.gmax_budget_adjust_setting?.promotion_day_adjust_config || { adjust_ratio: 0.5, max_daily_adjust_times: 10 },
+      },
+      identity_list: identityList,
+      enable_shop_video_exclusion_filter: true,
+      shop_video_filters: [],
+      pre_item_list: [],
+      shop_live_video_identity_list: [],
+      key_live_days: [],
+    },
+    risk_info: {
+      cookie_enabled: true,
+      screen_width: screen.width || 1920,
+      screen_height: screen.height || 1080,
+      browser_language: "th-TH",
+      browser_platform: navigator.platform || "Win32",
+      browser_name: "Mozilla",
+      browser_version: navigator.userAgent || "Mozilla/5.0",
+      browser_online: true,
+      timezone_name: "Asia/Bangkok",
+    },
+  };
+}
+
+// Clone an existing campaign into a new one with the given ROI + budget.
+async function createFromTemplate(ctx, templateCampaignId, roi, budget, accountName) {
+  const detail = await getCampaignDetail(ctx, templateCampaignId);
+  if (!detail || !detail.ad_info)
+    return { ok: false, error: "อ่านรายละเอียดแคมเปญต้นแบบไม่ได้" };
+  const payload = buildCreatePayload(detail, ctx, roi, budget, accountName);
+  const url = buildUrl(EP.CREATE_CAMPAIGN, ctxParams(ctx, false));
+  const j = await apiFetch(url, { method: "POST", body: JSON.stringify(payload) });
+  return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
+}
+
 async function setCampaignStatus(ctx, campaignId, operation) {
   const url = buildUrl(EP.UPDATE_STATUS, ctxParams(ctx, false));
   const j = await apiFetch(url, {
@@ -491,32 +619,62 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "CGMX_CREATE") {
     (async () => {
       try {
-        const st = await chrome.storage.local.get({ createRecipe: null, headerTemplate: {} });
-        setCsrfFallback(st.headerTemplate);
-        if (!st.createRecipe || !st.createRecipe.reqBody) {
-          sendResponse({
-            ok: false,
-            error: "ยังไม่มีแม่แบบการสร้าง — สร้างแคมเปญ GMV Max ด้วยมือ 1 ครั้งก่อน เพื่อให้ระบบจำ",
-          });
-          return;
-        }
-        let body;
-        try {
-          body = JSON.parse(st.createRecipe.reqBody);
-        } catch {
-          sendResponse({ ok: false, error: "แม่แบบการสร้างเสียหาย" });
-          return;
-        }
-        // Swap in the new ROI target, start budget and a fresh timestamped name.
-        if (msg.roi != null) deepSet(body, ["roas_bid", "target_roi"], Number(msg.roi).toFixed(1));
-        if (msg.budget != null) deepSet(body, ["budget"], Math.round(msg.budget) + ".00");
-        const name = `AUTO_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}`;
-        deepSet(body, ["campaign_name"], name);
-        const j = await apiFetch(st.createRecipe.url, {
-          method: st.createRecipe.method || "POST",
-          body: JSON.stringify(body),
+        const st = await chrome.storage.local.get({
+          ctx: null, headerTemplate: {}, createRecipe: null, campaigns: [],
         });
-        sendResponse({ ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j });
+        setCsrfFallback(st.headerTemplate);
+        const ctx = st.ctx;
+        if (!ctx || !ctx.aadvid) {
+          sendResponse({ ok: false, error: "no ctx" });
+          return;
+        }
+        // Preferred: clone an existing campaign (no manual recording needed).
+        let templateId = msg.templateCampaignId;
+        let accountName = "";
+        if (!templateId) {
+          // Pick any campaign on the same channel as a template.
+          const camps = st.campaigns || [];
+          const match = camps.find((c) => String(c.channelId) === String(msg.channelId)) || camps[0];
+          if (match) {
+            templateId = match.id;
+            accountName = match.channelName;
+          }
+        } else {
+          const found = (st.campaigns || []).find((c) => String(c.id) === String(templateId));
+          if (found) accountName = found.channelName;
+        }
+        if (templateId) {
+          const r = await createFromTemplate(ctx, templateId, msg.roi, msg.budget, accountName);
+          if (r.ok) {
+            sendResponse(r);
+            return;
+          }
+          // fall through to recipe replay if the clone failed
+          if (!st.createRecipe) {
+            sendResponse(r);
+            return;
+          }
+        }
+        // Fallback: replay a recorded create request.
+        if (st.createRecipe && st.createRecipe.reqBody) {
+          let body;
+          try {
+            body = JSON.parse(st.createRecipe.reqBody);
+          } catch {
+            sendResponse({ ok: false, error: "แม่แบบการสร้างเสียหาย" });
+            return;
+          }
+          if (msg.roi != null) deepSet(body, ["roas_bid"], parseFloat(Number(msg.roi).toFixed(1)));
+          if (msg.budget != null) deepSet(body, ["budget"], Number(msg.budget));
+          deepSet(body, ["campaign_name"], `AUTO_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}`);
+          const j = await apiFetch(st.createRecipe.url, {
+            method: st.createRecipe.method || "POST",
+            body: JSON.stringify(body),
+          });
+          sendResponse({ ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j });
+          return;
+        }
+        sendResponse({ ok: false, error: "ไม่มีแคมเปญต้นแบบให้โคลน — ลองซิงก์ให้เจอแคมเปญก่อน" });
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }
