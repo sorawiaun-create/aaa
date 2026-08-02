@@ -608,9 +608,9 @@ $("back").addEventListener("click", () => {
 chrome.storage.onChanged.addListener(() => loadStore(render));
 loadStore(render);
 
-// Auto-sync silently when the panel opens (if a TikTok tab is present), so the
-// user rarely has to press Sync manually.
-function autoSyncOnOpen() {
+// Auto-sync silently (if a TikTok tab is present) so the user rarely has to
+// press Sync manually — once on open, then repeatedly while the panel is open.
+function autoSync() {
   chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
     if (!tabs.length) return;
     chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, () => {
@@ -619,4 +619,5 @@ function autoSyncOnOpen() {
     });
   });
 }
-autoSyncOnOpen();
+autoSync();
+setInterval(autoSync, 45 * 1000);

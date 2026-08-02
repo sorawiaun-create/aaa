@@ -121,11 +121,11 @@ function execStatus(campaignId, operation) {
 }
 
 async function runRules() {
-  let s = await chrome.storage.local.get(KEYS);
-  if (!s.enabled) return;
-  // Auto-refresh data from TikTok first so decisions use live numbers.
+  // Always refresh data from TikTok first — this keeps the panel's numbers and
+  // "last synced" time current every interval, regardless of the master toggle.
   await tabSync();
-  s = await chrome.storage.local.get(KEYS);
+  const s = await chrome.storage.local.get(KEYS);
+  if (!s.enabled) return; // only ACT (pause/create) when the program is on
   const acted = s.actedIds || {};
   const createdTs = s.createdTs || {};
   const now = Date.now();
