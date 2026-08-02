@@ -40,6 +40,10 @@ function defaultSettings() {
       cap: 10000,
     },
     onlyWhenLive: true,
+    midnightReset: {
+      enabled: false,
+      budget: 300, // reset every running campaign's budget to this at 00:00 (Bangkok)
+    },
   };
 }
 
@@ -548,6 +552,14 @@ function renderSettings() {
       <div class="msg" id="createMsg"></div>
     </div>
 
+    <div class="sec">รีเซตงบเที่ยงคืน</div>
+    <div class="card">
+      <div class="row"><span><b>เปิดใช้งาน</b> <span class="muted">(00:00 น.)</span></span>
+        <label class="switch"><input type="checkbox" id="mrEn" ${s.midnightReset?.enabled ? "checked" : ""}><span class="slider"></span></label></div>
+      <div class="row" style="margin-top:8px"><label>รีเซตงบกลับเป็น (฿)</label><input type="number" id="mrBudget" value="${s.midnightReset?.budget ?? 300}"></div>
+      <div class="muted" style="margin-top:6px">ทุกเที่ยงคืน (เวลาไทย) ตั้งงบของแคมที่รันอยู่กลับเป็นค่านี้ — ใช้คู่กับสเกลงบ (กลางวันงบโต กลางคืนรีเซต)</div>
+    </div>
+
     <div class="sec">Budget Scaling (สเกลงบอัตโนมัติ)</div>
     <div class="card">
       <div class="row"><span><b>เปิดใช้งาน</b></span>
@@ -593,6 +605,10 @@ function renderSettings() {
       checkIntervalMin: Number($("iv").value),
       minBudgetBeforeCheck: Number($("minb").value),
       onlyWhenLive: $("onlyLive").checked,
+      midnightReset: {
+        enabled: $("mrEn").checked,
+        budget: Number($("mrBudget").value),
+      },
       triggers: {
         roi: readTrigger("roi"),
         cost: readTrigger("cost"),

@@ -21,8 +21,18 @@ const KEYS = {
 // bad new campaign can't spawn replacements in a tight loop).
 const CREATE_COOLDOWN_MS = 10 * 60 * 1000;
 
-chrome.runtime.onInstalled.addListener(() => reschedule());
-chrome.runtime.onStartup.addListener(() => reschedule());
+chrome.runtime.onInstalled.addListener(() => { reschedule(); scheduleMidnight(); });
+chrome.runtime.onStartup.addListener(() => { reschedule(); scheduleMidnight(); });
+
+// Schedule the next 00:00 Bangkok (UTC+7) reset.
+function scheduleMidnight() {
+  const now = Date.now();
+  const bkk = new Date(now + 7 * 3600 * 1000); // Bangkok wall-clock via UTC fields
+  const nextUtc =
+    Date.UTC(bkk.getUTCFullYear(), bkk.getUTCMonth(), bkk.getUTCDate() + 1, 0, 0, 0) -
+    7 * 3600 * 1000;
+  chrome.alarms.create("cgmx_midnight", { when: nextUtc });
+}
 
 function reschedule() {
   chrome.storage.local.get(KEYS, (s) => {
@@ -38,7 +48,35 @@ function reschedule() {
 
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === "cgmx_loop") runRules();
+  if (a.name === "cgmx_midnight") midnightReset().finally(scheduleMidnight);
 });
+
+// Reset each running campaign's budget back to the configured base at midnight.
+async function midnightReset() {
+  await tabSync();
+  const s = await chrome.storage.local.get(KEYS);
+  const scaledTs = s.scaledTs || {};
+  const done = [];
+  for (const ch of s.channels || []) {
+    const mr = ch.settings?.midnightReset;
+    if (!mr?.enabled || !mr.budget) continue;
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c.status));
+    for (const c of camps) {
+      if (Math.round(c.budget || 0) === Math.round(mr.budget)) continue;
+      const r = await execBudget(c.id, c.name, mr.budget);
+      if (r && r.ok) delete scaledTs[c.id]; // let scaling start fresh today
+      done.push({ ok: r && r.ok, name: c.name, to: mr.budget });
+    }
+  }
+  await chrome.storage.local.set({ scaledTs });
+  if (done.length && s.telegramToken && s.telegramChatId) {
+    const okN = done.filter((d) => d.ok).length;
+    const text =
+      `🌙 รีเซตงบเที่ยงคืน ${okN}/${done.length} แคมเปญ\n` +
+      done.map((d) => `${d.ok ? "✅" : "⚠️"} ${d.name} → ${d.to}฿`).join("\n");
+    sendTelegram(s.telegramToken, s.telegramChatId, text);
+  }
+}
 
 function statusRunning(s) {
   const t = String(s).toUpperCase();
