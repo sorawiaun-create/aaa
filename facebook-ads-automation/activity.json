@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-08-02T22:10:25.616531+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 4,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:10 (>22) และ เวลา=22:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:10 (>22) และ เวลา=22:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:10 (>22) และ เวลา=22:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:10 (>22) และ เวลา=22:10 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-02T22:00:36.601530+07:00",
       "dry_run": false,
       "summary": {
@@ -672,17 +724,6 @@
     },
     {
       "t": "2026-08-02T13:30:29.354524+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-02T13:20:26.049606+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
