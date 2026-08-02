@@ -29,7 +29,10 @@ from fb_automation.logging_setup import setup_logging
 from fb_automation.metrics import compute_metrics
 from fb_automation.rules import plan_campaign
 from fb_automation.state import State
-from fb_automation.status import aggregate_metrics, build_status, write_status
+from fb_automation.status import (
+    PERIOD_PRESETS, account_totals_from_row, aggregate_metrics, build_status,
+    write_status, zero_period,
+)
 from fb_automation.activity import append_run, load_activity, write_activity
 from fb_automation.notify import maybe_notify
 from fb_automation.board import write_board
@@ -168,7 +171,7 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             "active_today": 0,
             "error": None,
             "disabled": not account.enabled,
-            "spend": 0.0, "revenue": 0.0, "orders": 0, "roas": 0.0, "cost_per_order": 0.0,
+            "periods": {p: zero_period() for p in PERIOD_PRESETS},
         }
         # ข้ามบัญชีที่ถูกปิดจาก Dashboard
         if not account.enabled:
@@ -229,7 +232,17 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
                     account_name=account.name, events=events,
                 )
 
-        acct_stat.update(aggregate_metrics(account_metrics))
+        # ---- ข้อมูลย้อนหลังสำหรับหน้าภาพรวม ----
+        # วันนี้: ใช้ยอดรวมจากแคมเปญที่คำนวณแล้ว (ตรงกับกระดานแอด)
+        today_totals = aggregate_metrics(account_metrics)
+        acct_stat["periods"]["today"] = today_totals
+        # ช่วงอื่น: ดึงยอดรวมระดับบัญชีของแต่ละช่วงเวลา
+        for preset in ("yesterday", "last_3d", "last_7d", "last_30d"):
+            try:
+                row = client.get_account_totals(preset)
+                acct_stat["periods"][preset] = account_totals_from_row(row, account.purchase_action_types)
+            except Exception as e:  # noqa: BLE001
+                log.warning("  ดึงข้อมูลย้อนหลัง (%s) ไม่ได้: %s", preset, e)
         status_accounts.append(acct_stat)
         board_campaigns.sort(key=lambda c: (c["status"] != "ACTIVE", -c["spend"]))
         board_accounts.append({"name": account.name, "account_id": account.account_id,

@@ -38,18 +38,42 @@ class TestAggregate(unittest.TestCase):
 
 
 class TestBuildStatus(unittest.TestCase):
-    def test_totals(self):
+    def test_period_totals(self):
         accounts = [
-            {"name": "A", "spend": 100, "revenue": 300, "orders": 2},
-            {"name": "B", "spend": 100, "revenue": 200, "orders": 3},
+            {"name": "A", "periods": {"today": {"spend": 100, "revenue": 300, "orders": 2},
+                                       "last_7d": {"spend": 700, "revenue": 1400, "orders": 10}}},
+            {"name": "B", "periods": {"today": {"spend": 100, "revenue": 200, "orders": 3},
+                                       "last_7d": {"spend": 300, "revenue": 900, "orders": 6}}},
         ]
         s = build_status(updated_at="2026-07-31T15:00:00+07:00",
                          timezone="Asia/Bangkok", dry_run=False, accounts=accounts)
-        self.assertEqual(s["totals"]["spend"], 200)
-        self.assertEqual(s["totals"]["revenue"], 500)
-        self.assertEqual(s["totals"]["orders"], 5)
-        self.assertEqual(s["totals"]["roas"], 2.5)
-        self.assertEqual(len(s["accounts"]), 2)
+        self.assertEqual(s["period_totals"]["today"]["spend"], 200)
+        self.assertEqual(s["period_totals"]["today"]["revenue"], 500)
+        self.assertEqual(s["period_totals"]["today"]["roas"], 2.5)
+        self.assertEqual(s["period_totals"]["last_7d"]["spend"], 1000)
+        self.assertEqual(s["period_totals"]["last_7d"]["orders"], 16)
+        # ช่วงที่บัญชีไม่มีข้อมูล -> รวมเป็น 0 ไม่พัง
+        self.assertEqual(s["period_totals"]["yesterday"]["spend"], 0)
+
+
+class TestAccountTotalsFromRow(unittest.TestCase):
+    def test_from_row(self):
+        from fb_automation.status import account_totals_from_row
+        row = {"spend": "500",
+               "actions": [{"action_type": "omni_purchase", "value": "5"}],
+               "action_values": [{"action_type": "omni_purchase", "value": "1500"}]}
+        r = account_totals_from_row(row, ["omni_purchase", "purchase"])
+        self.assertEqual(r["spend"], 500)
+        self.assertEqual(r["orders"], 5)
+        self.assertEqual(r["revenue"], 1500)
+        self.assertEqual(r["roas"], 3.0)
+        self.assertEqual(r["cost_per_order"], 100)
+
+    def test_empty_row(self):
+        from fb_automation.status import account_totals_from_row
+        r = account_totals_from_row({}, ["omni_purchase"])
+        self.assertEqual(r["spend"], 0)
+        self.assertEqual(r["roas"], 0.0)
 
 
 if __name__ == "__main__":

@@ -85,6 +85,13 @@ class FacebookClient:
                 result[cid] = d
         return result
 
+    def get_account_totals(self, date_preset: str) -> dict[str, Any]:
+        """ดึง insight รวมทั้งบัญชีของช่วงเวลาหนึ่ง (today/yesterday/last_7d/last_30d ...)."""
+        fields = ["spend", "actions", "purchase_roas", "action_values"]
+        params = {"date_preset": date_preset, "level": "account", "limit": 1}
+        rows = list(self._account.get_insights(fields=fields, params=params))
+        return dict(rows[0]) if rows else {}
+
     def get_campaign_adsets(self, campaign_id: str) -> list[dict[str, Any]]:
         fields = ["id", "name", "status", "daily_budget", "lifetime_budget"]
         camp = Campaign(campaign_id, api=self._api)
