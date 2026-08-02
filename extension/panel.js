@@ -75,6 +75,7 @@ function availableChannels() {
       id: c.id,
       name: c.name,
       icon: c.icon,
+      identityId: c.identityId || "",
       count: campaignsOf(c.id).length,
     }));
   }
@@ -92,10 +93,19 @@ function availableChannels() {
   }
   return [...map.values()];
 }
+function channelMatch(c, ch) {
+  if (!ch) return false;
+  const cid = String(c.channelId || "");
+  if (cid && (cid === String(ch.id) || cid === String(ch.identityId || ""))) return true;
+  if (c.channelName && ch.name && c.channelName === ch.name) return true;
+  return false;
+}
 function campaignsOf(channelId) {
-  return (STORE.campaigns || []).filter(
-    (c) => (c.channelId || "__current__") === channelId
-  );
+  const ch =
+    (STORE.channels || []).find((x) => x.id === channelId) ||
+    (STORE.channelList || []).find((x) => x.id === channelId) ||
+    { id: channelId };
+  return (STORE.campaigns || []).filter((c) => channelMatch(c, ch));
 }
 
 /* ------------------------------ Views ------------------------------- */
@@ -166,8 +176,8 @@ function renderMain() {
     <div class="addbtn" id="addChan">+ เพิ่มช่องใหม่</div>
     <div class="card" style="margin-top:10px">
       <button class="primary" id="syncBtn">🔄 ดึงช่อง + ข้อมูลแคมเปญ (Sync)</button>
-      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}${STORE.channelRecipe ? " · 🟢 auto พร้อม" : ""}</div>
-      <div class="muted" style="margin-top:2px">${STORE.channelRecipe ? "✅ ระบบจำวิธีดึงช่องแล้ว — จากนี้ดึงเองอัตโนมัติทุกครั้ง" : "ครั้งแรกครั้งเดียว: ไปหน้า <b>สร้างแคมเปญ</b> กดช่อง “ค้นหาชื่อผู้ใช้ TikTok” ให้ลิสต์เด้ง 1 ครั้ง — หลังจากนั้นไม่ต้องทำอีก"}</div>
+      <div class="muted" style="margin-top:6px">${STORE.syncTs ? "ซิงค์ล่าสุด " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่เคยซิงค์"} · เจอช่องแล้ว ${(STORE.channelList || []).length}</div>
+      <div class="muted" style="margin-top:2px">เปิดหน้า GMV Max บน ads.tiktok.com ค้างไว้ — ระบบดึงช่อง+แคมเปญเองอัตโนมัติ</div>
       <div class="msg" id="syncMsg"></div>
     </div>
     <div class="sec">อื่นๆ</div>
@@ -303,6 +313,7 @@ function addChannel(id) {
     id,
     name: src ? src.name : id,
     icon: src ? src.icon : "",
+    identityId: src ? src.identityId || "" : "",
     settings: defaultSettings(),
   };
   const channels = [...(STORE.channels || []), ch];
@@ -322,6 +333,7 @@ function renderDetail() {
   const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
   const roi = cost > 0 ? sales / cost : 0;
   const cpo = orders > 0 ? cost / orders : 0;
+  const liveViewers = camps.reduce((a, c) => a + (c.liveViewers || 0), 0);
   const budget = camps.reduce((a, c) => a + (c.budget || 0), 0);
   const usedPct = budget > 0 ? Math.min(100, (cost / budget) * 100) : 0;
   const triggerAt = s.scaling?.whenUsedPercent || 50;
@@ -346,6 +358,7 @@ function renderDetail() {
       <div style="margin-top:10px">
         <div class="kv"><span class="k">งบใช้ / เพดาน</span><span class="val">${fmt(cost, 0)} / ${fmt(budget, 0)} ฿</span></div>
         <div class="kv"><span class="k">Orders</span><span class="val">${fmt(orders, 0)}</span></div>
+        <div class="kv"><span class="k">ผู้ชม live</span><span class="val">${fmt(liveViewers, 0)} คน</span></div>
         <div class="kv"><span class="k">แคมเปญที่ไลฟ์อยู่</span><span class="val">${live.length}</span></div>
       </div>
     </div>

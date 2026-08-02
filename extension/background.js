@@ -39,6 +39,15 @@ function statusRunning(s) {
   return t.includes("ENABLE") || t === "1" || t.includes("DELIVER") || t.includes("ACTIVE");
 }
 
+// A campaign belongs to a channel if its identity id matches the channel id or
+// the channel's identity id, or (last resort) the channel name matches.
+function channelMatch(c, ch) {
+  const cid = String(c.channelId || "");
+  if (cid && (cid === String(ch.id) || cid === String(ch.identityId || ""))) return true;
+  if (c.channelName && ch.name && c.channelName === ch.name) return true;
+  return false;
+}
+
 // Evaluate a campaign against a channel's trigger settings (OR logic).
 function triggered(c, st) {
   if (c.cost < (st.minBudgetBeforeCheck || 0)) return null;
@@ -76,23 +85,20 @@ function tabSync() {
   });
 }
 
-function buildPauseBody(recipe, id) {
-  try {
-    const o = JSON.parse(recipe.reqBody);
-    o.campaign_list = [String(id)];
-    o.operation = 2;
-    return JSON.stringify(o);
-  } catch {
-    return JSON.stringify({ campaign_list: [String(id)], operation: 2 });
-  }
-}
-function sanitize(h) {
-  const out = {};
-  const drop = ["cookie", "content-length", "host", "user-agent", "accept-encoding", "connection"];
-  for (const k of Object.keys(h || {})) if (!drop.includes(k.toLowerCase())) out[k] = h[k];
-  if (!Object.keys(out).some((k) => k.toLowerCase() === "content-type"))
-    out["Content-Type"] = "application/json";
-  return out;
+// Pause (operation 2) / enable (operation 1) a campaign natively via the
+// content script, which calls TikTok's update_status endpoint with the CSRF
+// token — no captured recipe required.
+function execStatus(campaignId, operation) {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { type: "CGMX_STATUS", campaignId, operation },
+        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
+      );
+    });
+  });
 }
 
 async function runRules() {
@@ -108,21 +114,13 @@ async function runRules() {
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
     if (!st.actions?.pause) continue;
-    const camps = (s.campaigns || []).filter(
-      (c) => (c.channelId || "__current__") === ch.id
-    );
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
     for (const c of camps) {
       if (!statusRunning(c.status)) continue;
       if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue; // cooldown 30m
       const reason = triggered(c, st);
       if (!reason) continue;
-      if (!s.pauseRecipe) continue;
-      const res = await execOnTikTok({
-        method: "POST",
-        url: s.pauseRecipe.url,
-        headers: sanitize(s.pauseRecipe.headers),
-        body: buildPauseBody(s.pauseRecipe, c.id),
-      });
+      const res = await execStatus(c.id, 2); // 2 = pause
       acted[c.id] = now;
       actions.push({ ok: res && res.ok, name: c.name, reason });
     }
