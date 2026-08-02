@@ -14,6 +14,7 @@ const KEYS = {
   lastRun: 0,
   actedIds: {}, // campaignId -> ts (avoid repeat actions within a window)
   createdTs: {}, // channelId -> ts of last auto-create (rate-limit new campaigns)
+  scaledTs: {}, // campaignId -> ts of last budget scale-up
 };
 
 // Minimum spacing between auto-creates on the same channel (safety brake so a
@@ -90,6 +91,20 @@ function tabSync() {
   });
 }
 
+// Change a campaign's budget via the content script.
+function execBudget(campaignId, campaignName, budget) {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { type: "CGMX_BUDGET", campaignId, campaignName, budget },
+        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
+      );
+    });
+  });
+}
+
 // Create a new campaign by cloning a template campaign, with a new ROI + budget.
 function execCreate(templateCampaignId, channelId, roi, budget) {
   return new Promise((resolve) => {
@@ -128,6 +143,7 @@ async function runRules() {
   if (!s.enabled) return; // only ACT (pause/create) when the program is on
   const acted = s.actedIds || {};
   const createdTs = s.createdTs || {};
+  const scaledTs = s.scaledTs || {};
   const now = Date.now();
   const actions = [];
 
@@ -164,7 +180,37 @@ async function runRules() {
     }
   }
 
-  await chrome.storage.local.set({ actedIds: acted, createdTs, lastRun: now });
+  // --- Budget scaling: grow the budget of running (healthy) campaigns. ---
+  for (const ch of s.channels || []) {
+    const st = ch.settings || {};
+    const sc = st.scaling || {};
+    if (!sc.enabled) continue;
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c.status));
+    for (const c of camps) {
+      const budget = c.budget || 0;
+      if (budget <= 0) continue;
+      const intervalMs = (sc.intervalMin || 15) * 60 * 1000;
+      if (scaledTs[c.id] && now - scaledTs[c.id] < intervalMs) continue;
+      const usedPct = (c.cost / budget) * 100;
+      // "time" mode scales every interval; otherwise scale once the used-budget
+      // threshold is reached.
+      const shouldScale = sc.mode === "time" ? true : usedPct >= (sc.whenUsedPercent || 50);
+      if (!shouldScale) continue;
+      let next = sc.scaleType === "percent" ? budget * (1 + (sc.amount || 0) / 100) : budget + (sc.amount || 0);
+      next = Math.round(next);
+      if (sc.cap && sc.cap > 0) next = Math.min(next, sc.cap);
+      if (next <= budget) continue; // already at/over the cap
+      const r = await execBudget(c.id, c.name, next);
+      if (r && r.ok) scaledTs[c.id] = now;
+      actions.push({
+        ok: r && r.ok,
+        name: `↗ เพิ่มงบ ${c.name}`,
+        reason: r && r.ok ? `${budget} → ${next} ฿` : `ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`,
+      });
+    }
+  }
+
+  await chrome.storage.local.set({ actedIds: acted, createdTs, scaledTs, lastRun: now });
 
   if (actions.length) {
     const okActs = actions.filter((a) => a.ok);
