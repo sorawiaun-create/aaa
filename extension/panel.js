@@ -54,6 +54,8 @@ function loadStore(cb) {
       channelList: [],
       channelRecipe: null,
       pauseRecipe: null,
+      createRecipe: null,
+      budgetRecipe: null,
       lastRun: 0,
       syncTs: 0,
     },
@@ -464,7 +466,12 @@ function renderSettings() {
         <label class="switch"><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""}><span class="slider"></span></label></div>
       <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
       <div class="row" style="margin-top:6px"><label>งบเริ่มต้น (฿)</label><input type="number" id="cBudget" value="${s.actions.createBudget}"></div>
-      <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ต้องเรียนรู้ endpoint การสร้างก่อน)</div>
+      <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ROI + งบ)</div>
+      <div class="note" style="margin-top:8px;margin-bottom:0">
+        ${STORE.createRecipe
+          ? "✅ จำแม่แบบการสร้างแล้ว — พร้อมสร้างอัตโนมัติ"
+          : "⚠️ ยังไม่มีแม่แบบ — <b>สร้างแคมเปญ GMV Max ด้วยมือ 1 ครั้ง</b> (เปิดหน้านี้ค้างไว้) ระบบจะจำวิธีสร้างเอง จากนั้นสร้างอัตโนมัติได้เลย"}
+      </div>
     </div>
 
     <div class="sec">Budget Scaling (สเกลงบอัตโนมัติ)</div>

@@ -78,6 +78,18 @@ async function apiFetch(url, opts = {}) {
     return { __nonjson: true, status: r.status, body: text.slice(0, 500) };
   }
 }
+// Recursively set every occurrence of the given keys within an object tree.
+function deepSet(node, keys, value, depth = 0) {
+  if (!node || typeof node !== "object" || depth > 8) return;
+  if (Array.isArray(node)) {
+    for (const it of node) deepSet(it, keys, value, depth + 1);
+    return;
+  }
+  for (const k of Object.keys(node)) {
+    if (keys.includes(k) && (typeof node[k] !== "object" || node[k] === null)) node[k] = value;
+    else deepSet(node[k], keys, value, depth + 1);
+  }
+}
 function ctxParams(ctx, noShop) {
   return {
     locale: "th",
@@ -273,6 +285,18 @@ window.addEventListener("message", (ev) => {
     });
     return;
   }
+  if (e.kind === "createRecipe") {
+    chrome.storage.local.set({
+      createRecipe: { url: e.url, method: e.method || "POST", reqBody: e.reqBody || "", ts: e.ts },
+    });
+    return;
+  }
+  if (e.kind === "budgetRecipe") {
+    chrome.storage.local.set({
+      budgetRecipe: { url: e.url, method: e.method || "POST", reqBody: e.reqBody || "", ts: e.ts },
+    });
+    return;
+  }
   if (e.kind === "ctx") {
     try {
       const q = new URL(e.url, BASE).searchParams;
@@ -457,6 +481,42 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           return;
         }
         sendResponse(await setCampaignStatus(st.ctx, msg.campaignId, msg.operation || 2));
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg && msg.type === "CGMX_CREATE") {
+    (async () => {
+      try {
+        const st = await chrome.storage.local.get({ createRecipe: null, headerTemplate: {} });
+        setCsrfFallback(st.headerTemplate);
+        if (!st.createRecipe || !st.createRecipe.reqBody) {
+          sendResponse({
+            ok: false,
+            error: "ยังไม่มีแม่แบบการสร้าง — สร้างแคมเปญ GMV Max ด้วยมือ 1 ครั้งก่อน เพื่อให้ระบบจำ",
+          });
+          return;
+        }
+        let body;
+        try {
+          body = JSON.parse(st.createRecipe.reqBody);
+        } catch {
+          sendResponse({ ok: false, error: "แม่แบบการสร้างเสียหาย" });
+          return;
+        }
+        // Swap in the new ROI target, start budget and a fresh timestamped name.
+        if (msg.roi != null) deepSet(body, ["roas_bid", "target_roi"], Number(msg.roi).toFixed(1));
+        if (msg.budget != null) deepSet(body, ["budget"], Math.round(msg.budget) + ".00");
+        const name = `AUTO_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}`;
+        deepSet(body, ["campaign_name"], name);
+        const j = await apiFetch(st.createRecipe.url, {
+          method: st.createRecipe.method || "POST",
+          body: JSON.stringify(body),
+        });
+        sendResponse({ ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j });
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }

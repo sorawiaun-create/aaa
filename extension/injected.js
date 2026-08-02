@@ -5,6 +5,8 @@
   const TAG = "__CGMX__";
   const LIST_EP = "/oec/stat/post_campaign_list";
   const STATUS_EP = "/creation/campaign/update_status";
+  const CREATE_EP = "/creation/all_ad_data/create";
+  const BUDGET_EP = "/creation/all_ad_data/update";
   // Endpoints that carry the seller's LIVE/TikTok-account (channel) list —
   // e.g. the "แหล่งที่มาของ LIVE / ค้นหาตามชื่อผู้ใช้" dropdown on the
   // create-campaign page. Capture their full response so we can list channels.
@@ -89,6 +91,29 @@
     if (u.includes(STATUS_EP)) {
       post({
         kind: "recipe",
+        url: u,
+        method: String(method).toUpperCase(),
+        headers,
+        reqBody,
+        ts: Date.now(),
+      });
+    }
+    // Record a real "create campaign" request so we can replay it (with a new
+    // ROI/budget/name) when a trigger fires.
+    if (u.includes(CREATE_EP) && reqBody) {
+      post({
+        kind: "createRecipe",
+        url: u,
+        method: String(method).toUpperCase(),
+        headers,
+        reqBody,
+        ts: Date.now(),
+      });
+    }
+    // Record a real "budget update" request (used for budget scaling).
+    if (u.includes(BUDGET_EP) && reqBody) {
+      post({
+        kind: "budgetRecipe",
         url: u,
         method: String(method).toUpperCase(),
         headers,
