@@ -329,14 +329,16 @@ function renderDetail() {
   const camps = campaignsOf(ch.id);
   const live = camps.filter((c) => statusLive(c.status));
 
-  // Aggregate metrics across this channel's campaigns.
-  const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
-  const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
-  const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
+  // Aggregate metrics over RUNNING campaigns only — paused/ended ones would
+  // otherwise skew the totals with stale/zero data.
+  const active = live;
+  const sales = active.reduce((a, c) => a + (c.gmv || 0), 0);
+  const cost = active.reduce((a, c) => a + (c.cost || 0), 0);
+  const orders = active.reduce((a, c) => a + (c.orders || 0), 0);
   const roi = cost > 0 ? sales / cost : 0;
   const cpo = orders > 0 ? cost / orders : 0;
-  const liveViewers = camps.reduce((a, c) => a + (c.liveViewers || 0), 0);
-  const budget = camps.reduce((a, c) => a + (c.budget || 0), 0);
+  const liveViewers = active.reduce((a, c) => a + (c.liveViewers || 0), 0);
+  const budget = active.reduce((a, c) => a + (c.budget || 0), 0);
   const usedPct = budget > 0 ? Math.min(100, (cost / budget) * 100) : 0;
   const triggerAt = s.scaling?.whenUsedPercent || 50;
 
@@ -350,8 +352,9 @@ function renderDetail() {
   const app = $("app");
   app.innerHTML = `
     <div class="card">
-      <div class="row"><span class="muted">แคมเปญ ${live.length ? "ACTIVE" : "หยุด"} · ${camps.length} ตัว</span>
+      <div class="row"><span class="muted">🟢 กำลังรัน ${active.length} · ทั้งหมด ${camps.length} แคมเปญ</span>
         <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
+      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่รันอยู่เท่านั้น</div>
       <div class="metrics" style="margin-top:10px">
         <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
         <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
@@ -361,7 +364,6 @@ function renderDetail() {
         <div class="kv"><span class="k">งบใช้ / เพดาน</span><span class="val">${fmt(cost, 0)} / ${fmt(budget, 0)} ฿</span></div>
         <div class="kv"><span class="k">Orders</span><span class="val">${fmt(orders, 0)}</span></div>
         <div class="kv"><span class="k">ผู้ชม live</span><span class="val">${fmt(liveViewers, 0)} คน</span></div>
-        <div class="kv"><span class="k">แคมเปญที่ไลฟ์อยู่</span><span class="val">${live.length}</span></div>
       </div>
     </div>
 
