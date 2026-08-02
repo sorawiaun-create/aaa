@@ -4,6 +4,22 @@ import {
   commissionFor, planFor, basePayFor, daysWorkedFor,
   computePayroll, computeChannelStats, computeOverview, computeTeamStats,
 } from '../src/lib/payroll.js';
+import { hoursBetween } from '../src/lib/format.js';
+
+// --- hoursBetween (live duration) ---
+test('hoursBetween: same-day duration', () => {
+  assert.equal(hoursBetween('20:00', '23:30'), 3.5);
+  assert.equal(hoursBetween('18:00', '21:00'), 3);
+});
+test('hoursBetween: crosses midnight', () => {
+  assert.equal(hoursBetween('22:00', '01:00'), 3);
+  assert.equal(hoursBetween('20:00', '00:00'), 4);
+});
+test('hoursBetween: blank/invalid → 0', () => {
+  assert.equal(hoursBetween('', '23:00'), 0);
+  assert.equal(hoursBetween('20:00', ''), 0);
+  assert.equal(hoursBetween(null, null), 0);
+});
 
 // --- commissionFor ---
 test('flat commission = rate% of amount', () => {
@@ -96,6 +112,42 @@ test('payroll: base + commission + KPI bonus, sorted by total', () => {
 
   // sorted by total desc
   assert.equal(rows[0].employee.id, 'e1');
+});
+
+test('payroll sums manual per-day deductions from work logs', () => {
+  const employees = [
+    { id: 'm1', name: 'Monthly', pay: { baseType: 'monthly', baseAmount: 26000, commission: { type: 'none' } } },
+    { id: 'd1', name: 'Daily', pay: { baseType: 'daily', baseAmount: 500, commission: { type: 'none' } } },
+  ];
+  const workLogs = [
+    { employeeId: 'm1', date: '02/07/2026', status: 'personal', deductAmount: 1000 },
+    { employeeId: 'm1', date: '03/07/2026', status: 'sick', deductAmount: 1000 },
+    { employeeId: 'm1', date: '04/07/2026', status: 'half', deductAmount: 500 },
+    { employeeId: 'm1', date: '05/07/2026', status: 'present' },
+    { employeeId: 'd1', date: '01/07/2026', status: 'present' },
+    { employeeId: 'd1', date: '02/07/2026', status: 'sick' }, // leave day: not a worked day, no manual deduction
+  ];
+  const rows = computePayroll({ employees, sales: [], workLogs, settings: {}, monthKey: '2026-07' });
+  const m1 = rows.find((r) => r.employee.id === 'm1');
+  assert.equal(m1.deduction, 2500); // 1000 + 1000 + 500
+  assert.equal(m1.leaveDays, 3);
+  assert.equal(m1.daysWorked, 2); // present(05) + half(04); personal/sick excluded
+  assert.equal(m1.total, 23500); // 26000 - 2500
+  const d1 = rows.find((r) => r.employee.id === 'd1');
+  assert.equal(d1.deduction, 0);
+  assert.equal(d1.daysWorked, 1); // only the present day; leave day not paid
+  assert.equal(d1.base, 500);
+});
+
+test('payroll deductions are isolated per month', () => {
+  const employees = [{ id: 'm1', name: 'M', pay: { baseType: 'monthly', baseAmount: 30000, commission: { type: 'none' } } }];
+  const workLogs = [
+    { employeeId: 'm1', date: '15/06/2026', status: 'personal', deductAmount: 1000 },
+    { employeeId: 'm1', date: '15/07/2026', status: 'personal', deductAmount: 1200 },
+  ];
+  const [jul] = computePayroll({ employees, sales: [], workLogs, settings: {}, monthKey: '2026-07' });
+  assert.equal(jul.deduction, 1200);
+  assert.equal(jul.total, 28800);
 });
 
 test('payroll month filter isolates a month', () => {
