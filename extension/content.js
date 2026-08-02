@@ -301,6 +301,24 @@ async function fetchChannels(ctx, out) {
   return { list: [], source: "" };
 }
 
+// Fetch every other endpoint that might list the seller's channels, storing
+// the raw response so the parsing can be verified/extended from a debug export.
+async function probeExtraChannelEndpoints(ctx, out) {
+  const eps = [
+    ["marketing_account_identity_list", "/api/oec_shopping/v1/creation/marketing_account_identity_list"],
+    ["tt_list", "/api/oec_shopping/v1/oec/tt_list"],
+    ["shop_allow_list", "/api/oec_shopping/v1/oec/shop_allow_list"],
+    ["get_adv_bind_shop_list", "/api/shopping/v1/gmv_max/get_adv_bind_shop_list/"],
+  ];
+  for (const [name, path] of eps) {
+    try {
+      out.probes[name] = await apiFetch(buildUrl(path, ctxParams(ctx, false)), { method: "GET" });
+    } catch (e) {
+      out.errors.push(`${name}: ${e}`);
+    }
+  }
+}
+
 async function fetchCampaigns(ctx, out) {
   const date = bangkokDateStr();
   const body = {
@@ -353,9 +371,32 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           return;
         }
         const out = { ctxUsed: ctx, probes: {}, errors: [] };
-        const { list: channelList, source } = await fetchChannels(ctx, out);
+        const { list: idChannels, source } = await fetchChannels(ctx, out);
         const campaigns = await fetchCampaigns(ctx, out);
-        out.channelSource = source;
+        await probeExtraChannelEndpoints(ctx, out);
+
+        // Union: identity-list channels + channels derived from campaign rows
+        // (each campaign carries tt_account_name/avatar + template_ad_identity_id).
+        const byId = new Map();
+        for (const c of idChannels) if (c.id) byId.set(c.id, c);
+        for (const cp of campaigns) {
+          const id = String(cp.channelId || "");
+          if (id && !byId.has(id))
+            byId.set(id, {
+              id,
+              name: cp.channelName || id,
+              icon: cp.channelIcon || "",
+              identityId: id,
+              raw: { from: "campaign" },
+            });
+        }
+        // Also try parsing any extra probe that returned a channel-looking list.
+        for (const [name, resp] of Object.entries(out.probes)) {
+          if (["post_campaign_list", "identity_list", "creator_identity_list"].includes(name)) continue;
+          for (const ch of flattenIdentity(resp)) if (ch.id && !byId.has(ch.id)) byId.set(ch.id, ch);
+        }
+        const channelList = [...byId.values()];
+        out.channelSource = source || (channelList.length ? "campaigns" : "");
 
         const patch = { syncRaw: out, campaigns, syncTs: Date.now() };
         if (channelList.length) patch.channelList = channelList;
@@ -364,7 +405,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           ok: true,
           channels: channelList.length,
           campaigns: campaigns.length,
-          source,
+          source: out.channelSource,
           errors: out.errors,
         });
       } catch (err) {
