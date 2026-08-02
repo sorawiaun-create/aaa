@@ -13,7 +13,12 @@ const KEYS = {
   pauseRecipe: null,
   lastRun: 0,
   actedIds: {}, // campaignId -> ts (avoid repeat actions within a window)
+  createdTs: {}, // channelId -> ts of last auto-create (rate-limit new campaigns)
 };
+
+// Minimum spacing between auto-creates on the same channel (safety brake so a
+// bad new campaign can't spawn replacements in a tight loop).
+const CREATE_COOLDOWN_MS = 10 * 60 * 1000;
 
 chrome.runtime.onInstalled.addListener(() => reschedule());
 chrome.runtime.onStartup.addListener(() => reschedule());
@@ -122,6 +127,7 @@ async function runRules() {
   await tabSync();
   s = await chrome.storage.local.get(KEYS);
   const acted = s.actedIds || {};
+  const createdTs = s.createdTs || {};
   const now = Date.now();
   const actions = [];
 
@@ -139,19 +145,26 @@ async function runRules() {
       actions.push({ ok: res && res.ok, name: c.name, reason });
 
       // Optionally create a fresh campaign to replace the paused one, cloning
-      // the campaign we just paused as the template.
+      // the campaign we just paused as the template. This keeps the loop going
+      // (pause → create → monitor → repeat) while a rate limit prevents runaway
+      // spawning if a brand-new campaign immediately underperforms.
       if (res && res.ok && st.actions?.createNew) {
-        const cr = await execCreate(c.id, ch.id, st.actions.createRoi, st.actions.createBudget);
-        actions.push({
-          ok: cr && cr.ok,
-          name: `↳ สร้างใหม่ (ROI ${st.actions.createRoi}, งบ ${st.actions.createBudget}฿)`,
-          reason: cr && cr.ok ? "สำเร็จ" : `ไม่สำเร็จ: ${(cr && (cr.error || cr.msg)) || "?"}`,
-        });
+        if (createdTs[ch.id] && now - createdTs[ch.id] < CREATE_COOLDOWN_MS) {
+          actions.push({ ok: true, name: "↳ ข้ามการสร้างใหม่", reason: "เพิ่งสร้างไปเมื่อครู่ (กันสร้างรัว)" });
+        } else {
+          const cr = await execCreate(c.id, ch.id, st.actions.createRoi, st.actions.createBudget);
+          if (cr && cr.ok) createdTs[ch.id] = now;
+          actions.push({
+            ok: cr && cr.ok,
+            name: `↳ สร้างใหม่ (ROI ${st.actions.createRoi}, งบ ${st.actions.createBudget}฿)`,
+            reason: cr && cr.ok ? "สำเร็จ" : `ไม่สำเร็จ: ${(cr && (cr.error || cr.msg)) || "?"}`,
+          });
+        }
       }
     }
   }
 
-  await chrome.storage.local.set({ actedIds: acted, lastRun: now });
+  await chrome.storage.local.set({ actedIds: acted, createdTs, lastRun: now });
 
   if (actions.length) {
     const okActs = actions.filter((a) => a.ok);
