@@ -153,9 +153,12 @@ function fmt(n, d = 0) {
     maximumFractionDigits: d,
   });
 }
-function statusLive(s) {
-  const t = String(s).toUpperCase();
-  return t.includes("ENABLE") || t === "1" || t.includes("DELIVER") || t.includes("ACTIVE");
+// Is a campaign toggled ON? Prefer the explicit flag from mapCampaigns; fall
+// back to reading the status string for older cached data.
+function isOn(c) {
+  if (typeof c.on === "boolean") return c.on;
+  const t = String(c.status).toUpperCase();
+  return t === "1" || t.includes("ENABLE");
 }
 
 function renderMain() {
@@ -461,7 +464,7 @@ function renderReport() {
   const chans = (STORE.channelList || []).length ? STORE.channelList : STORE.channels || [];
   const rows = chans
     .map((ch) => {
-      const camps = campaignsOf(ch.id).filter((c) => statusLive(c.status));
+      const camps = campaignsOf(ch.id).filter((c) => isOn(c));
       const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
       const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
       const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
@@ -532,7 +535,7 @@ function renderDetail() {
   if (!ch) return go("main");
   const s = ch.settings || defaultSettings();
   const camps = campaignsOf(ch.id);
-  const live = camps.filter((c) => statusLive(c.status));
+  const live = camps.filter((c) => isOn(c));
 
   // Aggregate metrics over RUNNING campaigns only — paused/ended ones would
   // otherwise skew the totals with stale/zero data.
@@ -613,7 +616,7 @@ function renderDetail() {
               .slice(0, 10)
               .map(
                 (c) => `<div class="crow">
-        <span class="dot" style="background:${statusLive(c.status) ? "var(--green)" : "#cfd8d7"}"></span>
+        <span class="dot" style="background:${isOn(c) ? "var(--green)" : "#cfd8d7"}"></span>
         <span class="cn">${esc(c.name)}</span>
         <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(c.roi, 2)}</span>
         <span class="muted" style="min-width:52px;text-align:right">${fmt(c.gmv, 0)}฿</span>

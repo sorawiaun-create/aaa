@@ -151,10 +151,15 @@ function mapCampaigns(arr) {
     const cpoField = num(c.lod_shop_cost_per_onsite_roi2_shopping_sku);
     const live = num(c.lod_shop_roi2_live_play_count);
     const budget = num(c.campaign_budget ?? c.campaign_total_budget ?? c.campaign_target_roi_budget);
+    // The real on/off switch is campaign_opt_status: "1"/ENABLE = on, "0" = off.
+    const opt = String(c.campaign_opt_status ?? "").toUpperCase();
+    const on = opt === "1" || opt.includes("ENABLE");
     return {
       id: String(c.campaign_id ?? c.campaign_id_str ?? c.id ?? ""),
       name: c.campaign_name ?? "(ไม่มีชื่อ)",
-      status: String(c.campaign_status ?? c.campaign_primary_status ?? c.campaign_opt_status ?? ""),
+      on,
+      optStatus: opt,
+      status: String(c.campaign_opt_status ?? c.campaign_primary_status ?? c.campaign_status ?? ""),
       budget,
       cost,
       gmv,

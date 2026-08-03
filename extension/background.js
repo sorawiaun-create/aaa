@@ -72,7 +72,7 @@ async function midnightReset() {
   for (const ch of s.channels || []) {
     const mr = ch.settings?.midnightReset;
     if (!mr?.enabled || !mr.budget) continue;
-    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c.status));
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c));
     for (const c of camps) {
       if (Math.round(c.budget || 0) === Math.round(mr.budget)) continue;
       const r = await execBudget(c.id, c.name, mr.budget);
@@ -98,7 +98,7 @@ async function sendDailySummary() {
   await tabSync();
   const s = await chrome.storage.local.get(KEYS);
   if (!s.telegramToken || !s.telegramChatId) return;
-  const running = (s.campaigns || []).filter((c) => statusRunning(c.status));
+  const running = (s.campaigns || []).filter((c) => statusRunning(c));
   const sales = running.reduce((a, c) => a + (c.gmv || 0), 0);
   const cost = running.reduce((a, c) => a + (c.cost || 0), 0);
   const orders = running.reduce((a, c) => a + (c.orders || 0), 0);
@@ -131,9 +131,12 @@ function scheduleDailySummary() {
   });
 }
 
-function statusRunning(s) {
-  const t = String(s).toUpperCase();
-  return t.includes("ENABLE") || t === "1" || t.includes("DELIVER") || t.includes("ACTIVE");
+// A campaign is "running/on" per its opt-status flag (set in mapCampaigns);
+// fall back to the status string for older cached data.
+function statusRunning(c) {
+  if (c && typeof c.on === "boolean") return c.on;
+  const t = String(c && c.status).toUpperCase();
+  return t === "1" || t.includes("ENABLE");
 }
 
 // A campaign belongs to a channel if its identity id matches the channel id or
@@ -258,7 +261,7 @@ async function runRules() {
     if (!st.actions?.pause) continue;
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
     for (const c of camps) {
-      if (!statusRunning(c.status)) continue;
+      if (!statusRunning(c)) continue;
       if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue; // cooldown 30m
       const reason = triggered(c, st);
       if (!reason) continue;
@@ -291,7 +294,7 @@ async function runRules() {
     const st = ch.settings || {};
     const sc = st.scaling || {};
     if (!sc.enabled) continue;
-    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c.status));
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c));
     for (const c of camps) {
       const budget = c.budget || 0;
       if (budget <= 0) continue;
@@ -321,7 +324,7 @@ async function runRules() {
     const st = ch.settings || {};
     const ra = st.roiAuto || {};
     if (!ra.enabled) continue;
-    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c.status));
+    const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c));
     for (const c of camps) {
       if (c.cost < (st.minBudgetBeforeCheck || 0)) continue; // need real data first
       const target = c.targetRoi || 0;
