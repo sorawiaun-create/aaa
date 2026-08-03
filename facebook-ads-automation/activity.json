@@ -1,6 +1,108 @@
 {
   "runs": [
     {
+      "t": "2026-08-04T05:10:25.260600+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 9,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:10 (>5) และ เวลา=5:10 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-04T05:00:34.591742+07:00",
       "dry_run": false,
       "summary": {
@@ -805,38 +907,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-03T20:00:37.058249+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 1,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=2332.35 (>200) และ ทุนซื้อ=101.41 (>100)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 1334 → 1541 บาท",
-          "reason": "จ่าย=218.78 (>80) และ ROAS=13.90 (>3.50) และ ทุนซื้อ=72.93 (<180) และ เวลา=20:01 (>6) และ เวลา=20:01 (>=18) · จ่าย=218.78 (>100) และ ROAS=13.90 (>3) และ ทุนซื้อ=72.93 (<220) และ เวลา=20:01 (>6) และ เวลา=20:01 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
