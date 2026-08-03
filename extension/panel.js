@@ -566,9 +566,9 @@ function renderDetail() {
   const app = $("app");
   app.innerHTML = `
     <div class="card">
-      <div class="row"><span class="muted">🟢 ยิงจริง ${active.filter((c) => c.delivering).length} · 🟠 รอคิว ${active.filter((c) => !c.delivering).length} · ⚪ ปิด ${camps.length - active.length}</span>
+      <div class="row"><span class="muted">🟢 เปิดอยู่ ${active.length} · ⚪ ปิด ${camps.length - active.length} · ทั้งหมด ${camps.length}</span>
         <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
-      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่เปิดอยู่ (ยิงจริง + รอคิว)</div>
+      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่เปิด (กำลังยิงจริง) เท่านั้น</div>
       <div class="metrics" style="margin-top:10px">
         <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
         <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
