@@ -138,6 +138,19 @@ function flattenIdentity(resp) {
   for (const c of out) if (c.id && c.id !== "undefined") byId.set(c.id, c);
   return [...byId.values()];
 }
+// TikTok reports on/off via campaign_primary_status (campaign_opt_status is a
+// separate/inverted flag). Returns "on" (delivering), "wait" (toggled on but
+// not live right now), or "off".
+const NOT_LIVE_STATUSES = ["tts_asset_unavailable"];
+function campaignState(c) {
+  const p = String(c.campaign_primary_status ?? "").toLowerCase();
+  if (p === "delivery_ok" || p === "enable") return "on";
+  if (p === "not_delivery") {
+    const cs = String(c.campaign_status ?? "").toLowerCase();
+    return NOT_LIVE_STATUSES.includes(cs) ? "wait" : "on";
+  }
+  return "off";
+}
 function mapCampaigns(arr) {
   return arr.map((c) => {
     const cost = num(c.lod_shop_cost ?? c.cost ?? c.basic_cost);
@@ -151,15 +164,14 @@ function mapCampaigns(arr) {
     const cpoField = num(c.lod_shop_cost_per_onsite_roi2_shopping_sku);
     const live = num(c.lod_shop_roi2_live_play_count);
     const budget = num(c.campaign_budget ?? c.campaign_total_budget ?? c.campaign_target_roi_budget);
-    // The real on/off switch is campaign_opt_status: "1"/ENABLE = on, "0" = off.
-    const opt = String(c.campaign_opt_status ?? "").toUpperCase();
-    const on = opt === "1" || opt.includes("ENABLE");
+    const state = campaignState(c); // "on" (delivering) | "wait" (on, not live) | "off"
     return {
       id: String(c.campaign_id ?? c.campaign_id_str ?? c.id ?? ""),
       name: c.campaign_name ?? "(ไม่มีชื่อ)",
-      on,
-      optStatus: opt,
-      status: String(c.campaign_opt_status ?? c.campaign_primary_status ?? c.campaign_status ?? ""),
+      on: state !== "off", // toggled on (delivering or waiting for live)
+      delivering: state === "on",
+      state,
+      status: String(c.campaign_primary_status ?? c.campaign_status ?? ""),
       budget,
       cost,
       gmv,
