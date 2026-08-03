@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-04T06:50:36.680468+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=200.60 (>200) และ ทุนซื้อ=∞ (>100)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-04T06:45:05.303942+07:00",
       "dry_run": false,
       "summary": {
@@ -871,17 +893,6 @@
         "status_changes": 0,
         "budget_changes": 0,
         "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-03T21:40:24.141555+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 4,
         "errors": 0
       },
       "events": []
