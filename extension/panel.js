@@ -160,6 +160,12 @@ function isOn(c) {
   const t = String(c.status).toUpperCase();
   return t === "1" || t.includes("ENABLE");
 }
+// 3-state dot: green = delivering now, amber = on but waiting its turn, gray = off.
+function stateColor(c) {
+  if (c.state === "on" || c.delivering) return "var(--green)";
+  if (c.state === "wait" || isOn(c)) return "#f5a623";
+  return "#cfd8d7";
+}
 
 function renderMain() {
   setHeader(
@@ -560,9 +566,9 @@ function renderDetail() {
   const app = $("app");
   app.innerHTML = `
     <div class="card">
-      <div class="row"><span class="muted">🟢 กำลังรัน ${active.length} · ทั้งหมด ${camps.length} แคมเปญ</span>
+      <div class="row"><span class="muted">🟢 ยิงจริง ${active.filter((c) => c.delivering).length} · 🟠 รอคิว ${active.filter((c) => !c.delivering).length} · ⚪ ปิด ${camps.length - active.length}</span>
         <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
-      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่รันอยู่เท่านั้น</div>
+      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่เปิดอยู่ (ยิงจริง + รอคิว)</div>
       <div class="metrics" style="margin-top:10px">
         <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
         <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
@@ -616,7 +622,7 @@ function renderDetail() {
               .slice(0, 10)
               .map(
                 (c) => `<div class="crow">
-        <span class="dot" style="background:${isOn(c) ? "var(--green)" : "#cfd8d7"}"></span>
+        <span class="dot" style="background:${stateColor(c)}"></span>
         <span class="cn">${esc(c.name)}</span>
         <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(c.roi, 2)}</span>
         <span class="muted" style="min-width:52px;text-align:right">${fmt(c.gmv, 0)}฿</span>
