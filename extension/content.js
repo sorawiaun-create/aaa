@@ -138,16 +138,22 @@ function flattenIdentity(resp) {
   for (const c of out) if (c.id && c.id !== "undefined") byId.set(c.id, c);
   return [...byId.values()];
 }
-// TikTok reports on/off via campaign_primary_status (campaign_opt_status is a
-// separate/inverted flag). Returns "on" (delivering), "wait" (toggled on but
-// not live right now), or "off".
+// Classify a GMV Max LIVE campaign. On/off comes from campaign_primary_status,
+// but LIVE GMV Max only delivers ONE campaign per channel at a time, so the
+// other enrolled (toggled-on) campaigns report primary_status "disable" with
+// campaign_status "roi2_mutex_exclusive" — those are still ON, just waiting
+// their turn. Returns "on" (delivering), "wait" (on, not live now), or "off".
 const NOT_LIVE_STATUSES = ["tts_asset_unavailable"];
 function campaignState(c) {
   const p = String(c.campaign_primary_status ?? "").toLowerCase();
+  const cs = String(c.campaign_status ?? "").toLowerCase();
   if (p === "delivery_ok" || p === "enable") return "on";
-  if (p === "not_delivery") {
-    const cs = String(c.campaign_status ?? "").toLowerCase();
-    return NOT_LIVE_STATUSES.includes(cs) ? "wait" : "on";
+  if (p === "not_delivery") return NOT_LIVE_STATUSES.includes(cs) ? "wait" : "on";
+  if (p === "disable") return cs === "roi2_mutex_exclusive" ? "wait" : "off";
+  // Unknown/blank status: treat as on if it has spent today (has activity).
+  if (!p) {
+    const cost = num(c.lod_shop_cost ?? c.cost);
+    return cost > 0 ? "wait" : "off";
   }
   return "off";
 }
