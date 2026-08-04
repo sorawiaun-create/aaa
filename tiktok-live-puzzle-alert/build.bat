@@ -4,47 +4,52 @@ title Build PuzzleAlert.exe
 cd /d "%~dp0"
 
 echo ============================================
-echo   กำลังสร้างไฟล์ PuzzleAlert.exe
-echo   (ทำครั้งเดียว ใช้เวลาสัก 2-5 นาที)
+echo   Building PuzzleAlert.exe
+echo   (one time only, takes about 2-5 minutes)
 echo ============================================
 echo.
 
-REM --- เช็กก่อนว่ามี Python ไหม ---
+REM --- Check Python first ---
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [!] ไม่พบ Python ในเครื่อง
-    echo     ต้องติดตั้ง Python 3.10+ ก่อน 1 ครั้ง เพื่อสร้าง .exe
-    echo     โหลดที่ https://www.python.org/downloads/
-    echo     ** ตอนติดตั้ง ติ๊ก "Add Python to PATH" ด้วย **
-    echo     ติดตั้งเสร็จแล้วปิดหน้าต่างนี้ แล้วดับเบิลคลิก build.bat ใหม่
+    echo [!] Python not found.
+    echo     Please install Python 3.10+ once to build the .exe
+    echo     Download: https://www.python.org/downloads/
+    echo     ** During install, tick "Add Python to PATH" **
+    echo     Then close this window and double-click build.bat again.
     echo.
     pause
     exit /b 1
 )
 
-REM สร้าง virtual environment แยกไว้ กันชนกับของเครื่อง
+REM Create an isolated virtual environment
 if not exist ".venv" (
     python -m venv .venv
 )
 call .venv\Scripts\activate
 
-echo [1/3] ติดตั้งไลบรารี...
+echo [1/3] Installing libraries...
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
 
 echo.
-echo [2/3] กำลัง build...
-REM --add-data "ต้นทาง;ปลายทาง"  (บน Windows ใช้ ; คั่น)
+echo [2/3] Building...
+REM --add-data "source;dest"  (use ; on Windows)
 pyinstaller --noconfirm --onefile --name PuzzleAlert ^
     --add-data "config.example.json;." ^
     app.py
 
 echo.
-echo [3/3] เสร็จแล้ว!
-echo ----------------------------------------------
-echo ไฟล์อยู่ที่:  dist\PuzzleAlert.exe
-echo คัดลอกไฟล์นั้นไปไว้ที่ไหนก็ได้ แล้วดับเบิลคลิกเปิดได้เลย
-echo (config.json กับ templates จะถูกสร้างข้างๆ ตัว .exe เอง)
-echo ----------------------------------------------
+if exist "dist\PuzzleAlert.exe" (
+    echo [3/3] Done!
+    echo ----------------------------------------------
+    echo File is at:  dist\PuzzleAlert.exe
+    echo Copy it anywhere and double-click to run.
+    echo config.json and templates will be created next to it.
+    echo ----------------------------------------------
+) else (
+    echo [X] Build failed - PuzzleAlert.exe was not created.
+    echo     Please copy the error messages above and send them for help.
+)
 pause
