@@ -51,3 +51,11 @@ class PuzzleDetector:
             _min_v, max_v, _min_l, _max_l = cv2.minMaxLoc(res)
             best = max(best, float(max_v))
         return best >= self.threshold, best
+
+    def capture(self, path):
+        """จับภาพหน้าจอ (สี) ณ ตอนนี้ บันทึกเป็น JPEG สำหรับแนบไป LINE"""
+        raw = self._sct.grab(self._monitor())
+        frame = np.array(raw)  # BGRA
+        bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        cv2.imwrite(path, bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        return path

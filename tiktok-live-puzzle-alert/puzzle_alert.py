@@ -14,6 +14,7 @@ import json
 import time
 
 from detector import PuzzleDetector
+from image_host import upload_image
 from line_client import LineClient
 from sound import play_alert
 
@@ -49,6 +50,7 @@ def run_watch(cfg, debug=False):
     interval = float(d.get("interval_seconds", 1.5))
     repeat = float(cfg.get("repeat_line_alert_seconds", 30))
     sound_on = bool(cfg.get("sound_alert", True))
+    attach_shot = bool(cfg.get("attach_screenshot", True))
 
     print("🟢 เริ่มเฝ้าดูหน้าจอ TikTok Live Studio... (กด Ctrl+C เพื่อหยุด)")
     if debug:
@@ -75,9 +77,17 @@ def run_watch(cfg, debug=False):
                     alerting = True
                     last_line_ts = now
                     print(f"🔔 เจอจิ๊กซอว์! (score={score:.2f}) กำลังแจ้งเตือน...")
+                    # แนบรูปหน้าจอตอนนั้น (ถ้าเปิดไว้) จะได้เห็นว่าจิ๊กซอว์แบบไหน
+                    image_url = None
+                    if attach_shot:
+                        try:
+                            shot = detector.capture("_last_alert.jpg")
+                            image_url = upload_image(shot)
+                        except Exception as e:
+                            print("   อัปโหลดรูปไม่สำเร็จ (จะส่งแบบไม่มีรูป):", e)
                     try:
                         line.send("🧩 TikTok Live เด้งจิ๊กซอว์ให้ยืนยันตัวตน! "
-                                  "รีบกลับมาต่อก่อนโดนตัดไลฟ์ ⏰")
+                                  "รีบกลับมาต่อก่อนโดนตัดไลฟ์ ⏰", image_url=image_url)
                     except Exception as e:
                         print("   LINE error:", e)
                     if sound_on:

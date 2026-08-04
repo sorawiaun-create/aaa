@@ -22,13 +22,19 @@ class LineClient:
         self.token = channel_access_token
         self.to = (to_user_id or "").strip() or None
 
-    def send(self, text):
+    def send(self, text, image_url=None):
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
         # LINE จำกัดข้อความ text ที่ 5000 ตัวอักษร
         messages = [{"type": "text", "text": text[:4900]}]
+        if image_url:
+            messages.append({
+                "type": "image",
+                "originalContentUrl": image_url,
+                "previewImageUrl": image_url,
+            })
         if self.to:
             url, body = API_PUSH, {"to": self.to, "messages": messages}
         else:
