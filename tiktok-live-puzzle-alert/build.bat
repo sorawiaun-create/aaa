@@ -9,6 +9,19 @@ echo   (ทำครั้งเดียว ใช้เวลาสัก 2-5 
 echo ============================================
 echo.
 
+REM --- เช็กก่อนว่ามี Python ไหม ---
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [!] ไม่พบ Python ในเครื่อง
+    echo     ต้องติดตั้ง Python 3.10+ ก่อน 1 ครั้ง เพื่อสร้าง .exe
+    echo     โหลดที่ https://www.python.org/downloads/
+    echo     ** ตอนติดตั้ง ติ๊ก "Add Python to PATH" ด้วย **
+    echo     ติดตั้งเสร็จแล้วปิดหน้าต่างนี้ แล้วดับเบิลคลิก build.bat ใหม่
+    echo.
+    pause
+    exit /b 1
+)
+
 REM สร้าง virtual environment แยกไว้ กันชนกับของเครื่อง
 if not exist ".venv" (
     python -m venv .venv
