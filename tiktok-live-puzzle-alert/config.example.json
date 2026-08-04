@@ -1,0 +1,14 @@
+{
+  "line": {
+    "channel_access_token": "ใส่ Channel access token ของ LINE Messaging API ตรงนี้",
+    "to_user_id": ""
+  },
+  "detection": {
+    "templates": ["templates/puzzle.png"],
+    "region": null,
+    "threshold": 0.8,
+    "interval_seconds": 1.5
+  },
+  "sound_alert": true,
+  "repeat_line_alert_seconds": 30
+}
