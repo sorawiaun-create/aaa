@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 import mss
 
-TEMPLATE_PATH = "templates/puzzle.png"
+TEMPLATES_DIR = "templates"
 
 
 def grab_primary_bgr():
@@ -30,11 +30,12 @@ def grab_primary_bgr():
 
 
 def calibrate_from_frame(frame):
-    """รับภาพ (BGR) มาให้ผู้ใช้ลากกรอบเลือก แล้วบันทึกเป็น template
+    """รับภาพ (BGR) มาให้ผู้ใช้ลากกรอบเลือก แล้วบันทึกเป็น template ใหม่ (ไม่ทับของเดิม)
 
-    คืนค่า True ถ้าบันทึกสำเร็จ
+    คืนค่า path ของไฟล์ที่บันทึก หรือ None ถ้ายกเลิก
+    รองรับจิ๊กซอว์หลายแบบ: เรียกซ้ำได้เรื่อยๆ จะได้ puzzle_1.png, puzzle_2.png ...
     """
-    os.makedirs("templates", exist_ok=True)
+    os.makedirs(TEMPLATES_DIR, exist_ok=True)
     print("ลากกรอบเลือกส่วนที่อยู่นิ่งของกล่องจิ๊กซอว์ แล้วกด ENTER (c = ยกเลิก)")
     roi = cv2.selectROI("เลือกกล่องจิ๊กซอว์ (ENTER=ตกลง / c=ยกเลิก)",
                         frame, showCrosshair=True, fromCenter=False)
@@ -43,27 +44,43 @@ def calibrate_from_frame(frame):
     x, y, w, h = [int(v) for v in roi]
     if w == 0 or h == 0:
         print("ยกเลิก ไม่ได้เลือกพื้นที่")
-        return False
+        return None
 
+    path = next_template_path()
     crop = frame[y:y + h, x:x + w]
-    cv2.imwrite(TEMPLATE_PATH, crop)
-    print(f"\n✅ บันทึก template แล้ว -> {TEMPLATE_PATH}  (ขนาด {w}x{h})")
+    cv2.imwrite(path, crop)
+    print(f"\n✅ บันทึก template แล้ว -> {path}  (ขนาด {w}x{h})")
+    print(f"   ตอนนี้มี template ทั้งหมด {len(list_templates())} แบบ")
+    print("   (ถ้ามีจิ๊กซอว์อีกแบบ ให้กดเมนูข้อ 3 ซ้ำ ใส่รูปแบบนั้นเพิ่มได้เลย)")
+    return path
 
-    # แนะนำ region เผื่อขอบรอบๆ ไว้กันตำแหน่งขยับเล็กน้อย
-    pad = 80
-    rx, ry = max(0, x - pad), max(0, y - pad)
-    rw, rh = w + pad * 2, h + pad * 2
-    print("\nถ้าอยากให้ตรวจเร็วขึ้น + แม่นขึ้น ใส่ค่านี้ใน config.json ช่อง detection:")
-    print(f'  "region": [{rx}, {ry}, {rw}, {rh}]')
-    print("(ถ้าไม่ใส่ จะสแกนทั้งจอหลัก ก็ใช้ได้ปกติ)")
-    return True
+
+def next_template_path():
+    """หาชื่อไฟล์ถัดไปที่ยังไม่ถูกใช้ เช่น templates/puzzle_1.png"""
+    i = 1
+    while True:
+        path = os.path.join(TEMPLATES_DIR, f"puzzle_{i}.png")
+        if not os.path.exists(path):
+            return path
+        i += 1
+
+
+def list_templates():
+    """คืน list ของ path รูป template ทั้งหมดในโฟลเดอร์"""
+    if not os.path.isdir(TEMPLATES_DIR):
+        return []
+    out = []
+    for name in sorted(os.listdir(TEMPLATES_DIR)):
+        if name.lower().endswith((".png", ".jpg", ".jpeg")):
+            out.append(os.path.join(TEMPLATES_DIR, name).replace("\\", "/"))
+    return out
 
 
 def calibrate_from_image(image_path):
     frame = cv2.imread(image_path)
     if frame is None:
         print(f"อ่านไฟล์ไม่ได้: {image_path}")
-        return False
+        return None
     return calibrate_from_frame(frame)
 
 

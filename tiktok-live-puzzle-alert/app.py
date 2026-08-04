@@ -77,6 +77,21 @@ def config_path():
     return os.path.join(app_dir(), CONFIG_NAME)
 
 
+def sync_templates_into_config(template_paths):
+    """อัปเดตรายการ templates ใน config.json ให้ตรงกับรูปทั้งหมดที่มี
+
+    รองรับจิ๊กซอว์หลายแบบ: ทุกรูปในโฟลเดอร์ templates จะถูกใช้ตรวจจับทั้งหมด
+    เจอแบบไหนก่อนก็เตือน
+    """
+    dst = ensure_config()
+    with open(dst, encoding="utf-8") as f:
+        cfg = json.load(f)
+    cfg.setdefault("detection", {})["templates"] = template_paths
+    with open(dst, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    print(f"📝 ลงทะเบียนจิ๊กซอว์ทั้งหมด {len(template_paths)} แบบใน config แล้ว")
+
+
 MENU = """
 ============================================
    🧩 TikTok Live Puzzle Alert
@@ -99,7 +114,9 @@ def handle(choice):
         img = pick_image()
         if img:
             import calibrate
-            calibrate.calibrate_from_image(img)
+            saved = calibrate.calibrate_from_image(img)
+            if saved:
+                sync_templates_into_config(calibrate.list_templates())
         else:
             print("ไม่ได้เลือกไฟล์")
     elif choice == "4":
@@ -115,8 +132,14 @@ def main():
     # ให้ path relative (templates/...) อ้างอิงข้างๆ โปรแกรมเสมอ
     os.chdir(app_dir())
     ensure_config()
+    import calibrate
     while True:
         print(MENU)
+        n = len(calibrate.list_templates())
+        if n == 0:
+            print("   สถานะจิ๊กซอว์: ⚠️  ยังไม่มีรูป (กด 3 เพิ่มก่อนใช้งานจริง)")
+        else:
+            print(f"   สถานะจิ๊กซอว์: ✅ มี {n} แบบ (เพิ่มอีกได้ด้วยข้อ 3)")
         choice = input("เลือกหมายเลข > ").strip()
         try:
             if not handle(choice):
