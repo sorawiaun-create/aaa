@@ -2,7 +2,8 @@
 
 คุณยังเป็นคนต่อจิ๊กซอว์เอง โปรแกรมนี้แค่ "เตือนไม่ให้พลาดจังหวะ" เท่านั้น
 
-วิธีใช้:
+รันแบบเมนู (แนะนำ):   ดับเบิลคลิก RUN.bat  หรือ  PuzzleAlert.exe
+รันแบบคำสั่ง:
   python puzzle_alert.py --test-line   # ทดสอบว่าส่ง LINE ได้
   python puzzle_alert.py               # รันจริง (เฝ้าดูหน้าจอ)
   python puzzle_alert.py --debug       # โชว์ค่าความคล้ายทุกวินาที ไว้จูน threshold
@@ -17,37 +18,28 @@ from line_client import LineClient
 from sound import play_alert
 
 
-def load_config(path):
+def load_config(path="config.json"):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="แจ้งเตือนจิ๊กซอว์ TikTok Live เข้า LINE")
-    parser.add_argument("--config", default="config.json")
-    parser.add_argument("--test-line", action="store_true",
-                        help="ส่งข้อความทดสอบไป LINE แล้วจบ")
-    parser.add_argument("--debug", action="store_true",
-                        help="โชว์ค่าความคล้าย (score) ทุกรอบ")
-    args = parser.parse_args()
-
-    try:
-        cfg = load_config(args.config)
-    except FileNotFoundError:
-        print(f"ไม่พบไฟล์ {args.config} — คัดลอกจาก config.example.json ก่อน "
-              "แล้วใส่ token")
-        return
-
+def test_line(cfg):
+    """ส่งข้อความทดสอบไป LINE"""
     line = LineClient(
         cfg["line"]["channel_access_token"],
         cfg["line"].get("to_user_id"),
     )
+    line.send("✅ ทดสอบ: เชื่อมต่อ LINE สำเร็จ พร้อมเตือนจิ๊กซอว์ TikTok Live แล้ว")
+    print("ส่งข้อความทดสอบไป LINE เรียบร้อย")
+    print("ถ้าไม่ได้รับ ให้เช็ก token และว่าแอดบอทเป็นเพื่อนแล้วหรือยัง")
 
-    if args.test_line:
-        line.send("✅ ทดสอบ: เชื่อมต่อ LINE สำเร็จ พร้อมเตือนจิ๊กซอว์ TikTok Live แล้ว")
-        print("ส่งข้อความทดสอบไป LINE เรียบร้อย ถ้าไม่ได้รับ เช็ก token / แอดบอทเป็นเพื่อนหรือยัง")
-        return
 
+def run_watch(cfg, debug=False):
+    """วนเฝ้าดูหน้าจอ เจอจิ๊กซอว์เมื่อไหร่แจ้งเตือน (กด Ctrl+C เพื่อหยุด)"""
+    line = LineClient(
+        cfg["line"]["channel_access_token"],
+        cfg["line"].get("to_user_id"),
+    )
     d = cfg["detection"]
     detector = PuzzleDetector(
         d["templates"],
@@ -59,10 +51,10 @@ def main():
     sound_on = bool(cfg.get("sound_alert", True))
 
     print("🟢 เริ่มเฝ้าดูหน้าจอ TikTok Live Studio... (กด Ctrl+C เพื่อหยุด)")
-    if args.debug:
+    if debug:
         print("   [debug] จะโชว์ค่า score ทุกรอบ ค่าตอนเจอจิ๊กซอว์ควรใกล้ 1.0")
 
-    alerting = False       # ตอนนี้กำลังเตือนอยู่ไหม (จิ๊กซอว์ยังค้างหน้าจอ)
+    alerting = False       # ตอนนี้จิ๊กซอว์ยังค้างหน้าจออยู่ไหม
     last_line_ts = 0.0     # ส่ง LINE ครั้งล่าสุดเมื่อไหร่
 
     try:
@@ -74,7 +66,7 @@ def main():
                 time.sleep(interval)
                 continue
 
-            if args.debug:
+            if debug:
                 print(f"   score={score:.3f} {'<< เจอ' if found else ''}")
 
             now = time.time()
@@ -107,7 +99,28 @@ def main():
 
             time.sleep(interval)
     except KeyboardInterrupt:
-        print("\n👋 หยุดการทำงานแล้ว")
+        print("\n👋 หยุดเฝ้าดูหน้าจอแล้ว")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="แจ้งเตือนจิ๊กซอว์ TikTok Live เข้า LINE")
+    parser.add_argument("--config", default="config.json")
+    parser.add_argument("--test-line", action="store_true",
+                        help="ส่งข้อความทดสอบไป LINE แล้วจบ")
+    parser.add_argument("--debug", action="store_true",
+                        help="โชว์ค่าความคล้าย (score) ทุกรอบ")
+    args = parser.parse_args()
+
+    try:
+        cfg = load_config(args.config)
+    except FileNotFoundError:
+        print(f"ไม่พบไฟล์ {args.config} — คัดลอกจาก config.example.json ก่อน แล้วใส่ token")
+        return
+
+    if args.test_line:
+        test_line(cfg)
+    else:
+        run_watch(cfg, debug=args.debug)
 
 
 if __name__ == "__main__":

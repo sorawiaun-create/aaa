@@ -3,7 +3,7 @@
 วิธีใช้ (แนะนำ):
   1. ครั้งหน้าที่จิ๊กซอว์เด้งใน TikTok Live Studio ให้กด Print Screen / Snip
      แล้วเซฟเป็นไฟล์รูป เช่น shot.png
-  2. รัน:  python calibrate.py --image shot.png
+  2. รัน:  python calibrate.py --image shot.png   (หรือใช้เมนูในโปรแกรมหลัก)
   3. ลากกรอบเลือกเฉพาะ "ส่วนที่อยู่นิ่งๆ" ของกล่อง (เช่น หัวข้อ/ข้อความ/ขอบกล่อง)
      อย่าเลือกชิ้นจิ๊กซอว์ที่เลื่อนได้ เพราะตำแหน่งมันเปลี่ยนทุกครั้ง
   4. กด ENTER เพื่อบันทึก (กด c เพื่อยกเลิก)
@@ -29,26 +29,11 @@ def grab_primary_bgr():
     return np.array(raw)[:, :, :3].copy()  # BGRA -> BGR
 
 
-def main():
-    parser = argparse.ArgumentParser(description="สร้าง template จิ๊กซอว์")
-    parser.add_argument("--image", help="ไฟล์ภาพหน้าจอที่แคปไว้ (เช่น shot.png)")
-    parser.add_argument("--live", action="store_true",
-                        help="จับภาพสดจากจอหลักใน 5 วินาที")
-    args = parser.parse_args()
+def calibrate_from_frame(frame):
+    """รับภาพ (BGR) มาให้ผู้ใช้ลากกรอบเลือก แล้วบันทึกเป็น template
 
-    if args.image:
-        frame = cv2.imread(args.image)
-        if frame is None:
-            print(f"อ่านไฟล์ไม่ได้: {args.image}")
-            return
-    elif args.live:
-        print("จะจับภาพจอหลักใน 5 วินาที เปิดกล่องจิ๊กซอว์ให้พร้อม...")
-        time.sleep(5)
-        frame = grab_primary_bgr()
-    else:
-        print("ต้องระบุ --image ไฟล์.png  หรือ  --live")
-        return
-
+    คืนค่า True ถ้าบันทึกสำเร็จ
+    """
     os.makedirs("templates", exist_ok=True)
     print("ลากกรอบเลือกส่วนที่อยู่นิ่งของกล่องจิ๊กซอว์ แล้วกด ENTER (c = ยกเลิก)")
     roi = cv2.selectROI("เลือกกล่องจิ๊กซอว์ (ENTER=ตกลง / c=ยกเลิก)",
@@ -58,7 +43,7 @@ def main():
     x, y, w, h = [int(v) for v in roi]
     if w == 0 or h == 0:
         print("ยกเลิก ไม่ได้เลือกพื้นที่")
-        return
+        return False
 
     crop = frame[y:y + h, x:x + w]
     cv2.imwrite(TEMPLATE_PATH, crop)
@@ -71,6 +56,32 @@ def main():
     print("\nถ้าอยากให้ตรวจเร็วขึ้น + แม่นขึ้น ใส่ค่านี้ใน config.json ช่อง detection:")
     print(f'  "region": [{rx}, {ry}, {rw}, {rh}]')
     print("(ถ้าไม่ใส่ จะสแกนทั้งจอหลัก ก็ใช้ได้ปกติ)")
+    return True
+
+
+def calibrate_from_image(image_path):
+    frame = cv2.imread(image_path)
+    if frame is None:
+        print(f"อ่านไฟล์ไม่ได้: {image_path}")
+        return False
+    return calibrate_from_frame(frame)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="สร้าง template จิ๊กซอว์")
+    parser.add_argument("--image", help="ไฟล์ภาพหน้าจอที่แคปไว้ (เช่น shot.png)")
+    parser.add_argument("--live", action="store_true",
+                        help="จับภาพสดจากจอหลักใน 5 วินาที")
+    args = parser.parse_args()
+
+    if args.image:
+        calibrate_from_image(args.image)
+    elif args.live:
+        print("จะจับภาพจอหลักใน 5 วินาที เปิดกล่องจิ๊กซอว์ให้พร้อม...")
+        time.sleep(5)
+        calibrate_from_frame(grab_primary_bgr())
+    else:
+        print("ต้องระบุ --image ไฟล์.png  หรือ  --live")
 
 
 if __name__ == "__main__":
