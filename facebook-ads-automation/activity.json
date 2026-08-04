@@ -1,6 +1,108 @@
 {
   "runs": [
     {
+      "t": "2026-08-05T05:10:36.349444+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 9,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด",
+          "reason": "เวลา=5:11 (>5) และ เวลา=5:11 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-05T05:00:47.163479+07:00",
       "dry_run": false,
       "summary": {
@@ -832,17 +934,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-04T20:00:44.201408+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
