@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-06T06:20:29.753564+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=232.34 (>200) และ ทุนซื้อ=∞ (>100)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-06T06:10:26.945485+07:00",
       "dry_run": false,
       "summary": {
@@ -921,38 +943,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-05T21:00:37.496998+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 2,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 690 → 911 บาท",
-          "reason": "จ่าย=185.03 (>40) และ ROAS=4.63 (>3.50) และ ทุนซื้อ=61.68 (<80) และ เวลา=21:01 (>6) และ เวลา=21:01 (>=18) · จ่าย=185.03 (>40) และ ROAS=4.63 (>3) และ ทุนซื้อ=61.68 (<80) และ เวลา=21:01 (>6) และ เวลา=21:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 1337 → 1404 บาท",
-          "reason": "จ่าย=172.30 (>100) และ ROAS=3.19 (>3) และ ทุนซื้อ=172.30 (<220) และ เวลา=21:01 (>6) และ เวลา=21:01 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
