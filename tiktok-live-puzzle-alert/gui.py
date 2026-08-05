@@ -141,29 +141,66 @@ class App:
         self.lbl_template.config(text=f"มีรูปจิ๊กซอว์ {n} แบบ    |    {wtext}", fg=color)
 
     # ---------- channels ----------
+    def ask_text(self, title, prompt):
+        """ช่องกรอกที่ 'วางได้' — มีปุ่มวาง + Ctrl+V + คลิกขวาวาง (คืน str หรือ None)"""
+        dlg = tk.Toplevel(self.root)
+        dlg.title(title)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.resizable(False, False)
+        tk.Label(dlg, text=prompt, font=FONT, justify="left", wraplength=440
+                 ).pack(padx=16, pady=(16, 8), anchor="w")
+        ent = tk.Entry(dlg, font=FONT, width=54)
+        ent.pack(padx=16, fill="x")
+        ent.focus_set()
+
+        def do_paste():
+            try:
+                ent.insert("insert", dlg.clipboard_get())
+            except Exception:
+                pass
+
+        # Ctrl+V (รองรับทั้งเลย์เอาต์ไทย/อังกฤษ) + คลิกขวาวาง
+        ent.bind("<Control-v>", lambda e: (do_paste(), "break")[1])
+        ent.bind("<Control-V>", lambda e: (do_paste(), "break")[1])
+        menu = tk.Menu(dlg, tearoff=0)
+        menu.add_command(label="วาง (Paste)", command=do_paste)
+        ent.bind("<Button-3>", lambda e: menu.tk_popup(e.x_root, e.y_root))
+
+        result = {"val": None}
+
+        def ok():
+            result["val"] = ent.get().strip()
+            dlg.destroy()
+
+        ttk.Button(dlg, text="📋 วางจากคลิปบอร์ด", command=do_paste
+                   ).pack(padx=16, pady=(10, 4), anchor="w")
+        btns = tk.Frame(dlg)
+        btns.pack(pady=(4, 14))
+        ttk.Button(btns, text="ตกลง", command=ok).pack(side="left", padx=6)
+        ttk.Button(btns, text="ยกเลิก", command=dlg.destroy).pack(side="left", padx=6)
+        ent.bind("<Return>", lambda e: ok())
+        dlg.wait_window()
+        return result["val"] or None
+
     def setup_line(self):
-        from tkinter import simpledialog
-        token = simpledialog.askstring(
+        token = self.ask_text(
             "ตั้งค่า LINE",
-            "วาง Channel access token ของ LINE:\n(ดูวิธีสร้างใน README)",
-            parent=self.root)
+            "วาง Channel access token ของ LINE (กดปุ่ม '📋 วางจากคลิปบอร์ด' ได้):")
         if not token:
             return
         cfg = self.load_cfg()
-        cfg.setdefault("line", {})["channel_access_token"] = token.strip()
+        cfg.setdefault("line", {})["channel_access_token"] = token
         self.save_cfg(cfg)
         self.refresh_status()
         self.log("✅ บันทึก LINE token แล้ว")
 
     def setup_telegram(self):
-        from tkinter import simpledialog
-        token = simpledialog.askstring(
+        token = self.ask_text(
             "ตั้งค่า Telegram (1/2)",
-            "วาง bot token จาก @BotFather:",
-            parent=self.root)
+            "วาง bot token จาก @BotFather (กดปุ่ม '📋 วางจากคลิปบอร์ด' ได้):")
         if not token:
             return
-        token = token.strip()
         messagebox.showinfo(
             "ทักบอทก่อน",
             "เปิดแชทกับบอทของคุณในแอป Telegram\nพิมพ์อะไรก็ได้ทักไป 1 ครั้ง\nแล้วกด OK",
@@ -175,11 +212,9 @@ class App:
         except Exception as e:
             self.log(f"หา chat id อัตโนมัติไม่ได้: {e}")
         if not chat_id:
-            chat_id = simpledialog.askstring(
+            chat_id = self.ask_text(
                 "ตั้งค่า Telegram (2/2)",
-                "หา chat id อัตโนมัติไม่เจอ\nใส่ chat id เอง (ดูวิธีใน README):",
-                parent=self.root) or ""
-            chat_id = chat_id.strip()
+                "หา chat id อัตโนมัติไม่เจอ ใส่ chat id เอง (ดูวิธีใน README):") or ""
         if not chat_id:
             self.log("⚠️ ยังไม่มี chat id — ลองทักบอทก่อนแล้วตั้งใหม่")
             return
