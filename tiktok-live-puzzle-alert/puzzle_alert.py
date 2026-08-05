@@ -65,11 +65,16 @@ def test_line(cfg):
     print("ส่งเรียบร้อย ถ้าไม่ได้รับ ให้เช็กการตั้งค่า/แจ้งเตือนในแอป")
 
 
-def run_watch(cfg, debug=False):
-    """วนเฝ้าดูหน้าจอ เจอจิ๊กซอว์เมื่อไหร่แจ้งเตือน (กด Ctrl+C เพื่อหยุด)"""
+def run_watch(cfg, debug=False, stop_event=None, log=None):
+    """วนเฝ้าดูหน้าจอ เจอจิ๊กซอว์เมื่อไหร่แจ้งเตือน
+
+    stop_event : threading.Event สำหรับสั่งหยุด (ใช้กับ GUI) — ไม่ใส่ = วนจน Ctrl+C
+    log        : ฟังก์ชันรับข้อความสถานะ (ใช้กับ GUI) — ไม่ใส่ = print ลง console
+    """
+    log = log or print
     channels = build_channels(cfg)
     if not channels:
-        print("⚠️  ยังไม่ได้ตั้งค่าช่องทางแจ้งเตือนเลย (กดเมนูข้อ 1 ก่อน)")
+        log("⚠️  ยังไม่ได้ตั้งค่าช่องทางแจ้งเตือนเลย (ตั้งค่า LINE/Telegram ก่อน)")
         return
     d = cfg["detection"]
     detector = PuzzleDetector(
@@ -83,38 +88,46 @@ def run_watch(cfg, debug=False):
     sound_on = bool(cfg.get("sound_alert", True))
     attach_shot = bool(cfg.get("attach_screenshot", True))
 
-    print("🟢 เริ่มเฝ้าดูหน้าจอ TikTok Live Studio... (กด Ctrl+C เพื่อหยุด)")
+    log("🟢 เริ่มเฝ้าดู TikTok Live Studio แล้ว...")
     if debug:
-        print("   [debug] จะโชว์ค่า score ทุกรอบ ค่าตอนเจอจิ๊กซอว์ควรใกล้ 1.0")
+        log("   [debug] จะโชว์ค่า score ทุกรอบ ค่าตอนเจอจิ๊กซอว์ควรใกล้ 1.0")
+
+    def _sleep(sec):
+        """หยุดพักแบบสั่งหยุดกลางคันได้ (คืน True ถ้าถูกสั่งหยุด)"""
+        if stop_event:
+            return stop_event.wait(sec)
+        time.sleep(sec)
+        return False
 
     alerting = False       # ตอนนี้จิ๊กซอว์ยังค้างหน้าจออยู่ไหม
-    last_line_ts = 0.0     # ส่ง LINE ครั้งล่าสุดเมื่อไหร่
+    last_line_ts = 0.0     # ส่งแจ้งเตือนครั้งล่าสุดเมื่อไหร่
 
     try:
-        while True:
+        while not (stop_event and stop_event.is_set()):
             try:
                 found, score = detector.check()
             except Exception as e:  # ตรวจจับพลาด อย่าให้โปรแกรมตาย
-                print("⚠️  ตรวจจับผิดพลาด:", e)
-                time.sleep(interval)
+                log(f"⚠️  ตรวจจับผิดพลาด: {e}")
+                if _sleep(interval):
+                    break
                 continue
 
             if debug:
-                print(f"   score={score:.3f} {'<< เจอ' if found else ''}")
+                log(f"   score={score:.3f} {'<< เจอ' if found else ''}")
 
             now = time.time()
             if found:
                 if not alerting:
                     alerting = True
                     last_line_ts = now
-                    print(f"🔔 เจอจิ๊กซอว์! (score={score:.2f}) กำลังแจ้งเตือน...")
+                    log(f"🔔 เจอจิ๊กซอว์! (score={score:.2f}) กำลังแจ้งเตือน...")
                     # แนบรูปตอนนั้น (ถ้าเปิดไว้) จะได้เห็นว่าจิ๊กซอว์แบบไหน
                     shot = None
                     if attach_shot:
                         try:
                             shot = detector.capture("_last_alert.jpg")
                         except Exception as e:
-                            print("   จับภาพไม่สำเร็จ (จะส่งแบบไม่มีรูป):", e)
+                            log(f"   จับภาพไม่สำเร็จ (จะส่งแบบไม่มีรูป): {e}")
                     notify_all(channels,
                                "🧩 TikTok Live เด้งจิ๊กซอว์ให้ยืนยันตัวตน! "
                                "รีบกลับมาต่อก่อนโดนตัดไลฟ์ ⏰",
@@ -132,11 +145,13 @@ def run_watch(cfg, debug=False):
             else:
                 if alerting:
                     alerting = False
-                    print("✅ จิ๊กซอว์หายแล้ว (น่าจะต่อเรียบร้อย)")
+                    log("✅ จิ๊กซอว์หายแล้ว (น่าจะต่อเรียบร้อย)")
 
-            time.sleep(interval)
+            if _sleep(interval):
+                break
     except KeyboardInterrupt:
-        print("\n👋 หยุดเฝ้าดูหน้าจอแล้ว")
+        pass
+    log("👋 หยุดเฝ้าดูแล้ว")
 
 
 def main():

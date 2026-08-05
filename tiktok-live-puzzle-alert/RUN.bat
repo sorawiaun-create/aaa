@@ -10,5 +10,5 @@ if errorlevel 1 (
     python -m pip install -r requirements.txt
 )
 
-python app.py
+python gui.py
 pause

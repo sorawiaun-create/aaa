@@ -35,10 +35,11 @@ python -m pip install pyinstaller
 
 echo.
 echo [2/3] Building...
+REM --windowed = no black console window (real app feel)
 REM --add-data "source;dest"  (use ; on Windows)
-pyinstaller --noconfirm --onefile --name PuzzleAlert ^
+pyinstaller --noconfirm --onefile --windowed --name PuzzleAlert ^
     --add-data "config.example.json;." ^
-    app.py
+    gui.py
 
 echo.
 if exist "dist\PuzzleAlert.exe" (
