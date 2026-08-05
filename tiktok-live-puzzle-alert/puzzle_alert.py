@@ -14,9 +14,9 @@ import json
 import time
 
 from detector import PuzzleDetector
-from image_host import upload_image
 from line_client import LineClient
 from sound import play_alert
+from telegram_client import TelegramClient
 
 
 def load_config(path="config.json"):
@@ -24,8 +24,30 @@ def load_config(path="config.json"):
         return json.load(f)
 
 
+def build_channels(cfg):
+    """สร้างรายการช่องทางแจ้งเตือนที่ตั้งค่าไว้ (LINE / Telegram)"""
+    channels = []
+    lc = cfg.get("line", {})
+    tok = lc.get("channel_access_token", "")
+    if tok and not tok.startswith("ใส่ "):
+        channels.append(LineClient(tok, lc.get("to_user_id")))
+    tg = cfg.get("telegram", {})
+    if tg.get("bot_token") and tg.get("chat_id"):
+        channels.append(TelegramClient(tg["bot_token"], tg["chat_id"]))
+    return channels
+
+
+def notify_all(channels, text, image_path=None, attach=True):
+    """ส่งแจ้งเตือนไปทุกช่องทาง (ช่องไหนพังก็ไม่ล้มทั้งหมด)"""
+    for ch in channels:
+        try:
+            ch.notify(text, image_path=image_path, attach=attach)
+        except Exception as e:
+            print(f"   {type(ch).__name__} error:", e)
+
+
 def test_line(cfg):
-    """ทดสอบทั้งเสียงในเครื่อง + ส่งข้อความไป LINE"""
+    """ทดสอบทั้งเสียงในเครื่อง + ส่งข้อความไปทุกช่องทาง"""
     # 1) เสียงในเครื่อง (ให้เหมือนตอนเจอจิ๊กซอว์จริง)
     if cfg.get("sound_alert", True):
         print("🔊 เล่นเสียงทดสอบ... (ควรได้ยินเสียงบี๊บ)")
@@ -33,27 +55,28 @@ def test_line(cfg):
     else:
         print("(sound_alert ปิดอยู่ ข้ามการทดสอบเสียง)")
 
-    # 2) ส่งข้อความไป LINE
-    line = LineClient(
-        cfg["line"]["channel_access_token"],
-        cfg["line"].get("to_user_id"),
-    )
-    line.send("✅ ทดสอบ: เชื่อมต่อ LINE สำเร็จ พร้อมเตือนจิ๊กซอว์ TikTok Live แล้ว")
-    print("ส่งข้อความทดสอบไป LINE เรียบร้อย")
-    print("ถ้าไม่ได้รับ ให้เช็ก token และว่าแอดบอทเป็นเพื่อนแล้วหรือยัง")
+    # 2) ส่งข้อความไปทุกช่องทางที่ตั้งค่าไว้
+    channels = build_channels(cfg)
+    if not channels:
+        print("⚠️  ยังไม่ได้ตั้งค่าช่องทางแจ้งเตือนเลย (กดเมนูข้อ 1 ก่อน)")
+        return
+    print(f"ส่งข้อความทดสอบไป {len(channels)} ช่องทาง...")
+    notify_all(channels, "✅ ทดสอบ: พร้อมเตือนจิ๊กซอว์ TikTok Live แล้ว", attach=False)
+    print("ส่งเรียบร้อย ถ้าไม่ได้รับ ให้เช็กการตั้งค่า/แจ้งเตือนในแอป")
 
 
 def run_watch(cfg, debug=False):
     """วนเฝ้าดูหน้าจอ เจอจิ๊กซอว์เมื่อไหร่แจ้งเตือน (กด Ctrl+C เพื่อหยุด)"""
-    line = LineClient(
-        cfg["line"]["channel_access_token"],
-        cfg["line"].get("to_user_id"),
-    )
+    channels = build_channels(cfg)
+    if not channels:
+        print("⚠️  ยังไม่ได้ตั้งค่าช่องทางแจ้งเตือนเลย (กดเมนูข้อ 1 ก่อน)")
+        return
     d = cfg["detection"]
     detector = PuzzleDetector(
         d["templates"],
         d.get("threshold", 0.8),
         d.get("region"),
+        d.get("window_title"),
     )
     interval = float(d.get("interval_seconds", 1.5))
     repeat = float(cfg.get("repeat_line_alert_seconds", 30))
@@ -85,31 +108,27 @@ def run_watch(cfg, debug=False):
                     alerting = True
                     last_line_ts = now
                     print(f"🔔 เจอจิ๊กซอว์! (score={score:.2f}) กำลังแจ้งเตือน...")
-                    # แนบรูปหน้าจอตอนนั้น (ถ้าเปิดไว้) จะได้เห็นว่าจิ๊กซอว์แบบไหน
-                    image_url = None
+                    # แนบรูปตอนนั้น (ถ้าเปิดไว้) จะได้เห็นว่าจิ๊กซอว์แบบไหน
+                    shot = None
                     if attach_shot:
                         try:
                             shot = detector.capture("_last_alert.jpg")
-                            image_url = upload_image(shot)
                         except Exception as e:
-                            print("   อัปโหลดรูปไม่สำเร็จ (จะส่งแบบไม่มีรูป):", e)
-                    try:
-                        line.send("🧩 TikTok Live เด้งจิ๊กซอว์ให้ยืนยันตัวตน! "
-                                  "รีบกลับมาต่อก่อนโดนตัดไลฟ์ ⏰", image_url=image_url)
-                    except Exception as e:
-                        print("   LINE error:", e)
+                            print("   จับภาพไม่สำเร็จ (จะส่งแบบไม่มีรูป):", e)
+                    notify_all(channels,
+                               "🧩 TikTok Live เด้งจิ๊กซอว์ให้ยืนยันตัวตน! "
+                               "รีบกลับมาต่อก่อนโดนตัดไลฟ์ ⏰",
+                               image_path=shot, attach=attach_shot)
                     if sound_on:
                         play_alert()
                 else:
-                    # ยังค้างอยู่ -> เตือนเสียงต่อ + ส่ง LINE ซ้ำเป็นระยะ
+                    # ยังค้างอยู่ -> เตือนเสียงต่อ + ส่งซ้ำเป็นระยะ
                     if sound_on:
                         play_alert()
                     if now - last_line_ts >= repeat:
                         last_line_ts = now
-                        try:
-                            line.send("⚠️ ยังไม่ได้ต่อจิ๊กซอว์นะ! รีบด่วน ก่อนไลฟ์โดนตัด 🧩")
-                        except Exception as e:
-                            print("   LINE error:", e)
+                        notify_all(channels,
+                                   "⚠️ ยังไม่ได้ต่อจิ๊กซอว์นะ! รีบด่วน ก่อนไลฟ์โดนตัด 🧩")
             else:
                 if alerting:
                     alerting = False

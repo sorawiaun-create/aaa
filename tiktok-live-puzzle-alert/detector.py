@@ -10,12 +10,15 @@ import mss
 
 
 class PuzzleDetector:
-    def __init__(self, template_paths, threshold=0.8, region=None):
+    def __init__(self, template_paths, threshold=0.8, region=None, window_title=None):
         if not template_paths:
             raise ValueError("ต้องมีอย่างน้อย 1 template (ดู calibrate.py)")
         self.threshold = float(threshold)
         # region = [x, y, width, height] อ้างอิงจากจอหลัก หรือ None = ทั้งจอหลัก
         self.region = region
+        # window_title != "" -> จับเฉพาะหน้าต่างนั้น (ไม่ต้องเปิดค้างหน้าจอ)
+        self.window_title = (window_title or "").strip()
+        self._warned = False
         self.templates = []
         for path in template_paths:
             img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -34,10 +37,28 @@ class PuzzleDetector:
         # monitors[1] = จอหลัก
         return self._sct.monitors[1]
 
-    def _grab_gray(self):
+    def _grab_bgr(self):
+        """จับภาพเป็น BGR — ใช้ window capture ถ้าตั้งค่าไว้ ไม่งั้นจับทั้งจอ"""
+        if self.window_title:
+            try:
+                import window_capture as wc
+                hwnd = wc.find_window(self.window_title)
+                if hwnd:
+                    img = wc.capture_window(hwnd)
+                    if img is not None:
+                        return img
+            except Exception as e:
+                if not self._warned:
+                    print("⚠️  window capture ใช้ไม่ได้ ใช้จับทั้งจอแทน:", e)
+                    self._warned = True
+            if not self._warned:
+                print(f"⚠️  หาหน้าต่าง '{self.window_title}' ไม่เจอ ใช้จับทั้งจอแทนชั่วคราว")
+                self._warned = True
         raw = self._sct.grab(self._monitor())
-        frame = np.array(raw)  # BGRA
-        return cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
+        return cv2.cvtColor(np.array(raw), cv2.COLOR_BGRA2BGR)
+
+    def _grab_gray(self):
+        return cv2.cvtColor(self._grab_bgr(), cv2.COLOR_BGR2GRAY)
 
     def check(self):
         """คืนค่า (found: bool, best_score: float)"""
@@ -53,9 +74,7 @@ class PuzzleDetector:
         return best >= self.threshold, best
 
     def capture(self, path):
-        """จับภาพหน้าจอ (สี) ณ ตอนนี้ บันทึกเป็น JPEG สำหรับแนบไป LINE"""
-        raw = self._sct.grab(self._monitor())
-        frame = np.array(raw)  # BGRA
-        bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        """จับภาพ (สี) ณ ตอนนี้ บันทึกเป็น JPEG สำหรับแนบไปแจ้งเตือน"""
+        bgr = self._grab_bgr()
         cv2.imwrite(path, bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
         return path

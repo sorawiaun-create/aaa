@@ -1,13 +1,18 @@
 {
   "line": {
-    "channel_access_token": "ใส่ Channel access token ของ LINE Messaging API ตรงนี้",
+    "channel_access_token": "",
     "to_user_id": ""
+  },
+  "telegram": {
+    "bot_token": "",
+    "chat_id": ""
   },
   "detection": {
     "templates": ["templates/puzzle.png"],
     "region": null,
+    "window_title": "",
     "threshold": 0.8,
-    "interval_seconds": 1.5
+    "interval_seconds": 0.7
   },
   "sound_alert": true,
   "repeat_line_alert_seconds": 10,

@@ -45,3 +45,11 @@ class LineClient:
             raise RuntimeError(
                 f"LINE ส่งไม่สำเร็จ (HTTP {resp.status_code}): {resp.text}"
             )
+
+    def notify(self, text, image_path=None, attach=True):
+        """ส่งแจ้งเตือน (LINE ต้องอัปรูปขึ้นเว็บก่อนถึงแนบได้)"""
+        image_url = None
+        if image_path and attach:
+            from image_host import upload_image
+            image_url = upload_image(image_path)
+        self.send(text, image_url=image_url)

@@ -39,20 +39,106 @@ def ensure_config():
     return dst
 
 
-def set_token():
+def _load_cfg():
     dst = ensure_config()
     with open(dst, encoding="utf-8") as f:
-        cfg = json.load(f)
+        return dst, json.load(f)
+
+
+def _save_cfg(dst, cfg):
+    with open(dst, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+
+def setup_channels():
+    """ตั้งค่าช่องทางแจ้งเตือน: LINE หรือ Telegram"""
+    print("\nตั้งค่าช่องทางไหน?")
+    print("   1) LINE")
+    print("   2) Telegram  (เด้งเตือนชัวร์กว่า แนะนำ)")
+    c = input("เลือก > ").strip()
+    if c == "1":
+        _setup_line()
+    elif c == "2":
+        _setup_telegram()
+    else:
+        print("ยกเลิก")
+
+
+def _setup_line():
+    dst, cfg = _load_cfg()
     print("\nวาง Channel access token ของ LINE (ตัวยาวๆ) แล้วกด Enter")
-    print("(ดูวิธีสร้างใน README.md ขั้นตอนที่ 2)")
+    print("(ดูวิธีสร้างใน README.md)")
     token = input("token > ").strip()
     if not token:
         print("ไม่ได้ใส่อะไร ยกเลิก")
         return
-    cfg["line"]["channel_access_token"] = token
-    with open(dst, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
-    print("✅ บันทึก token แล้ว")
+    cfg.setdefault("line", {})["channel_access_token"] = token
+    _save_cfg(dst, cfg)
+    print("✅ บันทึก LINE token แล้ว")
+
+
+def _setup_telegram():
+    dst, cfg = _load_cfg()
+    print("\nขั้นตอนสร้างบอท Telegram (ทำครั้งเดียว):")
+    print("  1) เปิดแอป Telegram ค้นหา @BotFather")
+    print("  2) พิมพ์ /newbot ตั้งชื่อ -> จะได้ 'bot token' (ตัวยาวๆ)")
+    token = input("\nวาง bot token > ").strip()
+    if not token:
+        print("ไม่ได้ใส่อะไร ยกเลิก")
+        return
+    print("\n  3) เปิดแชทกับบอทของคุณ แล้ว 'พิมพ์อะไรก็ได้' ทักไปหาบอท 1 ครั้ง")
+    input("     ทักแล้วกด Enter เพื่อให้โปรแกรมหา chat id ให้อัตโนมัติ...")
+    chat_id = ""
+    try:
+        import telegram_client
+        chat_id = telegram_client.autodetect_chat_id(token) or ""
+    except Exception as e:
+        print("   หา chat id อัตโนมัติไม่ได้:", e)
+    if not chat_id:
+        chat_id = input("   ใส่ chat id เอง (ถ้าไม่รู้ ปล่อยว่างแล้ว Enter): ").strip()
+    if not chat_id:
+        print("⚠️  ยังไม่มี chat id — ลองทักบอทก่อนแล้วตั้งใหม่")
+        return
+    cfg.setdefault("telegram", {})
+    cfg["telegram"]["bot_token"] = token
+    cfg["telegram"]["chat_id"] = chat_id
+    _save_cfg(dst, cfg)
+    print(f"✅ บันทึก Telegram แล้ว (chat id: {chat_id})")
+
+
+def setup_window():
+    """เลือกหน้าต่างที่จะจับ เพื่อไม่ต้องเปิดค้างหน้าจอ"""
+    try:
+        import window_capture
+        wins = window_capture.list_windows()
+    except Exception as e:
+        print("โหมดนี้ใช้ได้เฉพาะ Windows:", e)
+        return
+    if not wins:
+        print("หาหน้าต่างไม่เจอ")
+        return
+    print("\nเลือกหน้าต่างที่จะจับ (โปรแกรมจะดูเฉพาะหน้าต่างนี้ ไม่ต้องเปิดค้างหน้าจอ):")
+    print("   0) ปิดโหมดนี้ (กลับไปจับทั้งจอเหมือนเดิม)")
+    for i, (_hwnd, title) in enumerate(wins, 1):
+        print(f"   {i}) {title[:60]}")
+    sel = input("เลือกหมายเลข > ").strip()
+    dst, cfg = _load_cfg()
+    cfg.setdefault("detection", {})
+    if sel == "0":
+        cfg["detection"]["window_title"] = ""
+        _save_cfg(dst, cfg)
+        print("✅ ปิดโหมด window capture แล้ว (จับทั้งจอ)")
+        return
+    try:
+        idx = int(sel) - 1
+        title = wins[idx][1]
+    except (ValueError, IndexError):
+        print("เลขไม่ถูกต้อง ยกเลิก")
+        return
+    cfg["detection"]["window_title"] = title
+    _save_cfg(dst, cfg)
+    print(f"✅ ตั้งค่าให้จับหน้าต่าง: {title[:60]}")
+    print("   ตอนนี้ย่อ/เอาอย่างอื่นมาทับหน้าต่างนี้ได้แล้ว (ไม่ต้องเปิดค้าง)")
 
 
 def pick_image():
@@ -95,22 +181,25 @@ def sync_templates_into_config(template_paths):
 MENU = """
 ============================================
    🧩 TikTok Live Puzzle Alert
-   แจ้งเตือนจิ๊กซอว์ TikTok Live เข้า LINE
+   แจ้งเตือนจิ๊กซอว์ TikTok Live (LINE / Telegram)
 ============================================
-   1) ตั้งค่า / วาง token LINE
-   2) ทดสอบแจ้งเตือน (เสียงในเครื่อง + LINE)
-   3) ตั้งค่ารูปจิ๊กซอว์ (เลือกไฟล์ภาพที่แคปไว้)
-   4) เริ่มเฝ้าดูหน้าจอ (รันจริง)  << ใช้ตอนไลฟ์
-   5) ออก
+   1) ตั้งค่าช่องทางแจ้งเตือน (LINE / Telegram)
+   2) ทดสอบแจ้งเตือน (เสียง + ส่งข้อความ)
+   3) เลือกหน้าต่าง TikTok (ไม่ต้องเปิดค้างหน้าจอ)
+   4) ตั้งค่ารูปจิ๊กซอว์ (เลือกไฟล์ภาพที่แคปไว้)
+   5) เริ่มเฝ้าดูหน้าจอ (รันจริง)  << ใช้ตอนไลฟ์
+   6) ออก
 ============================================"""
 
 
 def handle(choice):
     if choice == "1":
-        set_token()
+        setup_channels()
     elif choice == "2":
         pa.test_line(pa.load_config(config_path()))
     elif choice == "3":
+        setup_window()
+    elif choice == "4":
         img = pick_image()
         if img:
             import calibrate
@@ -119,12 +208,12 @@ def handle(choice):
                 sync_templates_into_config(calibrate.list_templates())
         else:
             print("ไม่ได้เลือกไฟล์")
-    elif choice == "4":
-        pa.run_watch(pa.load_config(config_path()))
     elif choice == "5":
+        pa.run_watch(pa.load_config(config_path()))
+    elif choice == "6":
         return False
     else:
-        print("พิมพ์เลข 1-5")
+        print("พิมพ์เลข 1-6")
     return True
 
 
