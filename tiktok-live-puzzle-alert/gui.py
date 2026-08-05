@@ -105,14 +105,17 @@ class App:
         self.lbl_template = tk.Label(f3, text="", font=FONT, anchor="w")
         self.lbl_template.pack(fill="x", padx=10, pady=(8, 4))
         row3 = tk.Frame(f3)
-        row3.pack(fill="x", padx=10, pady=(0, 10))
+        row3.pack(fill="x", padx=10, pady=(0, 2))
         ttk.Button(row3, text="📎 แนบรูปจิ๊กซอว์...", command=self.add_template).pack(side="left")
-        ttk.Button(row3, text="🔎 ทดสอบตรวจจับ", command=self.test_detect).pack(side="left", padx=6)
-        ttk.Button(row3, text="📷 ดูภาพที่จับได้", command=self.preview_capture).pack(side="left")
-        tk.Label(row3, text="ความไว:", font=FONT).pack(side="left", padx=(10, 2))
+        ttk.Button(row3, text="🗑️ ล้างรูปทั้งหมด", command=self.clear_templates).pack(side="left", padx=6)
+        ttk.Button(row3, text="🔎 ทดสอบตรวจจับ", command=self.test_detect).pack(side="left")
+        ttk.Button(row3, text="📷 ดูภาพที่จับได้", command=self.preview_capture).pack(side="left", padx=6)
+        row3b = tk.Frame(f3)
+        row3b.pack(fill="x", padx=10, pady=(0, 10))
+        tk.Label(row3b, text="ความไว (threshold):", font=FONT).pack(side="left", padx=(0, 2))
         thr0 = str(self.load_cfg().get("detection", {}).get("threshold", 0.75))
         self.var_thr = tk.StringVar(value=thr0)
-        ttk.Spinbox(row3, from_=0.40, to=0.95, increment=0.05, width=5,
+        ttk.Spinbox(row3b, from_=0.40, to=0.95, increment=0.05, width=5,
                     textvariable=self.var_thr, command=self.save_threshold).pack(side="left")
 
         # 4) เริ่ม/หยุด
@@ -303,6 +306,31 @@ class App:
             self.log(f"✅ เพิ่มรูปจิ๊กซอว์แล้ว (รวม {len(calibrate.list_templates())} แบบ)")
         else:
             self.log("ยกเลิกการเพิ่มรูป")
+
+    def clear_templates(self):
+        """ลบรูปจิ๊กซอว์ทั้งหมด เริ่มใหม่"""
+        import calibrate
+        files = calibrate.list_templates()
+        if not files:
+            self.log("ไม่มีรูปให้ลบ")
+            return
+        if not messagebox.askyesno(
+                "ล้างรูปทั้งหมด",
+                f"ลบรูปจิ๊กซอว์ทั้งหมด {len(files)} รูป?\n(แล้วค่อยแนบใหม่ได้เลย)",
+                parent=self.root):
+            return
+        removed = 0
+        for p in files:
+            try:
+                os.remove(p)
+                removed += 1
+            except Exception:
+                pass
+        cfg = self.load_cfg()
+        cfg.setdefault("detection", {})["templates"] = []
+        self.save_cfg(cfg)
+        self.refresh_status()
+        self.log(f"🗑️ ลบรูปแล้ว {removed} รูป — เริ่มแนบใหม่ได้เลย")
 
     # ---------- test / tune ----------
     def save_threshold(self):
