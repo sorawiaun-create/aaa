@@ -104,7 +104,16 @@ class App:
         f3.pack(fill="x", padx=14, pady=8)
         self.lbl_template = tk.Label(f3, text="", font=FONT, anchor="w")
         self.lbl_template.pack(fill="x", padx=10, pady=(8, 4))
-        ttk.Button(f3, text="📎 แนบรูปจิ๊กซอว์...", command=self.add_template).pack(anchor="w", padx=10, pady=(0, 10))
+        row3 = tk.Frame(f3)
+        row3.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(row3, text="📎 แนบรูปจิ๊กซอว์...", command=self.add_template).pack(side="left")
+        ttk.Button(row3, text="🔎 ทดสอบตรวจจับ", command=self.test_detect).pack(side="left", padx=6)
+        ttk.Button(row3, text="📷 ดูภาพที่จับได้", command=self.preview_capture).pack(side="left")
+        tk.Label(row3, text="ความไว:", font=FONT).pack(side="left", padx=(10, 2))
+        thr0 = str(self.load_cfg().get("detection", {}).get("threshold", 0.75))
+        self.var_thr = tk.StringVar(value=thr0)
+        ttk.Spinbox(row3, from_=0.40, to=0.95, increment=0.05, width=5,
+                    textvariable=self.var_thr, command=self.save_threshold).pack(side="left")
 
         # 4) เริ่ม/หยุด
         f4 = tk.Frame(self.root)
@@ -294,6 +303,84 @@ class App:
             self.log(f"✅ เพิ่มรูปจิ๊กซอว์แล้ว (รวม {len(calibrate.list_templates())} แบบ)")
         else:
             self.log("ยกเลิกการเพิ่มรูป")
+
+    # ---------- test / tune ----------
+    def save_threshold(self):
+        try:
+            thr = float(self.var_thr.get())
+        except (ValueError, tk.TclError):
+            return
+        cfg = self.load_cfg()
+        cfg.setdefault("detection", {})["threshold"] = thr
+        self.save_cfg(cfg)
+        self.log(f"ตั้งความไว (threshold) = {thr:.2f}")
+
+    def test_detect(self):
+        """ทดสอบตรวจจับกับรูปที่แคปไว้ — ไม่ต้องรอจิ๊กซอว์จริง"""
+        import calibrate
+        if not calibrate.list_templates():
+            messagebox.showwarning("ยังไม่มีรูปจิ๊กซอว์",
+                                   "กด '📎 แนบรูปจิ๊กซอว์...' ก่อนนะครับ", parent=self.root)
+            return
+        path = filedialog.askopenfilename(
+            title="เลือกรูปหน้าจอที่มีจิ๊กซอว์ (เอาไว้ทดสอบว่าตรวจเจอไหม)",
+            filetypes=[("รูปภาพ", "*.png *.jpg *.jpeg"), ("ทั้งหมด", "*.*")])
+        if not path:
+            return
+        from detector import PuzzleDetector
+        cfg = self.load_cfg()
+        thr = float(cfg.get("detection", {}).get("threshold", 0.75))
+        try:
+            det = PuzzleDetector(calibrate.list_templates(), thr)
+            score, scale = det.score_of_image(path)
+        except Exception as e:
+            self.log(f"ทดสอบไม่สำเร็จ: {e}")
+            return
+        ok = score >= thr
+        self.log(f"🔎 ผลทดสอบ: คะแนน = {score:.2f} (ขนาด {scale:.2f}x) | threshold {thr:.2f} "
+                 f"-> {'✅ ตรวจเจอ' if ok else '❌ ไม่เจอ'}")
+        if ok:
+            messagebox.showinfo("ผ่าน! ✅",
+                                f"ตรวจเจอ! คะแนน {score:.2f}\nพร้อมใช้งานจริงได้เลย 🎉",
+                                parent=self.root)
+        elif score >= 0.45:
+            sug = max(0.4, round(score - 0.05, 2))
+            if messagebox.askyesno(
+                    "ปรับความไวไหม?",
+                    f"คะแนน {score:.2f} ต่ำกว่าความไว {thr:.2f} เลยไม่เจอ\n\n"
+                    f"จะลดความไวเป็น {sug:.2f} ให้ตรวจเจอไหม?\n"
+                    f"(ถ้าต่ำเกินไปอาจเตือนผิดพลาดบ้าง)", parent=self.root):
+                self.var_thr.set(f"{sug:.2f}")
+                self.save_threshold()
+                messagebox.showinfo("ปรับแล้ว", "ลองกด '🔎 ทดสอบตรวจจับ' ซ้ำอีกทีได้เลย",
+                                    parent=self.root)
+        else:
+            messagebox.showwarning(
+                "คะแนนต่ำมาก",
+                f"คะแนนแค่ {score:.2f} — แปลว่ารูป template อาจไม่ตรง\n\n"
+                "ลองแนบรูปใหม่ แล้วครอบเฉพาะ 'ข้อความที่เหมือนเดิมทุกครั้ง'\n"
+                "(เช่นประโยค 'เราตรวจพบว่าไม่มีความเคลื่อนไหว...') อย่าครอบรูปวิว/ชิ้นจิ๊กซอว์",
+                parent=self.root)
+
+    def preview_capture(self):
+        """บันทึกภาพที่โปรแกรมจับได้ตอนนี้ แล้วเปิดให้ดู — เช็กว่า window capture ได้ภาพจริงไหม"""
+        import detector
+        cfg = self.load_cfg()
+        d = cfg.get("detection", {})
+        try:
+            path, mode = detector.capture_screen(
+                os.path.join(app_dir(), "_preview.jpg"),
+                region=d.get("region"), window_title=d.get("window_title"))
+        except Exception as e:
+            self.log(f"จับภาพไม่สำเร็จ: {e}")
+            return
+        modetxt = "หน้าต่าง (window capture)" if mode == "window" else "ทั้งจอ"
+        self.log(f"📷 บันทึกภาพตัวอย่างแล้ว (โหมด: {modetxt}) — กำลังเปิดให้ดู...")
+        self.log("   ถ้าภาพดำ/ว่าง = window capture ใช้กับ TikTok ไม่ได้ ให้เมนู 2 เลือก 'จับทั้งจอ' แทน")
+        try:
+            os.startfile(path)  # Windows
+        except Exception:
+            self.log(f"   เปิดไฟล์อัตโนมัติไม่ได้ ดูเองที่: {path}")
 
     # ---------- watch ----------
     def toggle_watch(self):
