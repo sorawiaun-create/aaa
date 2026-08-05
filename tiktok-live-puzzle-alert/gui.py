@@ -51,8 +51,17 @@ class App:
         self._build_ui()
         self.refresh_status()
         self.refresh_windows()
+        self._update_wgc_label()
         self.root.after(200, self._drain_log)
         self.log("พร้อมใช้งาน — ตั้งค่าช่องทางแจ้งเตือน แล้วแนบรูปจิ๊กซอว์ ก่อนกดเริ่ม")
+
+    def _update_wgc_label(self):
+        try:
+            import wgc_capture
+            ok = wgc_capture.available()
+        except Exception:
+            ok = False
+        self.lbl_wgc.config(text="✅ ติดตั้งแล้ว" if ok else "ยังไม่ติดตั้ง (กดปุ่มซ้ายเพื่อติดตั้ง)")
 
     # ---------- config ----------
     def _ensure_config(self):
@@ -93,11 +102,17 @@ class App:
         f2 = ttk.LabelFrame(self.root, text=" 2. หน้าต่างที่จะจับภาพ (ไม่ต้องเปิดค้างหน้าจอ) ")
         f2.pack(fill="x", padx=14, pady=8)
         row2 = tk.Frame(f2)
-        row2.pack(fill="x", padx=10, pady=10)
+        row2.pack(fill="x", padx=10, pady=(10, 4))
         self.cmb_window = ttk.Combobox(row2, font=FONT, state="readonly")
         self.cmb_window.pack(side="left", fill="x", expand=True)
         ttk.Button(row2, text="↻", width=3, command=self.refresh_windows).pack(side="left", padx=4)
         ttk.Button(row2, text="ใช้หน้าต่างนี้", command=self.apply_window).pack(side="left")
+        row2b = tk.Frame(f2)
+        row2b.pack(fill="x", padx=10, pady=(0, 8))
+        ttk.Button(row2b, text="⚙️ ติดตั้งโหมดจับตอนโดนบัง (WGC)",
+                   command=self.install_wgc).pack(side="left")
+        self.lbl_wgc = tk.Label(row2b, text="", font=("Tahoma", 9), fg="#666")
+        self.lbl_wgc.pack(side="left", padx=8)
 
         # 3) รูปจิ๊กซอว์
         f3 = ttk.LabelFrame(self.root, text=" 3. รูปจิ๊กซอว์ที่ให้โปรแกรมจำ ")
@@ -300,9 +315,38 @@ class App:
         self.save_cfg(cfg)
         self.refresh_status()
         if s["wt"]:
-            self.log(f"ตั้งเป็น: จับหน้าต่าง '{s['wt'][:40]}' (ย่อ/บังได้)")
+            self.log(f"ตั้งเป็น: จับหน้าต่าง '{s['wt'][:40]}' (ย่อ/บังได้ ถ้า WGC ติดตั้งแล้ว)")
         else:
             self.log(f"ตั้งเป็น: {s['label']}")
+
+    def install_wgc(self):
+        import sys
+        if getattr(sys, "frozen", False):
+            messagebox.showinfo(
+                "โหมด .exe",
+                "ไฟล์ .exe ติดตั้งเพิ่มเองไม่ได้\nให้เปิดด้วย RUN.bat หรือ build.bat ใหม่ "
+                "(build.bat จะรวมโหมดนี้ให้อัตโนมัติ)", parent=self.root)
+            return
+        self.lbl_wgc.config(text="กำลังติดตั้ง...")
+        self.log("⚙️ กำลังติดตั้งโหมดจับตอนโดนบัง (windows-capture)... รอสักครู่")
+        threading.Thread(target=self._install_wgc_worker, daemon=True).start()
+
+    def _install_wgc_worker(self):
+        import subprocess
+        import sys
+        try:
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "windows-capture"],
+                               capture_output=True, text=True)
+            if r.returncode == 0:
+                self.log("✅ ติดตั้งสำเร็จ! เลือกหน้าต่าง TikTok แล้วกด 📷 ดูภาพที่จับได้ ทดสอบดู")
+                self.root.after(0, lambda: self.lbl_wgc.config(text="✅ ติดตั้งแล้ว"))
+                self.root.after(0, self.refresh_windows)
+            else:
+                msg = (r.stderr or r.stdout or "")[-400:]
+                self.log("ติดตั้งไม่สำเร็จ: " + msg)
+                self.root.after(0, lambda: self.lbl_wgc.config(text="❌ ติดตั้งไม่ได้"))
+        except Exception as e:
+            self.log(f"ติดตั้งไม่สำเร็จ: {e}")
 
     # ---------- template ----------
     def add_template(self):

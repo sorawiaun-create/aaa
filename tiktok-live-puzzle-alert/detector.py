@@ -32,6 +32,19 @@ def capture_screen(path, region=None, window_title=None, monitor_index=1):
     คืนค่า (path, mode) โดย mode = 'window' ถ้าใช้ window capture, 'screen' ถ้าจับทั้งจอ
     """
     if window_title:
+        # 1) WGC (จับได้แม้โดนบัง/การ์ดจอ) — วิธีที่ดีที่สุด
+        try:
+            import wgc_capture
+            if wgc_capture.available():
+                sess = wgc_capture.WGCSession(window_title)
+                img = sess.grab()
+                sess.stop()
+                if img is not None and img.any():
+                    cv2.imwrite(path, img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                    return path, "window(WGC)"
+        except Exception:
+            pass
+        # 2) PrintWindow (สำรอง)
         try:
             import window_capture as wc
             hwnd = wc.find_window(window_title)
@@ -88,6 +101,7 @@ class PuzzleDetector:
         # window_title != "" -> จับเฉพาะหน้าต่างนั้น (ไม่ต้องเปิดค้างหน้าจอ)
         self.window_title = (window_title or "").strip()
         self._warned = False
+        self._wgc = None  # None=ยังไม่ลอง, False=ใช้ไม่ได้, obj=session
         self.templates = []
         for path in template_paths:
             img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -102,22 +116,46 @@ class PuzzleDetector:
             return {"left": int(x), "top": int(y), "width": int(w), "height": int(h)}
         return pick_monitor(self._sct, self.monitor_index)
 
+    def _wgc_grab(self):
+        """ดึงเฟรมจาก WGC (สร้าง session ครั้งเดียวแล้วใช้ซ้ำ) — คืน None ถ้าใช้ไม่ได้"""
+        if self._wgc is False:
+            return None
+        if self._wgc is None:
+            try:
+                import wgc_capture
+                if not wgc_capture.available():
+                    self._wgc = False
+                    return None
+                self._wgc = wgc_capture.WGCSession(self.window_title)
+            except Exception:
+                self._wgc = False
+                return None
+        try:
+            return self._wgc.grab()
+        except Exception:
+            return None
+
     def _grab_bgr(self):
         """จับภาพเป็น BGR — ใช้ window capture ถ้าตั้งค่าไว้ ไม่งั้นจับทั้งจอ"""
         if self.window_title:
+            # 1) WGC (จับได้แม้โดนบัง)
+            img = self._wgc_grab()
+            if img is not None and img.any():
+                return img
+            # 2) PrintWindow (สำรอง)
             try:
                 import window_capture as wc
                 hwnd = wc.find_window(self.window_title)
                 if hwnd:
                     img = wc.capture_window(hwnd)
-                    if img is not None:
+                    if img is not None and img.any():
                         return img
             except Exception as e:
                 if not self._warned:
                     print("⚠️  window capture ใช้ไม่ได้ ใช้จับทั้งจอแทน:", e)
                     self._warned = True
             if not self._warned:
-                print(f"⚠️  หาหน้าต่าง '{self.window_title}' ไม่เจอ ใช้จับทั้งจอแทนชั่วคราว")
+                print(f"⚠️  จับหน้าต่าง '{self.window_title}' ไม่ได้ ใช้จับทั้งจอแทนชั่วคราว")
                 self._warned = True
         raw = self._sct.grab(self._monitor())
         return cv2.cvtColor(np.array(raw), cv2.COLOR_BGRA2BGR)

@@ -32,6 +32,12 @@ echo [1/3] Installing libraries...
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
+REM Advanced capture (WGC) - optional, ignore if it fails
+python -m pip install windows-capture
+
+REM Bundle windows-capture only if it installed successfully
+set WGC=
+python -c "import windows_capture" 2>nul && set WGC=--collect-all windows_capture
 
 echo.
 echo [2/3] Building...
@@ -39,6 +45,7 @@ REM --windowed = no black console window (real app feel)
 REM --add-data "source;dest"  (use ; on Windows)
 pyinstaller --noconfirm --onefile --windowed --name PuzzleAlert ^
     --add-data "config.example.json;." ^
+    %WGC% ^
     gui.py
 
 echo.
