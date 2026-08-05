@@ -25,7 +25,15 @@ def load_config(path="config.json"):
 
 
 def test_line(cfg):
-    """ส่งข้อความทดสอบไป LINE"""
+    """ทดสอบทั้งเสียงในเครื่อง + ส่งข้อความไป LINE"""
+    # 1) เสียงในเครื่อง (ให้เหมือนตอนเจอจิ๊กซอว์จริง)
+    if cfg.get("sound_alert", True):
+        print("🔊 เล่นเสียงทดสอบ... (ควรได้ยินเสียงบี๊บ)")
+        play_alert()
+    else:
+        print("(sound_alert ปิดอยู่ ข้ามการทดสอบเสียง)")
+
+    # 2) ส่งข้อความไป LINE
     line = LineClient(
         cfg["line"]["channel_access_token"],
         cfg["line"].get("to_user_id"),
