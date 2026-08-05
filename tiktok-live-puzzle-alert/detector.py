@@ -17,7 +17,16 @@ DEFAULT_SCALES = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3]
 FINE_SCALES = [round(0.4 + 0.05 * i, 2) for i in range(0, 25)]  # 0.40 .. 1.60
 
 
-def capture_screen(path, region=None, window_title=None):
+def pick_monitor(sct, monitor_index):
+    """เลือกจอจาก mss.monitors อย่างปลอดภัย (0 = ทุกจอรวมกัน, 1 = จอหลัก, 2 = จอที่สอง...)"""
+    mons = sct.monitors
+    idx = int(monitor_index)
+    if idx < 0 or idx >= len(mons):
+        idx = 1 if len(mons) > 1 else 0
+    return mons[idx]
+
+
+def capture_screen(path, region=None, window_title=None, monitor_index=1):
     """จับภาพ ณ ตอนนี้ บันทึกเป็นไฟล์ (ไม่ต้องมี template) — ใช้ดูตัวอย่างว่าโปรแกรมเห็นอะไร
 
     คืนค่า (path, mode) โดย mode = 'window' ถ้าใช้ window capture, 'screen' ถ้าจับทั้งจอ
@@ -38,7 +47,7 @@ def capture_screen(path, region=None, window_title=None):
             x, y, w, h = region
             mon = {"left": int(x), "top": int(y), "width": int(w), "height": int(h)}
         else:
-            mon = sct.monitors[1]
+            mon = pick_monitor(sct, monitor_index)
         raw = sct.grab(mon)
     bgr = cv2.cvtColor(np.array(raw), cv2.COLOR_BGRA2BGR)
     cv2.imwrite(path, bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -67,12 +76,15 @@ def best_match(screen_gray, templates, scales=DEFAULT_SCALES):
 
 
 class PuzzleDetector:
-    def __init__(self, template_paths, threshold=0.8, region=None, window_title=None):
+    def __init__(self, template_paths, threshold=0.8, region=None, window_title=None,
+                 monitor_index=1):
         if not template_paths:
             raise ValueError("ต้องมีอย่างน้อย 1 template (แนบรูปจิ๊กซอว์ก่อน)")
         self.threshold = float(threshold)
-        # region = [x, y, width, height] อ้างอิงจากจอหลัก หรือ None = ทั้งจอหลัก
+        # region = [x, y, width, height] อ้างอิงจากจอหลัก หรือ None = ทั้งจอ
         self.region = region
+        # monitor_index: 0 = ทุกจอรวมกัน, 1 = จอหลัก, 2 = จอที่สอง...
+        self.monitor_index = int(monitor_index)
         # window_title != "" -> จับเฉพาะหน้าต่างนั้น (ไม่ต้องเปิดค้างหน้าจอ)
         self.window_title = (window_title or "").strip()
         self._warned = False
@@ -88,7 +100,7 @@ class PuzzleDetector:
         if self.region:
             x, y, w, h = self.region
             return {"left": int(x), "top": int(y), "width": int(w), "height": int(h)}
-        return self._sct.monitors[1]
+        return pick_monitor(self._sct, self.monitor_index)
 
     def _grab_bgr(self):
         """จับภาพเป็น BGR — ใช้ window capture ถ้าตั้งค่าไว้ ไม่งั้นจับทั้งจอ"""

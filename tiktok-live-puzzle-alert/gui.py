@@ -147,8 +147,13 @@ class App:
 
         import calibrate
         n = len(calibrate.list_templates())
-        wt = cfg.get("detection", {}).get("window_title", "")
-        wtext = f"จับหน้าต่าง: {wt[:40]}" if wt else "จับทั้งจอ (ค่าเริ่มต้น)"
+        det = cfg.get("detection", {})
+        wt = det.get("window_title", "")
+        if wt:
+            wtext = f"จับหน้าต่าง: {wt[:35]}"
+        else:
+            mon = det.get("monitor_index", 1)
+            wtext = "จับทุกจอรวมกัน" if mon == 0 else (f"จับจอที่ {mon}" if mon > 1 else "จับจอหลัก")
         color = "#22a06b" if n else "#c1121f"
         self.lbl_template.config(text=f"มีรูปจิ๊กซอว์ {n} แบบ    |    {wtext}", fg=color)
 
@@ -249,40 +254,55 @@ class App:
         except Exception as e:
             self.log(f"ทดสอบล้มเหลว: {e}")
 
-    # ---------- window ----------
+    # ---------- window / monitor ----------
     def refresh_windows(self):
-        self._windows = []
+        # นับจำนวนจอ
+        try:
+            import mss
+            with mss.mss() as sct:
+                nmon = max(1, len(sct.monitors) - 1)
+        except Exception:
+            nmon = 1
+        sources = [{"label": "🖥️ จับทั้งจอ (จอหลัก)", "wt": "", "mon": 1}]
+        for i in range(2, nmon + 1):
+            sources.append({"label": f"🖥️ จับทั้งจอ (จอที่ {i})", "wt": "", "mon": i})
+        if nmon > 1:
+            sources.append({"label": "🖥️ จับทุกจอรวมกัน", "wt": "", "mon": 0})
+        # หน้าต่าง (ถ้า window capture ใช้ได้)
         try:
             import window_capture
-            self._windows = window_capture.list_windows()
-        except Exception as e:
-            self.cmb_window["values"] = ["(ใช้ได้เฉพาะ Windows)"]
-            self.cmb_window.current(0)
-            return
-        titles = ["(จับทั้งจอ — ค่าเริ่มต้น)"] + [t for _h, t in self._windows]
-        self.cmb_window["values"] = titles
+            for _h, t in window_capture.list_windows():
+                sources.append({"label": f"🪟 หน้าต่าง: {t[:45]}", "wt": t, "mon": 1})
+        except Exception:
+            pass
+        self._sources = sources
+        self.cmb_window["values"] = [s["label"] for s in sources]
         # เลือกให้ตรงกับที่ตั้งไว้
-        cur = self.load_cfg().get("detection", {}).get("window_title", "")
+        det = self.load_cfg().get("detection", {})
+        cur_wt = det.get("window_title", "")
+        cur_mon = det.get("monitor_index", 1)
         idx = 0
-        for i, (_h, t) in enumerate(self._windows, 1):
-            if t == cur:
+        for i, s in enumerate(sources):
+            if s["wt"] == cur_wt and (cur_wt != "" or s["mon"] == cur_mon):
                 idx = i
                 break
         self.cmb_window.current(idx)
 
     def apply_window(self):
         sel = self.cmb_window.current()
+        if sel < 0 or not getattr(self, "_sources", None):
+            return
+        s = self._sources[sel]
         cfg = self.load_cfg()
         cfg.setdefault("detection", {})
-        if sel <= 0:
-            cfg["detection"]["window_title"] = ""
-            self.log("ตั้งเป็น: จับทั้งจอ")
-        else:
-            title = self._windows[sel - 1][1]
-            cfg["detection"]["window_title"] = title
-            self.log(f"ตั้งเป็น: จับหน้าต่าง '{title[:40]}' (ย่อ/บังได้แล้ว)")
+        cfg["detection"]["window_title"] = s["wt"]
+        cfg["detection"]["monitor_index"] = s["mon"]
         self.save_cfg(cfg)
         self.refresh_status()
+        if s["wt"]:
+            self.log(f"ตั้งเป็น: จับหน้าต่าง '{s['wt'][:40]}' (ย่อ/บังได้)")
+        else:
+            self.log(f"ตั้งเป็น: {s['label']}")
 
     # ---------- template ----------
     def add_template(self):
@@ -398,7 +418,8 @@ class App:
         try:
             path, mode = detector.capture_screen(
                 os.path.join(app_dir(), "_preview.jpg"),
-                region=d.get("region"), window_title=d.get("window_title"))
+                region=d.get("region"), window_title=d.get("window_title"),
+                monitor_index=d.get("monitor_index", 1))
         except Exception as e:
             self.log(f"จับภาพไม่สำเร็จ: {e}")
             return

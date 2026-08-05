@@ -82,6 +82,7 @@ def run_watch(cfg, debug=False, stop_event=None, log=None):
         d.get("threshold", 0.8),
         d.get("region"),
         d.get("window_title"),
+        d.get("monitor_index", 1),
     )
     interval = float(d.get("interval_seconds", 1.5))
     repeat = float(cfg.get("repeat_line_alert_seconds", 30))
