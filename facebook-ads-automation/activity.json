@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-08-05T22:00:37.342453+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 911 → 1202 บาท",
+          "reason": "จ่าย=185.06 (>40) และ ROAS=4.63 (>3.50) และ ทุนซื้อ=61.69 (<80) และ เวลา=22:01 (>6) และ เวลา=22:01 (>=18) · จ่าย=185.06 (>40) และ ROAS=4.63 (>3) และ ทุนซื้อ=61.69 (<80) และ เวลา=22:01 (>6) และ เวลา=22:01 (>=18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "ADS ดี เพิ่มงบ 5%",
+          "action": "INCREASE_BUDGET",
+          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 1404 → 1474 บาท",
+          "reason": "จ่าย=172.54 (>100) และ ROAS=3.19 (>3) และ ทุนซื้อ=172.54 (<220) และ เวลา=22:01 (>6) และ เวลา=22:01 (>=18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-05T21:50:25.491449+07:00",
       "dry_run": false,
       "summary": {
@@ -837,17 +889,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-05T13:00:40.113215+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
