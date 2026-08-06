@@ -264,7 +264,7 @@
   <section id="ai" class="hidden">
     <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
       <div class="muted" style="font-size:12.5px">
-        ให้ AI (Claude) ดูผลย้อนหลังของทุกบัญชี แล้วสรุป + แนะนำว่าแคมเปญไหนควร
+        ให้ AI (ChatGPT) ดูผลย้อนหลังของทุกบัญชี แล้วสรุป + แนะนำว่าแคมเปญไหนควร
         <span class="tag ok">เพิ่มงบ</span> <span class="tag">คงไว้</span>
         <span class="tag err">ลดงบ/ปิด</span> — เป็นคำแนะนำ ยังไม่แก้แอดจริงให้
       </div>
@@ -848,7 +848,7 @@ const AI_ACTION={
 function renderAI(a){
   const meta=document.getElementById("aiMeta"),body=document.getElementById("aiBody");
   if(!a){meta.textContent="";
-    body.innerHTML=`<div class="muted" style="text-align:center;padding:30px 12px">ยังไม่มีผลวิเคราะห์ — กด <b>🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</b> ด้านบน<br><span style="font-size:12px">(ต้องตั้งค่า ANTHROPIC_API_KEY ใน GitHub Secrets ก่อน)</span></div>`;return;}
+    body.innerHTML=`<div class="muted" style="text-align:center;padding:30px 12px">ยังไม่มีผลวิเคราะห์ — กด <b>🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</b> ด้านบน<br><span style="font-size:12px">(ต้องตั้งค่า OPENAI_API_KEY ใน GitHub Secrets ก่อน)</span></div>`;return;}
   if(a.error){meta.textContent="";
     body.innerHTML=`<div class="banner err" style="position:static;display:block">🤖 วิเคราะห์ไม่สำเร็จ: ${esc(a.error)}</div>`;return;}
   const when=a.generated_at?new Date(a.generated_at):null;
