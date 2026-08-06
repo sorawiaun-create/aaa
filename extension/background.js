@@ -281,7 +281,7 @@ function apiParseMinBudget(resp) {
 // or the amount already spent, e.g. 186฿ — you can't set below what's spent).
 // Keep retrying at whatever amount it asks for until accepted.
 async function apiReduceToMin(ctx, campaignId, campaignName) {
-  let target = 1;
+  let target = 100; // start at the known daily floor; bump up only if TikTok asks
   let last = null;
   for (let i = 0; i < 5; i++) {
     const r = await apiUpdate(ctx, campaignId, { budget: target, campaignName });
