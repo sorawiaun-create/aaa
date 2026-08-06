@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-06T17:10:28.114944+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-06T17:05:12.222997+07:00",
       "dry_run": false,
       "summary": {
@@ -743,28 +754,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-06T07:40:25.228965+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
-          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=257.42 (>250) และ ทุนซื้อ=∞ (>220)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
