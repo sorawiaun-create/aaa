@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-06T18:40:41.179271+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 6,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-06T18:30:32.421491+07:00",
       "dry_run": false,
       "summary": {
@@ -701,48 +712,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-06T09:00:38.930810+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=161.54 (>150) และ ทุนทัก=40.38 (>40)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=191.35 (>150) และ ทุนทัก=191.35 (>40)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=202.45 (>150) และ ทุนทัก=40.49 (>40)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
