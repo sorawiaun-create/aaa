@@ -269,8 +269,9 @@ async function apiUpdate(ctx, campaignId, opts) {
   return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
 }
 function apiParseMinBudget(resp) {
-  const msg = (resp && (resp.msg || (resp.extra && resp.extra.system_msg) || resp.message)) || "";
-  const m = String(msg).match(/฿\s*([\d,]+(?:\.\d+)?)/);
+  const s = String((resp && (resp.msg || (resp.extra && resp.extra.system_msg) || resp.message)) || "");
+  // TikTok TH writes the amount as "100.00฿" (number first); others as "฿100".
+  const m = s.match(/([\d,]+(?:\.\d+)?)\s*฿/) || s.match(/฿\s*([\d,]+(?:\.\d+)?)/);
   if (!m) return null;
   const v = parseFloat(m[1].replace(/,/g, ""));
   return isNaN(v) ? null : v;
