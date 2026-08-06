@@ -162,99 +162,59 @@ function triggered(c, st) {
   return null;
 }
 
-function execOnTikTok(req) {
+// Send a message to the TikTok tab's content script. If the content script is
+// missing/orphaned (e.g. after an extension reload — "message port closed"),
+// re-inject content.js and retry once. This keeps automation working without
+// the user having to manually refresh the TikTok tab.
+function sendTab(msg) {
   return new Promise((resolve) => {
     chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
       if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_EXEC", req }, (r) =>
-        resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
+      const tabId = tabs[0].id;
+      chrome.tabs.sendMessage(tabId, msg, (r) => {
+        if (!chrome.runtime.lastError) return resolve(r);
+        // Orphaned/absent content script — inject a fresh copy and retry.
+        chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => {
+          if (chrome.runtime.lastError)
+            return resolve({ ok: false, error: "inject: " + chrome.runtime.lastError.message });
+          chrome.tabs.sendMessage(tabId, msg, (r2) =>
+            resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r2)
+          );
+        });
+      });
     });
   });
 }
 
+function execOnTikTok(req) {
+  return sendTab({ type: "CGMX_EXEC", req });
+}
 // Ask the content script to refresh channels + campaigns from TikTok.
 function tabSync() {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, (r) =>
-        resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_SYNC" });
 }
-
-// Change a campaign's budget via the content script.
+// Change a campaign's budget.
 function execBudget(campaignId, campaignName, budget) {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_BUDGET", campaignId, campaignName, budget },
-        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_BUDGET", campaignId, campaignName, budget });
 }
-
-// Drop a campaign's budget to the minimum (before pausing) via the content script.
+// Drop a campaign's budget to the minimum (before pausing).
 function execMinBudget(campaignId, campaignName) {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_MINBUDGET", campaignId, campaignName },
-        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_MINBUDGET", campaignId, campaignName });
 }
-
-// Change a campaign's ROI target (roas_bid) via the content script.
+// Change a campaign's ROI target (roas_bid).
 function execRoi(campaignId, campaignName, roi) {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_ROI", campaignId, campaignName, roi },
-        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_ROI", campaignId, campaignName, roi });
 }
 
 // Create a new campaign by cloning a template campaign, with a new ROI + budget.
 function execCreate(templateCampaignId, channelId, roi, budget) {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_CREATE", templateCampaignId, channelId, roi, budget },
-        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_CREATE", templateCampaignId, channelId, roi, budget });
 }
 
-// Pause (operation 2) / enable (operation 1) a campaign natively via the
-// content script, which calls TikTok's update_status endpoint with the CSRF
-// token — no captured recipe required.
+// Pause (operation 2) / enable (operation 1) a campaign natively — the content
+// script calls TikTok's update_status endpoint with the CSRF token.
 function execStatus(campaignId, operation) {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_STATUS", campaignId, operation },
-        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
-      );
-    });
-  });
+  return sendTab({ type: "CGMX_STATUS", campaignId, operation });
 }
 
 async function runRules() {

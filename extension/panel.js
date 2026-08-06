@@ -154,6 +154,23 @@ function fmt(n, d = 0) {
     maximumFractionDigits: d,
   });
 }
+// Send a message to the TikTok tab; if the content script is orphaned (extension
+// was reloaded — "message port closed"), inject a fresh copy and retry once.
+function sendToTikTok(msg, cb) {
+  chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+    if (!tabs.length) return cb({ ok: false, error: "เปิดแท็บ ads.tiktok.com (หน้า GMV Max) ก่อน" });
+    const tabId = tabs[0].id;
+    chrome.tabs.sendMessage(tabId, msg, (r) => {
+      if (!chrome.runtime.lastError) return cb(r);
+      chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => {
+        if (chrome.runtime.lastError) return cb({ ok: false, error: "inject: " + chrome.runtime.lastError.message });
+        chrome.tabs.sendMessage(tabId, msg, (r2) =>
+          cb(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r2)
+        );
+      });
+    });
+  });
+}
 // Is a campaign toggled ON? Prefer the explicit flag from mapCampaigns; fall
 // back to reading the status string for older cached data.
 function isOn(c) {
@@ -471,21 +488,23 @@ function renderReport() {
   const chans = (STORE.channelList || []).length ? STORE.channelList : STORE.channels || [];
   const rows = chans
     .map((ch) => {
-      const camps = campaignsOf(ch.id).filter((c) => isOn(c));
-      const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
-      const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
-      const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
+      const all = campaignsOf(ch.id);
+      const worked = all.filter((c) => (c.cost || 0) > 0 || (c.gmv || 0) > 0);
+      const sales = worked.reduce((a, c) => a + (c.gmv || 0), 0);
+      const cost = worked.reduce((a, c) => a + (c.cost || 0), 0);
+      const orders = worked.reduce((a, c) => a + (c.orders || 0), 0);
       return {
         name: ch.name,
         icon: ch.icon,
-        running: camps.length,
+        running: all.filter((c) => c.delivering).length,
+        active: worked.length,
         sales,
         cost,
         orders,
         roi: cost > 0 ? sales / cost : 0,
       };
     })
-    .filter((r) => r.running > 0 || r.sales > 0);
+    .filter((r) => r.active > 0 || r.sales > 0);
   rows.sort((a, b) => b.sales - a.sales);
 
   const tSales = rows.reduce((a, r) => a + r.sales, 0);
@@ -495,7 +514,7 @@ function renderReport() {
 
   const app = $("app");
   app.innerHTML = `
-    <div class="muted" style="margin-bottom:8px">รวมเฉพาะแคมเปญที่กำลังรัน · ${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่ซิงค์"}</div>
+    <div class="muted" style="margin-bottom:8px">ยอดรวมของช่องวันนี้ · ${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่ซิงค์"}</div>
     <div class="card">
       <div class="metrics">
         <div class="metric"><div class="v">${fmt(tSales, 0)}</div><div class="l">ยอดขายรวม (฿)</div></div>
@@ -504,7 +523,7 @@ function renderReport() {
       </div>
       <div style="margin-top:10px">
         <div class="kv"><span class="k">Orders รวม</span><span class="val">${fmt(tOrders, 0)}</span></div>
-        <div class="kv"><span class="k">ช่องที่กำลังรัน</span><span class="val">${rows.filter((r) => r.running > 0).length} / ${chans.length}</span></div>
+        <div class="kv"><span class="k">ช่องที่มียอดวันนี้</span><span class="val">${rows.length} / ${chans.length}</span></div>
         <div class="kv"><span class="k">กำไรคร่าวๆ (ยอด − ค่าแอด)</span><span class="val" style="color:${tSales - tCost >= 0 ? "var(--green)" : "var(--red)"}">${fmt(tSales - tCost, 0)} ฿</span></div>
       </div>
     </div>
@@ -523,7 +542,7 @@ function renderReport() {
           <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(r.roi, 2)}</span>
         </div>
         <div class="row" style="margin-top:8px">
-          <span class="muted">🟢 รัน ${r.running}</span>
+          <span class="muted">🟢 ไลฟ์ ${r.running}</span>
           <span class="muted">ยอด ${fmt(r.sales, 0)}฿</span>
           <span class="muted">แอด ${fmt(r.cost, 0)}฿</span>
           <span class="muted">${fmt(r.orders, 0)} ออร์เดอร์</span>
@@ -542,18 +561,18 @@ function renderDetail() {
   if (!ch) return go("main");
   const s = ch.settings || defaultSettings();
   const camps = campaignsOf(ch.id);
-  const live = camps.filter((c) => isOn(c));
-
-  // Aggregate metrics over RUNNING campaigns only — paused/ended ones would
-  // otherwise skew the totals with stale/zero data.
-  const active = live;
-  const sales = active.reduce((a, c) => a + (c.gmv || 0), 0);
-  const cost = active.reduce((a, c) => a + (c.cost || 0), 0);
-  const orders = active.reduce((a, c) => a + (c.orders || 0), 0);
+  const delivering = camps.filter((c) => c.delivering);
+  // Dashboard metrics = this channel's TODAY totals across every campaign that
+  // spent/sold today (a campaign keeps its day's numbers even when it isn't the
+  // one currently live). The green dot separately marks what's airing right now.
+  const worked = camps.filter((c) => (c.cost || 0) > 0 || (c.gmv || 0) > 0);
+  const sales = worked.reduce((a, c) => a + (c.gmv || 0), 0);
+  const cost = worked.reduce((a, c) => a + (c.cost || 0), 0);
+  const orders = worked.reduce((a, c) => a + (c.orders || 0), 0);
   const roi = cost > 0 ? sales / cost : 0;
   const cpo = orders > 0 ? cost / orders : 0;
-  const liveViewers = active.reduce((a, c) => a + (c.liveViewers || 0), 0);
-  const budget = active.reduce((a, c) => a + (c.budget || 0), 0);
+  const liveViewers = camps.reduce((a, c) => a + (c.liveViewers || 0), 0);
+  const budget = worked.reduce((a, c) => a + (c.budget || 0), 0);
   const usedPct = budget > 0 ? Math.min(100, (cost / budget) * 100) : 0;
   const triggerAt = s.scaling?.whenUsedPercent || 50;
 
@@ -567,9 +586,9 @@ function renderDetail() {
   const app = $("app");
   app.innerHTML = `
     <div class="card">
-      <div class="row"><span class="muted">🟢 เปิดอยู่ ${active.length} · ⚪ ปิด ${camps.length - active.length} · ทั้งหมด ${camps.length}</span>
+      <div class="row"><span class="muted">🟢 ไลฟ์อยู่ตอนนี้ ${delivering.length} · มียอดวันนี้ ${worked.length} · ทั้งหมด ${camps.length}</span>
         <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
-      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่เปิด (กำลังยิงจริง) เท่านั้น</div>
+      <div class="muted" style="margin-top:2px">ตัวเลข = ยอดรวมของช่องวันนี้ · จุดเขียว = แคมที่กำลังไลฟ์จริงตอนนี้</div>
       <div class="metrics" style="margin-top:10px">
         <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
         <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
@@ -809,25 +828,11 @@ function renderSettings() {
     const budget = Number($("cBudget").value);
     if (!confirm(`สร้างแคมเปญ GMV Max Live ใหม่จริงบนช่อง "${ch.name}"?\nROI ${roi} · งบ ${budget}฿`)) return;
     $("createMsg").textContent = "กำลังสร้าง…";
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) {
-        $("createMsg").textContent = "เปิดแท็บ ads.tiktok.com ก่อน";
-        return;
-      }
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_CREATE", channelId: ch.id, roi, budget },
-        (r) => {
-          if (chrome.runtime.lastError) {
-            $("createMsg").textContent = "รีเฟรชหน้า TikTok แล้วลองใหม่: " + chrome.runtime.lastError.message;
-            return;
-          }
-          $("createMsg").textContent =
-            r && r.ok
-              ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
-              : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
-        }
-      );
+    sendToTikTok({ type: "CGMX_CREATE", channelId: ch.id, roi, budget }, (r) => {
+      $("createMsg").textContent =
+        r && r.ok
+          ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
+          : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
     });
   });
   $("testReduce").addEventListener("click", () => {
@@ -842,25 +847,11 @@ function renderSettings() {
     }
     if (!confirm(`ลดงบแคม "${target.name}" ให้เหลือต่ำสุดตอนนี้เลย?\n(งบปัจจุบัน ${fmt(target.budget, 0)}฿)`)) return;
     $("reduceMsg").textContent = "กำลังลดงบ…";
-    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
-      if (!tabs.length) {
-        $("reduceMsg").textContent = "เปิดแท็บ ads.tiktok.com ก่อน";
-        return;
-      }
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        { type: "CGMX_MINBUDGET", campaignId: target.id, campaignName: target.name },
-        (r) => {
-          if (chrome.runtime.lastError) {
-            $("reduceMsg").textContent = "รีเฟรชหน้า TikTok แล้วลองใหม่: " + chrome.runtime.lastError.message;
-            return;
-          }
-          $("reduceMsg").textContent =
-            r && r.ok
-              ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
-              : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
-        }
-      );
+    sendToTikTok({ type: "CGMX_MINBUDGET", campaignId: target.id, campaignName: target.name }, (r) => {
+      $("reduceMsg").textContent =
+        r && r.ok
+          ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
+          : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
     });
   });
 }
