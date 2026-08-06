@@ -268,8 +268,9 @@
         <span class="tag ok">เพิ่มงบ</span> <span class="tag">คงไว้</span>
         <span class="tag err">ลดงบ/ปิด</span> — เป็นคำแนะนำ ยังไม่แก้แอดจริงให้
       </div>
-      <button class="btn green" id="aiRunBtn" onclick="runAI()" title="สั่งให้ AI วิเคราะห์รอบใหม่ (ใช้เวลาสักครู่)">🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</button>
+      <button class="btn green" id="aiRunBtn" onclick="runAI()" title="ให้ AI วิเคราะห์เดี๋ยวนี้ (ทำงานในเว็บ ไม่ต้องรอคลาวด์)">🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</button>
     </div>
+    <div id="aiKeyBar" class="card" style="margin-bottom:10px;padding:10px 12px"></div>
     <div id="aiMeta" class="muted" style="font-size:12px;margin-bottom:10px"></div>
     <div id="aiBody"></div>
   </section>
@@ -845,14 +846,87 @@ const AI_ACTION={
   PAUSE:{t:"ปิด",icon:"⏸️",cls:"err"},
   REVIEW:{t:"ดูเพิ่ม",icon:"🔎",cls:""},
 };
+/* ---- กุญแจ OpenAI (เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ลงโค้ด/ไม่ commit) ---- */
+const OPENAI_KEY_STORE="fbdash_openai_key", AI_MODEL_STORE="fbdash_ai_model", AI_RESULT_STORE="fbdash_ai_result";
+function openaiKey(){return localStorage.getItem(OPENAI_KEY_STORE)||"";}
+function aiModel(){return localStorage.getItem(AI_MODEL_STORE)||"gpt-4o";}
+function maskKey(k){return k.length<12?"••••":k.slice(0,6)+"…"+k.slice(-4);}
+function saveOpenaiKey(){const v=document.getElementById("aiKeyInput").value.trim();
+  if(!v.startsWith("sk-")){toast("กุญแจต้องขึ้นต้นด้วย sk-","err");return;}
+  localStorage.setItem(OPENAI_KEY_STORE,v);toast("บันทึกกุญแจแล้ว ✓ (เก็บในเครื่องนี้เท่านั้น)","ok");renderAiKeyBar();}
+function clearOpenaiKey(){if(!confirm("ลบกุญแจ OpenAI ออกจากเบราว์เซอร์นี้?"))return;
+  localStorage.removeItem(OPENAI_KEY_STORE);renderAiKeyBar();}
+function setAiModel(v){localStorage.setItem(AI_MODEL_STORE,v);}
+function renderAiKeyBar(){
+  const bar=document.getElementById("aiKeyBar");if(!bar)return;
+  const k=openaiKey();
+  if(!k){bar.innerHTML=`<div style="font-size:13px;margin-bottom:7px">🔑 <b>ใส่กุญแจ ChatGPT (OpenAI) ของคุณ</b> — เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ถูกบันทึกลงโค้ดหรือส่งให้ใคร</div>
+    <div class="row" style="gap:8px;align-items:center">
+      <input id="aiKeyInput" type="password" placeholder="sk-..." style="flex:1;min-width:180px" autocomplete="off">
+      <button class="btn green sm" onclick="saveOpenaiKey()">บันทึกกุญแจ</button>
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:6px">⚠️ อย่าใช้บนเครื่องคนอื่น/เครื่องสาธารณะ · เอากุญแจจาก platform.openai.com/api-keys</div>`;
+    return;}
+  bar.innerHTML=`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:13px">🔑 กุญแจพร้อมใช้: <b>${maskKey(k)}</b></span>
+    <span class="muted" style="font-size:12px">โมเดล:</span>
+    <select onchange="setAiModel(this.value)" style="min-width:130px">
+      <option value="gpt-4o"${aiModel()==="gpt-4o"?" selected":""}>gpt-4o (แม่นสุด)</option>
+      <option value="gpt-4o-mini"${aiModel()==="gpt-4o-mini"?" selected":""}>gpt-4o-mini (ถูก/เร็ว)</option>
+    </select>
+    <div class="spacer" style="flex:1"></div>
+    <button class="btn ghost sm" onclick="clearOpenaiKey()">ลบกุญแจ</button>
+  </div>`;
+}
+/* ---- สร้าง prompt ในเว็บ (พอร์ตจาก ai.py) ---- */
+const AI_PERIODS_JS=["today","yesterday","last_7d","last_30d"];
+const AI_SYSTEM_PROMPT="คุณเป็นผู้เชี่ยวชาญยิงแอด Facebook สำหรับสินค้าอีคอมเมิร์ซในไทย หน้าที่คือวิเคราะห์ผลของแต่ละบัญชี/แคมเปญจากตัวเลขจริง แล้วบอกว่าควรทำอะไรเพื่อทำกำไรมากที่สุด โดยดูจาก ROAS (ยิ่งสูงยิ่งดี), ยอดใช้จ่าย, ยอดขาย, จำนวนออร์เดอร์ และต้นทุนต่อออร์เดอร์. หลักคิด: ROAS สูงและมีออร์เดอร์ควรเพิ่มงบ (SCALE_UP); ใช้เงินเยอะแต่ ROAS ต่ำ/ไม่มีออร์เดอร์ควรลดงบหรือปิด (SCALE_DOWN/PAUSE); ที่ดีอยู่แล้วคงไว้ (KEEP); ข้อมูลไม่พอให้ REVIEW. ตอบเป็นภาษาไทยล้วน กระชับ อ้างอิงตัวเลขจริงเสมอ. จุดคุ้มทุนราว ROAS 1.5-2.0.";
+function _r2(v){const n=Number(v);return isFinite(n)?Math.round(n*100)/100:0;}
+function compactDataJS(status,board){
+  const bmap={};((board||{}).accounts||[]).forEach(a=>bmap[a.account_id]=a);
+  const accounts=[];
+  for(const acc of (status||{}).accounts||[]){
+    if(acc.disabled||acc.error)continue;
+    const P={};for(const p of AI_PERIODS_JS){const d=(acc.periods||{})[p]||{};
+      P[p]={spend:_r2(d.spend),revenue:_r2(d.revenue),roas:_r2(d.roas),orders:Math.round(d.orders||0),cost_per_order:_r2(d.cost_per_order)};}
+    const camps=(((bmap[acc.account_id]||{}).campaigns)||[]).map(c=>({name:c.name||"",status:c.status||"",budget:c.budget,
+      spend_today:_r2(c.spend),roas_today:_r2(c.roas),orders_today:Math.round(c.orders||0)}));
+    accounts.push({name:acc.name||"",periods:P,campaigns:camps});
+  }
+  return {updated_at:(status||{}).updated_at,portfolio_totals:(status||{}).period_totals||{},accounts};
+}
+function buildAiPromptJS(status,board){
+  const data=compactDataJS(status,board);
+  return "นี่คือข้อมูลผลการยิงแอด Facebook หลายบัญชี (เงินบาท, ROAS = รายได้/ค่าโฆษณา)\n"+
+    "ช่วงเวลา: today=วันนี้, yesterday=เมื่อวาน, last_7d=7 วัน, last_30d=30 วัน\n\n"+
+    "```json\n"+JSON.stringify(data,null,1)+"\n```\n\n"+
+    "กรุณาวิเคราะห์แล้วตอบกลับเป็น JSON object เท่านั้น ตามโครงสร้างนี้:\n"+
+    '{"summary":"สรุปภาพรวมทั้งพอร์ต","overall_health":"good|warning|bad",'+
+    '"priority_actions":["ควรทำก่อน 3-6 ข้อ"],'+
+    '"accounts":[{"name":"ชื่อบัญชี","health":"good|warning|bad","diagnosis":"วินิจฉัย",'+
+    '"recommendations":[{"campaign":"ชื่อแคมเปญ","action":"SCALE_UP|SCALE_DOWN|KEEP|PAUSE|REVIEW","reason":"เหตุผลพร้อมตัวเลข"}]}]}\n'+
+    "ตอบภาษาไทย อ้างอิงตัวเลขจริง ห้ามมีข้อความอื่นนอกจาก JSON";
+}
+async function callOpenAI(key,model,system,user){
+  const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+    body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content:user}],
+      response_format:{type:"json_object"}})});
+  if(!r.ok){let t="";try{t=(await r.json()).error?.message||"";}catch(e){t=await r.text();}
+    throw new Error("OpenAI "+r.status+(t?": "+t.slice(0,180):""));}
+  const j=await r.json();return JSON.parse(j.choices[0].message.content);
+}
 function renderAI(a){
+  renderAiKeyBar();
   const meta=document.getElementById("aiMeta"),body=document.getElementById("aiBody");
   if(!a){meta.textContent="";
-    body.innerHTML=`<div class="muted" style="text-align:center;padding:30px 12px">ยังไม่มีผลวิเคราะห์ — กด <b>🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</b> ด้านบน<br><span style="font-size:12px">(ต้องตั้งค่า OPENAI_API_KEY ใน GitHub Secrets ก่อน)</span></div>`;return;}
+    body.innerHTML=`<div class="muted" style="text-align:center;padding:30px 12px">ยังไม่มีผลวิเคราะห์ — ใส่กุญแจด้านบน แล้วกด <b>🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</b><br><span style="font-size:12px">ทำงานในเว็บทันที ไม่ต้องรอคลาวด์</span></div>`;return;}
   if(a.error){meta.textContent="";
     body.innerHTML=`<div class="banner err" style="position:static;display:block">🤖 วิเคราะห์ไม่สำเร็จ: ${esc(a.error)}</div>`;return;}
   const when=a.generated_at?new Date(a.generated_at):null;
-  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"?"}</b>${a.model?` · โมเดล ${esc(a.model)}`:""}`;
+  const dwhen=a.data_as_of?new Date(a.data_as_of):null;
+  meta.innerHTML=`วิเคราะห์เมื่อ: <b>${when?when.toLocaleString("th-TH"):"?"}</b>${a.model?` · โมเดล ${esc(a.model)}`:""}`+
+    (dwhen?` · <span title="ตัวเลขที่ AI ใช้ มาจากรอบคลาวด์ล่าสุด">ข้อมูล ณ ${dwhen.toLocaleString("th-TH")}</span>`:"");
   const H=AI_HEALTH[a.overall_health]||AI_HEALTH.warning;
   let html=`<div class="card" style="margin-bottom:14px">
     <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
@@ -884,13 +958,24 @@ function renderAI(a){
   }
   body.innerHTML=html;
 }
-function runAI(){requireToken(async()=>{
+async function runAI(){
+  const key=openaiKey();
+  if(!key){renderAiKeyBar();toast("ใส่กุญแจ ChatGPT ก่อนครับ (ช่องด้านบน)","err");
+    const el=document.getElementById("aiKeyInput");if(el)el.focus();return;}
+  const st=OV_ST, bd=BOARD;
+  if(!st||!(st.accounts||[]).length){toast("ยังไม่มีข้อมูลให้วิเคราะห์ — กด ↻ โหลดใหม่ ก่อน","err");return;}
   const btn=document.getElementById("aiRunBtn");
   btn.disabled=true;btn.textContent="⏳ AI กำลังคิด…";
-  try{await dispatchAI();
-    toast("🤖 สั่งให้ AI วิเคราะห์แล้ว — รอสักครู่ (~1-2 นาที) แล้วกด ↻ โหลดใหม่","ok");}
-  catch(e){toast("❌ "+e.message,"err");}
-  setTimeout(()=>{btn.disabled=false;btn.textContent="🤖 ให้ AI วิเคราะห์เดี๋ยวนี้";},2500);});}
+  try{
+    const res=await callOpenAI(key,aiModel(),AI_SYSTEM_PROMPT,buildAiPromptJS(st,bd));
+    res.generated_at=new Date().toISOString();res.model=aiModel();
+    res.data_as_of=st.updated_at||null;
+    try{localStorage.setItem(AI_RESULT_STORE,JSON.stringify(res));}catch(e){}
+    renderAI(res);toast("🤖 วิเคราะห์เสร็จแล้ว ✓","ok");
+  }catch(e){toast("❌ "+e.message,"err");
+    renderAI({error:e.message,generated_at:new Date().toISOString(),model:aiModel()});}
+  btn.disabled=false;btn.textContent="🤖 ให้ AI วิเคราะห์เดี๋ยวนี้";
+}
 
 /* ===================== boot ===================== */
 async function boot(){
@@ -900,7 +985,9 @@ async function boot(){
   try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
   try{renderBoard(await loadBoard());}catch(e){renderBoard(null);}
   try{renderLog(await loadActivity());}catch(e){renderLog(null);}
-  try{renderAI(await loadAnalysis());}catch(e){renderAI(null);}
+  // AI: แสดงผลวิเคราะห์ล่าสุดที่เก็บไว้ในเบราว์เซอร์ (ทำงานฝั่งเว็บ ไม่ต้องรอคลาวด์)
+  try{const saved=localStorage.getItem(AI_RESULT_STORE);renderAI(saved?JSON.parse(saved):null);}
+  catch(e){renderAI(null);}
 }
 
 /* ===================== theme (สว่าง/มืด) ===================== */
