@@ -276,13 +276,24 @@ function apiParseMinBudget(resp) {
   const v = parseFloat(m[1].replace(/,/g, ""));
   return isNaN(v) ? null : v;
 }
+// Lower a campaign's budget as far as TikTok allows. TikTok rejects a too-low
+// budget with the required amount in the message (the daily minimum, e.g. 100฿,
+// or the amount already spent, e.g. 186฿ — you can't set below what's spent).
+// Keep retrying at whatever amount it asks for until accepted.
 async function apiReduceToMin(ctx, campaignId, campaignName) {
-  let r = await apiUpdate(ctx, campaignId, { budget: 1, campaignName });
-  if (r.ok) return { ok: true, budget: 1 };
-  const min = apiParseMinBudget(r.resp);
-  if (min == null) return { ok: false, error: r.msg || r.error || "ตั้งงบต่ำสุดไม่ได้", resp: r.resp };
-  r = await apiUpdate(ctx, campaignId, { budget: min, campaignName });
-  return { ok: r.ok, budget: min, code: r.code, msg: r.msg, resp: r.resp };
+  let target = 1;
+  let last = null;
+  for (let i = 0; i < 5; i++) {
+    const r = await apiUpdate(ctx, campaignId, { budget: target, campaignName });
+    if (r.ok) return { ok: true, budget: target, retried: i };
+    last = r;
+    const need = apiParseMinBudget(r.resp);
+    // No parseable amount, or it isn't asking for more than we tried -> give up.
+    if (need == null || Math.ceil(need) <= target)
+      return { ok: false, error: r.msg || r.error || "ตั้งงบต่ำสุดไม่ได้", resp: r.resp };
+    target = Math.ceil(need);
+  }
+  return { ok: false, error: (last && (last.msg || last.error)) || "ลองหลายครั้งแล้วยังไม่ได้", resp: last && last.resp };
 }
 async function apiSetStatus(ctx, campaignId, operation) {
   const j = await apiFetch(apiBuildUrl(API.STATUS, apiCtxParams(ctx)), {
