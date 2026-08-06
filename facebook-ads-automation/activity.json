@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-06T18:20:27.681651+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 6,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-06T18:10:31.722911+07:00",
       "dry_run": false,
       "summary": {
@@ -732,48 +743,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-06T08:40:32.955320+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=108.82 (>100) และ ทุนซื้อ=108.82 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=153.19 (>150) และ ทุนทัก=153.19 (>40)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=165.39 (>150) และ ทุนทัก=∞ (>40)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
