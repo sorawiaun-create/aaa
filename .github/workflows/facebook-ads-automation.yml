@@ -24,10 +24,12 @@ on:
         type: boolean
         default: false
 
-# กันไม่ให้รอบใหม่ทับรอบเก่าที่ยังทำงานอยู่
+# รอบใหม่ยกเลิกรอบเก่าที่ยังค้างคิว/ทำงานอยู่ แล้วรันตัวล่าสุดทันที
+# (กันปัญหารอบกองกันในคิวจน GitHub ยกเลิกทิ้ง แล้ว log ไม่อัพเดท)
+# ปลอดภัย เพราะแต่ละรอบสั้น ~30 วิ และรอบถัดไปประเมินกฎใหม่หมดอยู่แล้ว
 concurrency:
   group: facebook-ads-automation
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 # ให้ commit ไฟล์สรุป (status.json) กลับเข้า repo ได้
 permissions:
