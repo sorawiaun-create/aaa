@@ -71,7 +71,8 @@ jobs:
           RUN_FORCE: ${{ github.event.inputs.force }}
           # 🤖 AI วิเคราะห์ (ทำงานเฉพาะเมื่อกดปุ่มจาก Dashboard = ai:true)
           RUN_AI: ${{ github.event.inputs.ai }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
           # แจ้งเตือน LINE (ไม่บังคับ — ไม่ตั้งก็ข้าม)
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_TO: ${{ secrets.LINE_TO }}

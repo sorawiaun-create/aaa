@@ -1,11 +1,11 @@
-"""AI วิเคราะห์ Ads + แนะนำการปรับ (ใช้ Claude ของ Anthropic).
+"""AI วิเคราะห์ Ads + แนะนำการปรับ (ใช้ ChatGPT ของ OpenAI).
 
 เฟส 1: วิเคราะห์อย่างเดียว — สรุปสุขภาพพอร์ต, วินิจฉัยรายบัญชี, และ
 เสนอสิ่งที่ควรทำ (คน/ระบบค่อยตัดสินใจเอง) ยังไม่สั่งแก้แอดโดยตรง.
 
 ออกแบบให้ทดสอบได้ง่าย:
 - ``compact_data`` และ ``build_analysis_prompt`` เป็นฟังก์ชันบริสุทธิ์ (ไม่ต่อเน็ต)
-- ``run_analysis`` เท่านั้นที่เรียก Claude จริง
+- ``run_analysis`` เท่านั้นที่เรียก OpenAI จริง
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from typing import Any
 
 log = logging.getLogger("fb_automation")
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "gpt-4o"
 
 # ช่วงเวลาที่ส่งให้ AI ดู (ย่อจาก status.json ให้กระชับ ประหยัด token)
 _AI_PERIODS = ["today", "yesterday", "last_7d", "last_30d"]
@@ -141,16 +141,11 @@ def build_analysis_prompt(status: dict, board: dict) -> str:
     )
 
 
-def _extract_json(message: Any) -> dict:
-    """ดึงข้อความ JSON จาก response ของ Claude (ข้าม thinking blocks)."""
-    parts = []
-    for block in getattr(message, "content", []) or []:
-        if getattr(block, "type", None) == "text":
-            parts.append(getattr(block, "text", ""))
-    text = "".join(parts).strip()
+def _parse_json_text(text: str) -> dict:
+    """แปลงข้อความตอบกลับเป็น dict (เผื่อโมเดลใส่ ```json ... ``` ครอบ)."""
+    text = (text or "").strip()
     if not text:
         raise ValueError("ไม่มีข้อความตอบกลับจาก AI")
-    # เผื่อโมเดลใส่ ```json ... ``` ครอบ
     if text.startswith("```"):
         text = text.split("```", 2)[1]
         if text.startswith("json"):
@@ -160,32 +155,33 @@ def _extract_json(message: Any) -> dict:
 
 
 def run_analysis(status: dict, board: dict, api_key: str,
-                 model: str = DEFAULT_MODEL, max_tokens: int = 8000) -> dict:
-    """เรียก Claude วิเคราะห์จริง คืน dict ตาม ANALYSIS_SCHEMA (+ meta)."""
-    from anthropic import Anthropic  # import ในฟังก์ชันเพื่อให้ import โมดูลไม่พังถ้ายังไม่ติดตั้ง
+                 model: str = DEFAULT_MODEL, max_tokens: int = 4000) -> dict:
+    """เรียก OpenAI (ChatGPT) วิเคราะห์จริง คืน dict ตามโครงสร้าง ANALYSIS_SCHEMA (+ meta)."""
+    from openai import OpenAI  # import ในฟังก์ชันเพื่อให้ import โมดูลไม่พังถ้ายังไม่ติดตั้ง
 
-    client = Anthropic(api_key=api_key)
+    client = OpenAI(api_key=api_key)
     prompt = build_analysis_prompt(status, board)
-    kwargs: dict[str, Any] = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "system": SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": prompt}],
-        "output_config": {"format": {"type": "json_schema", "schema": ANALYSIS_SCHEMA}},
-    }
-    try:
-        msg = client.messages.create(**kwargs)
-    except TypeError:
-        # SDK เก่าอาจไม่รู้จัก output_config — ถอดออกแล้วพึ่ง prompt ให้ตอบ JSON
-        kwargs.pop("output_config", None)
-        kwargs["messages"] = [{
-            "role": "user",
-            "content": prompt + "\n\nสำคัญ: ตอบกลับเป็น JSON ตามโครงสร้างเท่านั้น ห้ามมีข้อความอื่น",
-        }]
-        msg = client.messages.create(**kwargs)
-
-    result = _extract_json(msg)
-    return result
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": prompt},
+    ]
+    base: dict[str, Any] = {"model": model, "messages": messages}
+    # ลองหลายแบบเผื่อโมเดลบางรุ่นไม่รองรับพารามิเตอร์บางตัว (เช่น max_tokens vs max_completion_tokens)
+    attempts = [
+        {**base, "response_format": {"type": "json_object"}, "max_tokens": max_tokens},
+        {**base, "response_format": {"type": "json_object"}, "max_completion_tokens": max_tokens},
+        {**base, "max_completion_tokens": max_tokens},
+        base,
+    ]
+    last_err: Exception | None = None
+    for kwargs in attempts:
+        try:
+            resp = client.chat.completions.create(**kwargs)
+            return _parse_json_text(resp.choices[0].message.content)
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            continue
+    raise last_err if last_err else RuntimeError("เรียก OpenAI ไม่สำเร็จ")
 
 
 def write_analysis(path: str, data: dict[str, Any]) -> None:
@@ -203,9 +199,9 @@ def maybe_run_analysis(status: dict, board: dict, now_iso: str) -> bool:
     """
     if str(os.environ.get("RUN_AI", "")).strip().lower() not in ("1", "true", "yes", "on"):
         return False
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
-        log.warning("ตั้ง RUN_AI แต่ไม่พบ ANTHROPIC_API_KEY — ข้ามการวิเคราะห์ AI")
+        log.warning("ตั้ง RUN_AI แต่ไม่พบ OPENAI_API_KEY — ข้ามการวิเคราะห์ AI")
         return False
     model = os.environ.get("AI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     path = os.environ.get("ANALYSIS_PATH", "analysis.json")
