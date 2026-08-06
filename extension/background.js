@@ -243,7 +243,7 @@ async function apiGetDetail(ctx, campaignId) {
   return j && j.data ? j.data : null;
 }
 async function apiUpdate(ctx, campaignId, opts) {
-  const detail = await apiGetDetail(ctx, campaignId);
+  const detail = opts.detail || (await apiGetDetail(ctx, campaignId));
   if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญไม่ได้" };
   const ad = detail.ad_info;
   // budget must be a NUMBER (TikTok rejects the "100.00" string form).
@@ -284,14 +284,16 @@ function apiParseMinBudget(resp) {
 // or the amount already spent, e.g. 186฿ — you can't set below what's spent).
 // Keep retrying at whatever amount it asks for until accepted.
 async function apiReduceToMin(ctx, campaignId, campaignName) {
+  // Fetch the campaign detail once, then reuse it for each retry (fast).
+  const detail = await apiGetDetail(ctx, campaignId);
+  if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญไม่ได้" };
   let target = 100; // start at the known daily floor; bump up only if TikTok asks
   let last = null;
   for (let i = 0; i < 5; i++) {
-    const r = await apiUpdate(ctx, campaignId, { budget: target, campaignName });
+    const r = await apiUpdate(ctx, campaignId, { budget: target, campaignName, detail });
     if (r.ok) return { ok: true, budget: target, retried: i };
     last = r;
     const need = apiParseMinBudget(r.resp);
-    // No parseable amount, or it isn't asking for more than we tried -> give up.
     if (need == null || Math.ceil(need) <= target)
       return { ok: false, error: r.msg || r.error || "ตั้งงบต่ำสุดไม่ได้", resp: r.resp };
     target = Math.ceil(need);
