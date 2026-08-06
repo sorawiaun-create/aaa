@@ -427,19 +427,20 @@ async function runRules() {
       if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue; // cooldown 30m
       const reason = triggered(c, st);
       if (!reason) continue;
-      // Drop the budget to the minimum BEFORE pausing so a high (scaled-up)
-      // budget can't keep spending after the campaign is turned off.
-      if (st.actions?.reduceBudgetBeforePause !== false) {
+      const res = await execStatus(c.id, 2); // 2 = pause FIRST
+      acted[c.id] = now;
+      actions.push({ ok: res && res.ok, name: c.name, reason });
+      // Then drop the budget to the minimum — TikTok only allows lowering the
+      // budget once the campaign is paused. This stops a high (scaled-up)
+      // budget from continuing to spend after the pause.
+      if (res && res.ok && st.actions?.reduceBudgetBeforePause !== false) {
         const mb = await execMinBudget(c.id, c.name);
         actions.push({
           ok: mb && mb.ok,
-          name: `↓ ลดงบก่อนปิด ${c.name}`,
+          name: `↓ ลดงบหลังปิด ${c.name}`,
           reason: mb && mb.ok ? `เหลือ ${mb.budget}฿` : `ไม่สำเร็จ: ${(mb && (mb.error || mb.msg)) || "?"}`,
         });
       }
-      const res = await execStatus(c.id, 2); // 2 = pause
-      acted[c.id] = now;
-      actions.push({ ok: res && res.ok, name: c.name, reason });
 
       // Optionally create a fresh campaign to replace the paused one, cloning
       // the campaign we just paused as the template. This keeps the loop going
@@ -586,6 +587,29 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   }
   if (msg?.type === "CGMX_DO_STATUS") {
     execStatus(msg.campaignId, msg.operation).then(sendResponse).catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  // Test the real reduce flow on a live campaign: pause -> reduce -> re-enable.
+  if (msg?.type === "CGMX_DO_TESTREDUCE") {
+    (async () => {
+      try {
+        const ctx = await apiCtx();
+        if (!ctx || !ctx.aadvid) return sendResponse({ ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ก่อน" });
+        const paused = await apiSetStatus(ctx, msg.campaignId, 2);
+        const reduced = await apiReduceToMin(ctx, msg.campaignId, msg.campaignName);
+        const reenabled = msg.reenable ? await apiSetStatus(ctx, msg.campaignId, 1) : { ok: true, skipped: true };
+        sendResponse({
+          ok: reduced.ok,
+          budget: reduced.budget,
+          paused: paused.ok,
+          reenabled: reenabled.ok,
+          error: reduced.error,
+          msg: reduced.msg,
+        });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
     return true;
   }
 });

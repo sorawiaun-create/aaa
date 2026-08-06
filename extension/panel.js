@@ -688,7 +688,7 @@ function renderSettings() {
     <div class="sec">ACTION เมื่อ TRIGGER</div>
     <div class="card">
       <label class="row" style="cursor:pointer"><span>ปิดแคมเปญ</span><input type="checkbox" id="aPause" ${s.actions.pause ? "checked" : ""}></label>
-      <label class="row" style="cursor:pointer;margin-top:8px"><span>ลดงบต่ำสุดก่อนปิด <span class="muted">(กันงบไหลหลังปิด)</span></span><input type="checkbox" id="aReduce" ${s.actions.reduceBudgetBeforePause !== false ? "checked" : ""}></label>
+      <label class="row" style="cursor:pointer;margin-top:8px"><span>ลดงบต่ำสุดหลังปิด <span class="muted">(กันงบไหลต่อ)</span></span><input type="checkbox" id="aReduce" ${s.actions.reduceBudgetBeforePause !== false ? "checked" : ""}></label>
       <label class="row" style="cursor:pointer;margin-top:8px"><span>แจ้งเตือน Telegram</span><input type="checkbox" id="aTg" ${s.actions.telegram ? "checked" : ""}></label>
       <button class="ghost" id="testReduce" style="width:100%;margin-top:10px">🧪 ทดสอบลดงบต่ำสุด (แคมที่ยิงอยู่)</button>
       <div class="msg" id="reduceMsg"></div>
@@ -841,16 +841,16 @@ function renderSettings() {
       $("reduceMsg").textContent = "ไม่พบแคมเปญของช่องนี้ — กด Sync ก่อน";
       return;
     }
-    if (!confirm(`ลดงบแคม "${target.name}" ให้เหลือต่ำสุดตอนนี้เลย?\n(งบปัจจุบัน ${fmt(target.budget, 0)}฿)`)) return;
-    $("reduceMsg").textContent = "กำลังลดงบ…";
+    if (!confirm(`ทดสอบ: ปิด → ลดงบต่ำสุด → เปิดกลับ\nแคม "${target.name}" (งบ ${fmt(target.budget, 0)}฿)\n\n⚠️ TikTok ให้ลดงบได้เฉพาะตอนแคมถูกปิด ระบบจะปิดชั่วครู่แล้วเปิดกลับ (งบจะเหลือต่ำสุด)`)) return;
+    $("reduceMsg").textContent = "กำลังปิด → ลดงบ → เปิดกลับ…";
     chrome.runtime.sendMessage(
-      { type: "CGMX_DO_MINBUDGET", campaignId: target.id, campaignName: target.name },
+      { type: "CGMX_DO_TESTREDUCE", campaignId: target.id, campaignName: target.name, reenable: true },
       (r) => {
         if (chrome.runtime.lastError) { $("reduceMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message; return; }
         $("reduceMsg").textContent =
           r && r.ok
-            ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
-            : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
+            ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (ปิด:${r.paused ? "✓" : "✗"} เปิดกลับ:${r.reenabled ? "✓" : "✗"})`
+            : `❌ ลดงบไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"} (ปิด:${r && r.paused ? "✓" : "✗"})`;
       }
     );
   });
