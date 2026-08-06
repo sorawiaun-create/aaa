@@ -37,6 +37,7 @@ from fb_automation.activity import append_run, load_activity, write_activity
 from fb_automation.notify import maybe_notify
 from fb_automation.board import write_board
 from fb_automation.commands import load_commands, clear_commands
+from fb_automation.ai import maybe_run_analysis
 
 LAST_RUN_KEY = "__last_rule_run__"
 
@@ -219,6 +220,7 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             board_campaigns.append({
                 "id": campaign["id"], "name": campaign.get("name", ""),
                 "status": (campaign.get("status") or "").upper(),
+                "effective_status": (campaign.get("effective_status") or "").upper(),
                 "budget": round(budget, 2) if budget is not None else None,
                 "spend": round(metrics["spend"], 2), "roas": round(metrics["roas"], 2),
                 "orders": int(metrics["purchases"]),
@@ -255,18 +257,25 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
              "  [DRY-RUN ไม่ได้แก้จริง]" if dry else "")
 
     # เขียนไฟล์สรุป + กระดานแอด ให้หน้า Dashboard อ่าน (ไม่ให้พังทั้งรอบถ้าเขียนไม่ได้)
+    status_data = build_status(
+        updated_at=now_local.isoformat(), timezone=config.settings.timezone,
+        dry_run=dry, accounts=status_accounts,
+    )
     try:
-        write_status(os.environ.get("STATUS_PATH", "status.json"), build_status(
-            updated_at=now_local.isoformat(), timezone=config.settings.timezone,
-            dry_run=dry, accounts=status_accounts,
-        ))
+        write_status(os.environ.get("STATUS_PATH", "status.json"), status_data)
     except Exception as e:  # noqa: BLE001
         log.warning("เขียน status.json ไม่สำเร็จ: %s", e)
+    board_data = {"updated_at": now_local.isoformat(), "accounts": board_accounts}
     try:
-        write_board(os.environ.get("BOARD_PATH", "board.json"),
-                    {"updated_at": now_local.isoformat(), "accounts": board_accounts})
+        write_board(os.environ.get("BOARD_PATH", "board.json"), board_data)
     except Exception as e:  # noqa: BLE001
         log.warning("เขียน board.json ไม่สำเร็จ: %s", e)
+
+    # 🤖 AI วิเคราะห์ (เฉพาะเมื่อสั่ง RUN_AI=1 — ไม่รันทุกรอบเพื่อคุมค่าใช้จ่าย)
+    try:
+        maybe_run_analysis(status_data, board_data, now_local.isoformat())
+    except Exception as e:  # noqa: BLE001
+        log.warning("ขั้นตอน AI วิเคราะห์มีปัญหา: %s", e)
 
     _finalize(now_local, dry, total, events, state)
     return total

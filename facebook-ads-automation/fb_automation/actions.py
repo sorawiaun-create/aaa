@@ -33,6 +33,60 @@ def _th_status(s: str | None) -> str:
     return {"ACTIVE": "เปิด", "PAUSED": "ปิด"}.get((s or "").upper(), s or "?")
 
 
+# แปล effective_status (สถานะการยิงจริง) เป็นภาษาไทย
+_TH_EFFECTIVE = {
+    "ACTIVE": "กำลังยิง",
+    "PAUSED": "ปิดอยู่",
+    "CAMPAIGN_PAUSED": "แคมเปญถูกปิด",
+    "ADSET_PAUSED": "ชุดโฆษณา (ad set) ถูกปิดอยู่",
+    "PENDING_REVIEW": "รอ Facebook ตรวจ",
+    "IN_PROCESS": "กำลังดำเนินการ",
+    "PENDING_BILLING_INFO": "รอข้อมูลการชำระเงิน",
+    "PREAPPROVED": "อนุมัติเบื้องต้น รอเริ่ม",
+    "DISAPPROVED": "โฆษณาไม่ผ่านการตรวจ",
+    "WITH_ISSUES": "มีปัญหา (ตรวจในหน้า Facebook)",
+    "ADSET_UNDER_REVIEW": "ชุดโฆษณากำลังถูกตรวจ",
+}
+# สถานะที่ถือว่า "กำลังจะยิง" (ยังไม่ต้องเตือนว่า error)
+_DELIVERING_OK = {"ACTIVE", "PENDING_REVIEW", "IN_PROCESS", "PENDING_BILLING_INFO",
+                  "PREAPPROVED", "ADSET_UNDER_REVIEW"}
+
+
+def _th_effective(s: str | None) -> str:
+    s = (s or "").upper()
+    return _TH_EFFECTIVE.get(s, s or "ไม่ทราบ")
+
+
+def activate_campaign_fully(client: FacebookClient, cid: str) -> dict[str, Any]:
+    """เปิดแคมเปญ + เปิด ad set ข้างในที่ถูกปิดอยู่ แล้วยืนยันสถานะจริง.
+
+    Facebook: การสั่งเปิดแค่ระดับแคมเปญ ถ้า ad set ข้างในยังถูกปิด แอดจะ "ไม่วิ่งจริง"
+    (API คืนสำเร็จแต่ไม่ยิง) — จึงต้องเปิด ad set ด้วย แล้วอ่าน effective_status มายืนยัน.
+
+    คืน dict: {effective, adsets_activated, adset_errors}
+    """
+    client.update_campaign_status(cid, "ACTIVE")
+    activated = 0
+    adset_errors: list[str] = []
+    try:
+        adsets = client.get_campaign_adsets(cid)
+    except Exception as e:  # noqa: BLE001
+        adsets = []
+        adset_errors.append(str(e)[:120])
+    for a in adsets:
+        if (a.get("status") or "").upper() == "PAUSED":
+            try:
+                client.update_adset_status(a["id"], "ACTIVE")
+                activated += 1
+            except Exception as e:  # noqa: BLE001
+                adset_errors.append(f"{a.get('name', 'ad set')}: {str(e)[:80]}")
+    return {
+        "effective": client.get_campaign_effective_status(cid),
+        "adsets_activated": activated,
+        "adset_errors": adset_errors,
+    }
+
+
 def _apply_budget_sequence(
     current_major: float,
     budget_actions: list[PlannedAction],
@@ -126,7 +180,35 @@ def execute_campaign(
         if final.status != current:
             detail = f"{_th_status(current)} → {_th_status(final.status)}"
             log.info("      🔀 สถานะ: %s (กฎ: %s)", detail, final.rule_name)
-            if not dry_run:
+            if dry_run:
+                summary.status_changes += 1
+                _event(final.rule_name, final.action, detail, ok=True, reason=final.reason)
+            elif final.status == "ACTIVE":
+                # เปิดแคมเปญ + เปิด ad set ข้างใน + ยืนยันสถานะจริง (แก้บั๊ก "log เปิดแต่ไม่วิ่ง")
+                try:
+                    res = activate_campaign_fully(client, cid)
+                    summary.status_changes += 1
+                    eff = res["effective"]
+                    extra = f" · เปิด ad set {res['adsets_activated']} ชุด" if res["adsets_activated"] else ""
+                    if eff in _DELIVERING_OK:
+                        ok_detail = f"{detail}{extra} · สถานะจริง: {_th_effective(eff)}"
+                        log.info("      ✅ เปิดสำเร็จ (%s)", eff or "?")
+                        _event(final.rule_name, final.action, ok_detail, ok=True, reason=final.reason)
+                    else:
+                        # สั่งเปิดแล้วแต่ Facebook ยังไม่ปล่อยยิง — แจ้งความจริง + ถือเป็น error เพื่อเตือน
+                        warn = (f"⚠️ สั่งเปิดแล้วแต่ยังไม่วิ่งจริง{extra} · "
+                                f"สถานะจริง: {_th_effective(eff)} ({eff or '?'})")
+                        if res["adset_errors"]:
+                            warn += " · " + "; ".join(res["adset_errors"][:3])
+                        log.warning("      ⚠️ เปิดแล้วแต่ยังไม่วิ่ง: %s", eff or "?")
+                        summary.errors += 1
+                        _event(final.rule_name, final.action, warn, ok=False,
+                               err=f"effective_status={eff}", reason=final.reason)
+                except Exception as e:  # noqa: BLE001
+                    log.error("      ❌ เปิดไม่สำเร็จ: %s", e)
+                    summary.errors += 1
+                    _event(final.rule_name, final.action, detail, ok=False, err=str(e)[:200], reason=final.reason)
+            else:
                 try:
                     client.update_campaign_status(cid, final.status)
                     summary.status_changes += 1
@@ -135,9 +217,6 @@ def execute_campaign(
                     log.error("      ❌ เปลี่ยนสถานะไม่สำเร็จ: %s", e)
                     summary.errors += 1
                     _event(final.rule_name, final.action, detail, ok=False, err=str(e)[:200], reason=final.reason)
-            else:
-                summary.status_changes += 1
-                _event(final.rule_name, final.action, detail, ok=True, reason=final.reason)
 
     # ---- 2) งบประมาณ ----
     budget_actions = [p for p in planned if p.kind == "BUDGET"]

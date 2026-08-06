@@ -161,6 +161,7 @@
       <button class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</button>
       <button class="tab" data-tab="board" onclick="showTab('board')">🧩 กระดานแอด</button>
       <button class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</button>
+      <button class="tab" data-tab="ai" onclick="showTab('ai')">🤖 AI วิเคราะห์</button>
       <button class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</button>
     </div>
     <div class="nav-title">คำสั่ง</div>
@@ -258,6 +259,20 @@
     </div>
     <div id="logList"></div>
   </section>
+
+  <!-- ===== 🤖 AI วิเคราะห์ ===== -->
+  <section id="ai" class="hidden">
+    <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
+      <div class="muted" style="font-size:12.5px">
+        ให้ AI (Claude) ดูผลย้อนหลังของทุกบัญชี แล้วสรุป + แนะนำว่าแคมเปญไหนควร
+        <span class="tag ok">เพิ่มงบ</span> <span class="tag">คงไว้</span>
+        <span class="tag err">ลดงบ/ปิด</span> — เป็นคำแนะนำ ยังไม่แก้แอดจริงให้
+      </div>
+      <button class="btn green" id="aiRunBtn" onclick="runAI()" title="สั่งให้ AI วิเคราะห์รอบใหม่ (ใช้เวลาสักครู่)">🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</button>
+    </div>
+    <div id="aiMeta" class="muted" style="font-size:12px;margin-bottom:10px"></div>
+    <div id="aiBody"></div>
+  </section>
   </main>
 </div>
 
@@ -287,6 +302,7 @@ const STATUS_PATH="facebook-ads-automation/status.json";
 const ACTIVITY_PATH="facebook-ads-automation/activity.json";
 const BOARD_PATH="facebook-ads-automation/board.json";
 const COMMANDS_PATH="facebook-ads-automation/commands.json";
+const ANALYSIS_PATH="facebook-ads-automation/analysis.json";
 const WORKFLOW="facebook-ads-automation.yml";
 const TOKEN_KEY="fbdash_gh_token";
 const DEFAULT_GROUP="กฎทั่วไป";
@@ -380,6 +396,17 @@ async function loadBoard(){
   if(!r.ok) throw new Error("โหลดกระดานแอดไม่ได้ (HTTP "+r.status+")");
   const j=await r.json(); return JSON.parse(fromB64(j.content));
 }
+async function loadAnalysis(){
+  let r=await apiGet(ANALYSIS_PATH,true); if(r.status===401) r=await apiGet(ANALYSIS_PATH,false);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error("โหลดผลวิเคราะห์ AI ไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); return JSON.parse(fromB64(j.content));
+}
+async function dispatchAI(){
+  const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
+  const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true",force:"true",ai:"true"}})});
+  if(!r.ok) throw new Error("สั่ง AI วิเคราะห์ไม่ได้ (HTTP "+r.status+") — กุญแจอาจไม่มีสิทธิ์ workflow");
+}
 async function loadCommandsFile(){
   let r=await apiGet(COMMANDS_PATH,true); if(r.status===401) r=await apiGet(COMMANDS_PATH,false);
   if(r.status===404) return {list:[],sha:null};
@@ -408,7 +435,7 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  ["overview","board","editor","logs"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
+  ["overview","board","editor","logs","ai"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
 
 /* ===================== OVERVIEW ===================== */
 let OV_ST=null, ovPeriod="today";
@@ -514,9 +541,14 @@ function boardAccountEl(a){
 }
 function boardRow(a,c){
   const active=c.status==="ACTIVE";
+  // เปิดอยู่ (status=ACTIVE) แต่ยังไม่ยิงจริง (effective_status ไม่ใช่ ACTIVE) = สะดุด
+  const DELIVER_OK=["ACTIVE","PENDING_REVIEW","IN_PROCESS","PENDING_BILLING_INFO","PREAPPROVED","ADSET_UNDER_REVIEW",""];
+  const stalled=active&&c.effective_status&&!DELIVER_OK.includes(c.effective_status);
   const el=document.createElement("div");el.className="brow";
   const st=document.createElement("span");st.className="bstat "+(active?"on":"off");st.textContent=active?"🟢 เปิด":"⏸️ ปิด";
   const nm=document.createElement("span");nm.className="bname";nm.textContent=c.name||c.id;nm.title=c.name||"";
+  if(stalled){const w=document.createElement("span");w.className="tag err";w.style.whiteSpace="nowrap";
+    w.textContent="⚠️ ไม่วิ่งจริง";w.title="เปิดอยู่แต่ยังไม่ยิง ("+c.effective_status+") — ลองกด ▶️ เปิด อีกครั้ง";nm.appendChild(document.createTextNode(" "));nm.appendChild(w);}
   const met=document.createElement("span");met.className="bmetric";
   met.textContent=`฿${Math.round(c.spend||0).toLocaleString("th-TH")} · ROAS ${(c.roas||0).toFixed(2)}x`;
   el.append(st,nm,met);
@@ -804,6 +836,62 @@ function runLive(){requireToken(async()=>{
     toast("⚡ สั่งรันจริงแล้ว — ดูผลได้ในแท็บ Log อีก ~1 นาที","ok");}catch(e){toast("❌ "+e.message,"err");}});}
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
+/* ===================== 🤖 AI วิเคราะห์ ===================== */
+const AI_HEALTH={good:{t:"ดี",cls:"ok"},warning:{t:"ควรระวัง",cls:""},bad:{t:"น่าห่วง",cls:"err"}};
+const AI_ACTION={
+  SCALE_UP:{t:"เพิ่มงบ",icon:"📈",cls:"ok"},
+  KEEP:{t:"คงไว้",icon:"✅",cls:""},
+  SCALE_DOWN:{t:"ลดงบ",icon:"📉",cls:"err"},
+  PAUSE:{t:"ปิด",icon:"⏸️",cls:"err"},
+  REVIEW:{t:"ดูเพิ่ม",icon:"🔎",cls:""},
+};
+function renderAI(a){
+  const meta=document.getElementById("aiMeta"),body=document.getElementById("aiBody");
+  if(!a){meta.textContent="";
+    body.innerHTML=`<div class="muted" style="text-align:center;padding:30px 12px">ยังไม่มีผลวิเคราะห์ — กด <b>🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</b> ด้านบน<br><span style="font-size:12px">(ต้องตั้งค่า ANTHROPIC_API_KEY ใน GitHub Secrets ก่อน)</span></div>`;return;}
+  if(a.error){meta.textContent="";
+    body.innerHTML=`<div class="banner err" style="position:static;display:block">🤖 วิเคราะห์ไม่สำเร็จ: ${esc(a.error)}</div>`;return;}
+  const when=a.generated_at?new Date(a.generated_at):null;
+  meta.innerHTML=`อัปเดตล่าสุด: <b>${when?when.toLocaleString("th-TH"):"?"}</b>${a.model?` · โมเดล ${esc(a.model)}`:""}`;
+  const H=AI_HEALTH[a.overall_health]||AI_HEALTH.warning;
+  let html=`<div class="card" style="margin-bottom:14px">
+    <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+      <b style="font-size:15px">ภาพรวมทั้งพอร์ต</b><span class="tag ${H.cls}">${H.t}</span></div>
+    <div style="line-height:1.6">${esc(a.summary||"")}</div>`;
+  if((a.priority_actions||[]).length){
+    html+=`<div style="margin-top:10px"><b>ควรทำก่อน:</b><ul style="margin:6px 0 0;padding-left:20px;line-height:1.7">`+
+      a.priority_actions.map(x=>`<li>${esc(x)}</li>`).join("")+`</ul></div>`;
+  }
+  html+=`</div>`;
+  for(const acc of (a.accounts||[])){
+    const AH=AI_HEALTH[acc.health]||AI_HEALTH.warning;
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div class="row" style="align-items:center;gap:8px;margin-bottom:4px">
+        <b style="font-size:14.5px">${esc(acc.name||"")}</b><span class="tag ${AH.cls}">${AH.t}</span></div>
+      <div class="muted" style="line-height:1.6;margin-bottom:8px">${esc(acc.diagnosis||"")}</div>`;
+    if((acc.recommendations||[]).length){
+      html+=`<div style="display:flex;flex-direction:column;gap:7px">`;
+      for(const r of acc.recommendations){
+        const AC=AI_ACTION[r.action]||AI_ACTION.REVIEW;
+        html+=`<div class="row" style="align-items:flex-start;gap:8px;padding:8px 10px;border-radius:9px;background:var(--panel2,rgba(127,127,127,.08))">
+          <span class="tag ${AC.cls}" style="white-space:nowrap">${AC.icon} ${AC.t}</span>
+          <div style="flex:1;line-height:1.55">${r.campaign?`<b>${esc(r.campaign)}</b> — `:""}${esc(r.reason||"")}</div>
+        </div>`;
+      }
+      html+=`</div>`;
+    }else{html+=`<div class="muted" style="font-size:12.5px">ไม่มีคำแนะนำเฉพาะเจาะจง</div>`;}
+    html+=`</div>`;
+  }
+  body.innerHTML=html;
+}
+function runAI(){requireToken(async()=>{
+  const btn=document.getElementById("aiRunBtn");
+  btn.disabled=true;btn.textContent="⏳ AI กำลังคิด…";
+  try{await dispatchAI();
+    toast("🤖 สั่งให้ AI วิเคราะห์แล้ว — รอสักครู่ (~1-2 นาที) แล้วกด ↻ โหลดใหม่","ok");}
+  catch(e){toast("❌ "+e.message,"err");}
+  setTimeout(()=>{btn.disabled=false;btn.textContent="🤖 ให้ AI วิเคราะห์เดี๋ยวนี้";},2500);});}
+
 /* ===================== boot ===================== */
 async function boot(){
   banner("⏳ กำลังโหลดข้อมูล…","info");curAcct=0;openFolders.clear();
@@ -812,6 +900,7 @@ async function boot(){
   try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
   try{renderBoard(await loadBoard());}catch(e){renderBoard(null);}
   try{renderLog(await loadActivity());}catch(e){renderLog(null);}
+  try{renderAI(await loadAnalysis());}catch(e){renderAI(null);}
 }
 
 /* ===================== theme (สว่าง/มืด) ===================== */

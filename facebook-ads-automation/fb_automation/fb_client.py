@@ -93,13 +93,24 @@ class FacebookClient:
         return dict(rows[0]) if rows else {}
 
     def get_campaign_adsets(self, campaign_id: str) -> list[dict[str, Any]]:
-        fields = ["id", "name", "status", "daily_budget", "lifetime_budget"]
+        fields = ["id", "name", "status", "effective_status", "daily_budget", "lifetime_budget"]
         camp = Campaign(campaign_id, api=self._api)
         return [dict(a) for a in camp.get_ad_sets(fields=fields, params={"limit": 200})]
+
+    def get_campaign_effective_status(self, campaign_id: str) -> str:
+        """อ่านสถานะการยิงจริง (effective_status) ของแคมเปญ — ใช้ยืนยันหลังสั่งเปิด/ปิด."""
+        try:
+            data = Campaign(campaign_id, api=self._api).api_get(fields=["effective_status"])
+            return (data.get("effective_status") or "").upper()
+        except Exception:  # noqa: BLE001
+            return ""
 
     # ---- สั่งเปลี่ยนแปลง ------------------------------------------------
     def update_campaign_status(self, campaign_id: str, status: str) -> None:
         Campaign(campaign_id, api=self._api).api_update(params={"status": status})
+
+    def update_adset_status(self, adset_id: str, status: str) -> None:
+        AdSet(adset_id, api=self._api).api_update(params={"status": status})
 
     def update_campaign_daily_budget(self, campaign_id: str, minor_amount: int) -> None:
         Campaign(campaign_id, api=self._api).api_update(params={"daily_budget": minor_amount})
