@@ -11,8 +11,15 @@ NOW = datetime(2026, 7, 31, 17, 46, tzinfo=timezone.utc)
 
 class FakeClient:
     account_id = "1"
-    def __init__(self): self.status_calls = []
+    def __init__(self, effective="ACTIVE", adsets=None):
+        self.status_calls = []
+        self.adset_status_calls = []
+        self._effective = effective
+        self._adsets = adsets if adsets is not None else []
     def update_campaign_status(self, cid, st): self.status_calls.append(st)
+    def update_adset_status(self, aid, st): self.adset_status_calls.append((aid, st))
+    def get_campaign_adsets(self, cid): return self._adsets
+    def get_campaign_effective_status(self, cid): return self._effective
     def to_major(self, x): return float(x) / 100
     def to_minor(self, x): return int(x * 100)
 
