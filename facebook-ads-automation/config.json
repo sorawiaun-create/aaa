@@ -1,7 +1,7 @@
 {
   "settings": {
     "timezone": "Asia/Bangkok",
-    "dry_run": false,
+    "dry_run": true,
     "campaign_name_filter": null,
     "interval_mins": 20
   },
@@ -1785,7 +1785,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
@@ -1806,7 +1807,8 @@
               "metric": "time_of_day"
             }
           ],
-          "group": "ปิด 5 ทุ่ม - เปิด ตี 5"
+          "group": "ปิด 5 ทุ่ม - เปิด ตี 5",
+          "enabled": false
         },
         {
           "name": "กฎใหม่",
