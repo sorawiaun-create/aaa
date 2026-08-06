@@ -393,6 +393,12 @@ function downloadDebug() {
       pauseRecipe: all.pauseRecipe
         ? { url: all.pauseRecipe.url, reqBody: all.pauseRecipe.reqBody }
         : null,
+      budgetRecipe: all.budgetRecipe
+        ? { url: all.budgetRecipe.url, method: all.budgetRecipe.method, reqBody: all.budgetRecipe.reqBody }
+        : null,
+      createRecipe: all.createRecipe
+        ? { url: all.createRecipe.url, method: all.createRecipe.method, reqBody: all.createRecipe.reqBody }
+        : null,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
