@@ -25,6 +25,7 @@ function defaultSettings() {
     },
     actions: {
       pause: true,
+      reduceBudgetBeforePause: true,
       createNew: false,
       createRoi: 1,
       createBudget: 300,
@@ -673,6 +674,7 @@ function renderSettings() {
     <div class="sec">ACTION เมื่อ TRIGGER</div>
     <div class="card">
       <label class="row" style="cursor:pointer"><span>ปิดแคมเปญ</span><input type="checkbox" id="aPause" ${s.actions.pause ? "checked" : ""}></label>
+      <label class="row" style="cursor:pointer;margin-top:8px"><span>ลดงบต่ำสุดก่อนปิด <span class="muted">(กันงบไหลหลังปิด)</span></span><input type="checkbox" id="aReduce" ${s.actions.reduceBudgetBeforePause !== false ? "checked" : ""}></label>
       <label class="row" style="cursor:pointer;margin-top:8px"><span>แจ้งเตือน Telegram</span><input type="checkbox" id="aTg" ${s.actions.telegram ? "checked" : ""}></label>
     </div>
 
@@ -771,6 +773,7 @@ function renderSettings() {
       },
       actions: {
         pause: $("aPause").checked,
+        reduceBudgetBeforePause: $("aReduce").checked,
         createNew: $("aCreate").checked,
         createRoi: Number($("cRoi").value),
         createBudget: Number($("cBudget").value),

@@ -199,6 +199,20 @@ function execBudget(campaignId, campaignName, budget) {
   });
 }
 
+// Drop a campaign's budget to the minimum (before pausing) via the content script.
+function execMinBudget(campaignId, campaignName) {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) return resolve({ ok: false, error: "no tiktok tab" });
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { type: "CGMX_MINBUDGET", campaignId, campaignName },
+        (r) => resolve(chrome.runtime.lastError ? { ok: false, error: chrome.runtime.lastError.message } : r)
+      );
+    });
+  });
+}
+
 // Change a campaign's ROI target (roas_bid) via the content script.
 function execRoi(campaignId, campaignName, roi) {
   return new Promise((resolve) => {
@@ -265,6 +279,16 @@ async function runRules() {
       if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue; // cooldown 30m
       const reason = triggered(c, st);
       if (!reason) continue;
+      // Drop the budget to the minimum BEFORE pausing so a high (scaled-up)
+      // budget can't keep spending after the campaign is turned off.
+      if (st.actions?.reduceBudgetBeforePause !== false) {
+        const mb = await execMinBudget(c.id, c.name);
+        actions.push({
+          ok: mb && mb.ok,
+          name: `↓ ลดงบก่อนปิด ${c.name}`,
+          reason: mb && mb.ok ? `เหลือ ${mb.budget}฿` : `ไม่สำเร็จ: ${(mb && (mb.error || mb.msg)) || "?"}`,
+        });
+      }
       const res = await execStatus(c.id, 2); // 2 = pause
       acted[c.id] = now;
       actions.push({ ok: res && res.ok, name: c.name, reason });

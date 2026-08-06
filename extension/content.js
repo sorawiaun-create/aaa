@@ -585,6 +585,28 @@ async function createFromTemplate(ctx, templateCampaignId, roi, budget, accountN
   return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
 }
 
+// TikTok rejects a too-low budget with a message stating the minimum (e.g.
+// "งบขั้นต่ำ ฿50"). Pull that number out.
+function parseMinBudget(resp) {
+  const msg =
+    (resp && (resp.msg || (resp.extra && resp.extra.system_msg) || resp.message)) || "";
+  const m = String(msg).match(/฿\s*([\d,]+(?:\.\d+)?)/);
+  if (!m) return null;
+  const v = parseFloat(m[1].replace(/,/g, ""));
+  return isNaN(v) ? null : v;
+}
+
+// Drop a campaign's budget to the lowest value TikTok allows: try a very low
+// budget, and if it's rejected, read the minimum from the error and set that.
+async function reduceBudgetToMin(ctx, campaignId, campaignName) {
+  let r = await updateCampaign(ctx, campaignId, { budget: 1, campaignName });
+  if (r.ok) return { ok: true, budget: 1 };
+  const min = parseMinBudget(r.resp);
+  if (min == null) return { ok: false, error: r.msg || "ตั้งงบต่ำสุดไม่ได้", resp: r.resp };
+  r = await updateCampaign(ctx, campaignId, { budget: min, campaignName });
+  return { ok: r.ok, budget: min, code: r.code, msg: r.msg, resp: r.resp };
+}
+
 async function setCampaignStatus(ctx, campaignId, operation) {
   const url = buildUrl(EP.UPDATE_STATUS, ctxParams(ctx, false));
   const j = await apiFetch(url, {
@@ -680,6 +702,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           return;
         }
         sendResponse(await updateCampaign(st.ctx, msg.campaignId, { budget: msg.budget, campaignName: msg.campaignName }));
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg && msg.type === "CGMX_MINBUDGET") {
+    (async () => {
+      try {
+        const st = await chrome.storage.local.get({ ctx: null, headerTemplate: {} });
+        setCsrfFallback(st.headerTemplate);
+        if (!st.ctx || !st.ctx.aadvid) {
+          sendResponse({ ok: false, error: "no ctx" });
+          return;
+        }
+        sendResponse(await reduceBudgetToMin(st.ctx, msg.campaignId, msg.campaignName));
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }
