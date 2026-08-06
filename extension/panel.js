@@ -676,6 +676,8 @@ function renderSettings() {
       <label class="row" style="cursor:pointer"><span>ปิดแคมเปญ</span><input type="checkbox" id="aPause" ${s.actions.pause ? "checked" : ""}></label>
       <label class="row" style="cursor:pointer;margin-top:8px"><span>ลดงบต่ำสุดก่อนปิด <span class="muted">(กันงบไหลหลังปิด)</span></span><input type="checkbox" id="aReduce" ${s.actions.reduceBudgetBeforePause !== false ? "checked" : ""}></label>
       <label class="row" style="cursor:pointer;margin-top:8px"><span>แจ้งเตือน Telegram</span><input type="checkbox" id="aTg" ${s.actions.telegram ? "checked" : ""}></label>
+      <button class="ghost" id="testReduce" style="width:100%;margin-top:10px">🧪 ทดสอบลดงบต่ำสุด (แคมที่ยิงอยู่)</button>
+      <div class="msg" id="reduceMsg"></div>
     </div>
 
     <div class="sec">สร้างแคมเปญใหม่อัตโนมัติ</div>
@@ -823,6 +825,39 @@ function renderSettings() {
           $("createMsg").textContent =
             r && r.ok
               ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
+              : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
+        }
+      );
+    });
+  });
+  $("testReduce").addEventListener("click", () => {
+    // Prefer a delivering campaign; else the highest-spend one on this channel.
+    const camps = campaignsOf(ch.id);
+    const target =
+      camps.find((c) => isOn(c)) ||
+      camps.slice().sort((a, b) => (b.cost || 0) - (a.cost || 0))[0];
+    if (!target) {
+      $("reduceMsg").textContent = "ไม่พบแคมเปญของช่องนี้ — กด Sync ก่อน";
+      return;
+    }
+    if (!confirm(`ลดงบแคม "${target.name}" ให้เหลือต่ำสุดตอนนี้เลย?\n(งบปัจจุบัน ${fmt(target.budget, 0)}฿)`)) return;
+    $("reduceMsg").textContent = "กำลังลดงบ…";
+    chrome.tabs.query({ url: "https://ads.tiktok.com/*" }, (tabs) => {
+      if (!tabs.length) {
+        $("reduceMsg").textContent = "เปิดแท็บ ads.tiktok.com ก่อน";
+        return;
+      }
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { type: "CGMX_MINBUDGET", campaignId: target.id, campaignName: target.name },
+        (r) => {
+          if (chrome.runtime.lastError) {
+            $("reduceMsg").textContent = "รีเฟรชหน้า TikTok แล้วลองใหม่: " + chrome.runtime.lastError.message;
+            return;
+          }
+          $("reduceMsg").textContent =
+            r && r.ok
+              ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
               : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
         }
       );
