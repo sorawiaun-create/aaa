@@ -186,6 +186,162 @@ function sendTab(msg) {
   });
 }
 
+/* ---------------- Direct TikTok API (runs in the service worker) ----------------
+   Actions (pause / budget / ROI / create) call TikTok's internal endpoints
+   straight from the background using the site cookies + CSRF token, so they no
+   longer depend on messaging a content script (which broke with "port closed"
+   after extension reloads). */
+const API = {
+  DETAIL: "/api/oec_shopping/v1/creation/all_ad_data/detail",
+  CREATE: "/api/oec_shopping/v1/creation/all_ad_data/create",
+  UPDATE: "/api/oec_shopping/v1/creation/all_ad_data/update",
+  STATUS: "/api/oec_shopping/v1/creation/campaign/update_status",
+};
+function apiCtxParams(ctx) {
+  return { locale: "th", language: "th", oec_seller_id: ctx.oec_seller_id, aadvid: ctx.aadvid, bc_id: ctx.bc_id };
+}
+function apiBuildUrl(path, params) {
+  const u = new URL("https://ads.tiktok.com" + path);
+  for (const [k, v] of Object.entries(params || {}))
+    if (v !== null && v !== undefined && v !== "") u.searchParams.set(k, v);
+  u.searchParams.set("_t", Date.now());
+  return u.toString();
+}
+function apiCsrf() {
+  return new Promise((res) => {
+    try {
+      chrome.cookies.get({ url: "https://ads.tiktok.com", name: "csrftoken" }, (c) => res((c && c.value) || ""));
+    } catch {
+      res("");
+    }
+  });
+}
+async function apiFetch(url, opts = {}) {
+  const csrf = await apiCsrf();
+  const headers = { "Content-Type": "application/json", "X-Csrftoken": csrf, ...(opts.headers || {}) };
+  const r = await fetch(url, { credentials: "include", ...opts, headers });
+  const t = await r.text();
+  try {
+    return JSON.parse(t);
+  } catch {
+    return { __nonjson: true, status: r.status, body: t.slice(0, 300) };
+  }
+}
+async function apiCtx() {
+  return (await chrome.storage.local.get({ ctx: null })).ctx;
+}
+function apiRiskInfo() {
+  return {
+    cookie_enabled: true, screen_width: 1920, screen_height: 1080,
+    browser_language: "th-TH", browser_platform: (self.navigator && navigator.platform) || "Win32",
+    browser_name: "Mozilla", browser_version: (self.navigator && navigator.userAgent) || "Mozilla/5.0",
+    browser_online: true, timezone_name: "Asia/Bangkok",
+  };
+}
+async function apiGetDetail(ctx, campaignId) {
+  const j = await apiFetch(apiBuildUrl(API.DETAIL, { ...apiCtxParams(ctx), campaign_id: campaignId }), { method: "GET" });
+  return j && j.data ? j.data : null;
+}
+async function apiUpdate(ctx, campaignId, opts) {
+  const detail = await apiGetDetail(ctx, campaignId);
+  if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญไม่ได้" };
+  const ad = detail.ad_info;
+  const bud = opts.budget != null ? Math.round(Number(opts.budget)) : Math.round(Number(ad.budget) || 0);
+  const budStr = bud + ".00";
+  const roasBid = opts.roi != null ? parseFloat(Number(opts.roi).toFixed(1)) : ad.roas_bid;
+  const pds = ad.promotion_days_setting || {};
+  const mult = pds.budget_multiplier || 150;
+  const payload = {
+    campaign_info: {
+      campaign_id: campaignId,
+      campaign_name: (detail.campaign_info && detail.campaign_info.campaign_name) || ad.campaign_name || "",
+      budget_mode: -1, budget: budStr, shop_automation_type: 2, shop_image_aigc_mode: 0,
+    },
+    ad_info: {
+      ...ad, campaign_id: campaignId, ad_id: ad.ad_id || "", budget_mode: 0, budget: budStr, roas_bid: roasBid,
+      shop_id: ctx.oec_seller_id, shop_authorized_bc: ad.shop_authorized_bc || ctx.bc_id,
+      promotion_days_setting: { ...pds, adjusted_budget: Math.round((bud * mult) / 100) },
+      gmax_budget_adjust_setting: { ...(ad.gmax_budget_adjust_setting || {}), effective_budget: bud },
+    },
+    risk_info: apiRiskInfo(),
+  };
+  const j = await apiFetch(apiBuildUrl(API.UPDATE, apiCtxParams(ctx)), { method: "POST", body: JSON.stringify(payload) });
+  return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
+}
+function apiParseMinBudget(resp) {
+  const msg = (resp && (resp.msg || (resp.extra && resp.extra.system_msg) || resp.message)) || "";
+  const m = String(msg).match(/฿\s*([\d,]+(?:\.\d+)?)/);
+  if (!m) return null;
+  const v = parseFloat(m[1].replace(/,/g, ""));
+  return isNaN(v) ? null : v;
+}
+async function apiReduceToMin(ctx, campaignId, campaignName) {
+  let r = await apiUpdate(ctx, campaignId, { budget: 1, campaignName });
+  if (r.ok) return { ok: true, budget: 1 };
+  const min = apiParseMinBudget(r.resp);
+  if (min == null) return { ok: false, error: r.msg || r.error || "ตั้งงบต่ำสุดไม่ได้", resp: r.resp };
+  r = await apiUpdate(ctx, campaignId, { budget: min, campaignName });
+  return { ok: r.ok, budget: min, code: r.code, msg: r.msg, resp: r.resp };
+}
+async function apiSetStatus(ctx, campaignId, operation) {
+  const j = await apiFetch(apiBuildUrl(API.STATUS, apiCtxParams(ctx)), {
+    method: "POST", body: JSON.stringify({ campaign_list: [String(campaignId)], operation }),
+  });
+  return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
+}
+function apiPad2(n) { return String(n).padStart(2, "0"); }
+function apiBuildCreate(detail, ctx, roi, budget, accountName) {
+  const ad = (detail && detail.ad_info) || {};
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2), MM = apiPad2(now.getMonth() + 1), dd = apiPad2(now.getDate());
+  const hh = apiPad2(now.getHours()), mm = apiPad2(now.getMinutes()), ss = apiPad2(now.getSeconds());
+  const bud = Number(budget);
+  const identityList = ad.identity_list && ad.identity_list.length
+    ? ad.identity_list : [{ tt_uid: ad.template_ad_identity_id || "", identity_type: 8 }];
+  return {
+    campaign_info: {
+      campaign_id: "", campaign_name: `${yy}/${MM}/${dd} - ${accountName || "ช่อง"} - ${hh}${mm}`,
+      budget_mode: 0, budget: bud, shop_automation_type: 2, shop_image_aigc_mode: 0,
+    },
+    ad_info: {
+      name: `adgroup_${now.getFullYear()}${MM}${dd}_${hh}${mm}${ss}`, campaign_id: "", ad_id: "",
+      inventory_flow_type: ad.inventory_flow_type || 1, inventory_flow: ad.inventory_flow || [3000],
+      shopping_inventory_type: ad.shopping_inventory_type || 1, external_type: ad.external_type ?? 0,
+      is_comment_disable: 0, schedule_type: 1,
+      start_time: `${now.getFullYear()}-${MM}-${dd} ${hh}:${mm}:${ss}`,
+      flow_control_mode: ad.flow_control_mode || 0, budget_mode: 0, budget: bud,
+      product_video_selection_type: 1, pricing: ad.pricing || 9, cpa_skip_first_phrase: ad.cpa_skip_first_phrase || 0,
+      optimize_goal: ad.optimize_goal || 111, external_action: ad.external_action ?? 0, deep_bid_type: ad.deep_bid_type || 108,
+      roas_bid: parseFloat(Number(roi).toFixed(1)), product_platform_id: "", country: "TH",
+      shop_id: ctx.oec_seller_id, ...(ad.shop_type ? { shop_type: ad.shop_type } : {}),
+      shop_authorized_bc: ad.shop_authorized_bc || ctx.bc_id, promotion_flow_type: 2,
+      product_source: ad.product_source ?? 0, product_bid_type: ad.product_bid_type ?? 0,
+      custom_tz_id: ad.custom_tz_id || "7473426712694374408", custom_tz_type: ad.custom_tz_type ?? 2,
+      promotion_days_setting: {
+        is_enable: false, automode_enable: true, custom_schedules: [], roas_bid_multiplier: 90, budget_multiplier: 150,
+        adjusted_roas_bid: (Number(roi) * 0.9).toFixed(1), adjusted_budget: (bud * 1.5).toFixed(2), benchmark_roas_bid: Number(roi),
+      },
+      compensation_activity_type: ad.compensation_activity_type ?? 3,
+      gmax_budget_adjust_setting: {
+        strategy: ad.gmax_budget_adjust_setting?.strategy || 2,
+        auto_budget_switch: ad.gmax_budget_adjust_setting?.auto_budget_switch ?? false,
+        auto_budget_adjust_config: ad.gmax_budget_adjust_setting?.auto_budget_adjust_config || { adjust_ratio: 0.5, max_daily_adjust_times: 10 },
+        promotion_day_adjust_config: ad.gmax_budget_adjust_setting?.promotion_day_adjust_config || { adjust_ratio: 0.5, max_daily_adjust_times: 10 },
+      },
+      identity_list: identityList, enable_shop_video_exclusion_filter: true, shop_video_filters: [],
+      pre_item_list: [], shop_live_video_identity_list: [], key_live_days: [],
+    },
+    risk_info: apiRiskInfo(),
+  };
+}
+async function apiCreate(ctx, templateCampaignId, roi, budget, accountName) {
+  const detail = await apiGetDetail(ctx, templateCampaignId);
+  if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญต้นแบบไม่ได้" };
+  const j = await apiFetch(apiBuildUrl(API.CREATE, apiCtxParams(ctx)), {
+    method: "POST", body: JSON.stringify(apiBuildCreate(detail, ctx, roi, budget, accountName)),
+  });
+  return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
+}
 function execOnTikTok(req) {
   return sendTab({ type: "CGMX_EXEC", req });
 }
@@ -193,28 +349,48 @@ function execOnTikTok(req) {
 function tabSync() {
   return sendTab({ type: "CGMX_SYNC" });
 }
-// Change a campaign's budget.
-function execBudget(campaignId, campaignName, budget) {
-  return sendTab({ type: "CGMX_BUDGET", campaignId, campaignName, budget });
+// Change a campaign's budget (direct fetch from the service worker).
+async function execBudget(campaignId, campaignName, budget) {
+  const ctx = await apiCtx();
+  if (!ctx || !ctx.aadvid) return { ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ให้โหลดก่อน" };
+  return apiUpdate(ctx, campaignId, { budget, campaignName });
 }
 // Drop a campaign's budget to the minimum (before pausing).
-function execMinBudget(campaignId, campaignName) {
-  return sendTab({ type: "CGMX_MINBUDGET", campaignId, campaignName });
+async function execMinBudget(campaignId, campaignName) {
+  const ctx = await apiCtx();
+  if (!ctx || !ctx.aadvid) return { ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ให้โหลดก่อน" };
+  return apiReduceToMin(ctx, campaignId, campaignName);
 }
 // Change a campaign's ROI target (roas_bid).
-function execRoi(campaignId, campaignName, roi) {
-  return sendTab({ type: "CGMX_ROI", campaignId, campaignName, roi });
+async function execRoi(campaignId, campaignName, roi) {
+  const ctx = await apiCtx();
+  if (!ctx || !ctx.aadvid) return { ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ให้โหลดก่อน" };
+  return apiUpdate(ctx, campaignId, { roi, campaignName });
 }
 
 // Create a new campaign by cloning a template campaign, with a new ROI + budget.
-function execCreate(templateCampaignId, channelId, roi, budget) {
-  return sendTab({ type: "CGMX_CREATE", templateCampaignId, channelId, roi, budget });
+async function execCreate(templateCampaignId, channelId, roi, budget) {
+  const ctx = await apiCtx();
+  if (!ctx || !ctx.aadvid) return { ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ให้โหลดก่อน" };
+  const s = await chrome.storage.local.get({ campaigns: [] });
+  const camps = s.campaigns || [];
+  let tid = templateCampaignId, accountName = "";
+  if (tid) {
+    const found = camps.find((c) => String(c.id) === String(tid));
+    if (found) accountName = found.channelName;
+  } else {
+    const match = camps.find((c) => String(c.channelId) === String(channelId)) || camps[0];
+    if (match) { tid = match.id; accountName = match.channelName; }
+  }
+  if (!tid) return { ok: false, error: "ไม่มีแคมเปญต้นแบบให้โคลน — กด Sync ให้เจอแคมเปญก่อน" };
+  return apiCreate(ctx, tid, roi, budget, accountName);
 }
 
-// Pause (operation 2) / enable (operation 1) a campaign natively — the content
-// script calls TikTok's update_status endpoint with the CSRF token.
-function execStatus(campaignId, operation) {
-  return sendTab({ type: "CGMX_STATUS", campaignId, operation });
+// Pause (operation 2) / enable (operation 1) a campaign — direct fetch.
+async function execStatus(campaignId, operation) {
+  const ctx = await apiCtx();
+  if (!ctx || !ctx.aadvid) return { ok: false, error: "ยังไม่มี context — เปิดหน้า GMV Max ให้โหลดก่อน" };
+  return apiSetStatus(ctx, campaignId, operation);
 }
 
 async function runRules() {
@@ -385,6 +561,19 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   }
   if (msg?.type === "CGMX_DAILY_TEST") {
     sendDailySummary().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  // Panel-triggered actions — run in the background via direct fetch (reliable).
+  if (msg?.type === "CGMX_DO_MINBUDGET") {
+    execMinBudget(msg.campaignId, msg.campaignName).then(sendResponse).catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  if (msg?.type === "CGMX_DO_CREATE") {
+    execCreate(null, msg.channelId, msg.roi, msg.budget).then(sendResponse).catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  if (msg?.type === "CGMX_DO_STATUS") {
+    execStatus(msg.campaignId, msg.operation).then(sendResponse).catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
 });

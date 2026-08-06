@@ -823,7 +823,8 @@ function renderSettings() {
     const budget = Number($("cBudget").value);
     if (!confirm(`สร้างแคมเปญ GMV Max Live ใหม่จริงบนช่อง "${ch.name}"?\nROI ${roi} · งบ ${budget}฿`)) return;
     $("createMsg").textContent = "กำลังสร้าง…";
-    sendToTikTok({ type: "CGMX_CREATE", channelId: ch.id, roi, budget }, (r) => {
+    chrome.runtime.sendMessage({ type: "CGMX_DO_CREATE", channelId: ch.id, roi, budget }, (r) => {
+      if (chrome.runtime.lastError) { $("createMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message; return; }
       $("createMsg").textContent =
         r && r.ok
           ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
@@ -842,12 +843,16 @@ function renderSettings() {
     }
     if (!confirm(`ลดงบแคม "${target.name}" ให้เหลือต่ำสุดตอนนี้เลย?\n(งบปัจจุบัน ${fmt(target.budget, 0)}฿)`)) return;
     $("reduceMsg").textContent = "กำลังลดงบ…";
-    sendToTikTok({ type: "CGMX_MINBUDGET", campaignId: target.id, campaignName: target.name }, (r) => {
-      $("reduceMsg").textContent =
-        r && r.ok
-          ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
-          : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
-    });
+    chrome.runtime.sendMessage(
+      { type: "CGMX_DO_MINBUDGET", campaignId: target.id, campaignName: target.name },
+      (r) => {
+        if (chrome.runtime.lastError) { $("reduceMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message; return; }
+        $("reduceMsg").textContent =
+          r && r.ok
+            ? `✅ ลดงบเหลือ ${r.budget}฿ แล้ว (${esc(target.name)})`
+            : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
+      }
+    );
   });
 }
 
