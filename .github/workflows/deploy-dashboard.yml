@@ -16,10 +16,10 @@ permissions:
   pages: write
   id-token: write
 
-# ให้ deploy ทีละรอบ รอบใหม่รอรอบเก่าจบ (docs เปลี่ยนไม่บ่อย ไม่กวนกัน)
+# รอบ deploy ใหม่เขี่ยรอบเก่าที่ค้างทิ้ง (กันกรณี Pages deploy ค้าง "waiting" แล้วบล็อกคิว)
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
