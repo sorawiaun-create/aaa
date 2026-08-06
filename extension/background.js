@@ -246,8 +246,8 @@ async function apiUpdate(ctx, campaignId, opts) {
   const detail = await apiGetDetail(ctx, campaignId);
   if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญไม่ได้" };
   const ad = detail.ad_info;
+  // budget must be a NUMBER (TikTok rejects the "100.00" string form).
   const bud = opts.budget != null ? Math.round(Number(opts.budget)) : Math.round(Number(ad.budget) || 0);
-  const budStr = bud + ".00";
   const roasBid = opts.roi != null ? parseFloat(Number(opts.roi).toFixed(1)) : ad.roas_bid;
   const pds = ad.promotion_days_setting || {};
   const mult = pds.budget_multiplier || 150;
@@ -255,13 +255,16 @@ async function apiUpdate(ctx, campaignId, opts) {
     campaign_info: {
       campaign_id: campaignId,
       campaign_name: (detail.campaign_info && detail.campaign_info.campaign_name) || ad.campaign_name || "",
-      budget_mode: -1, budget: budStr, shop_automation_type: 2, shop_image_aigc_mode: 0,
+      budget_mode: -1, budget: bud, shop_automation_type: 2, shop_image_aigc_mode: 0, gmv_roi_mode: 0,
     },
     ad_info: {
-      ...ad, campaign_id: campaignId, ad_id: ad.ad_id || "", budget_mode: 0, budget: budStr, roas_bid: roasBid,
+      ...ad,
+      campaign_id: campaignId, ad_id: ad.ad_id || "", budget_mode: 0, budget: bud, roas_bid: roasBid,
+      product_platform_id: ad.product_platform_id ?? "0",
       shop_id: ctx.oec_seller_id, shop_authorized_bc: ad.shop_authorized_bc || ctx.bc_id,
-      promotion_days_setting: { ...pds, adjusted_budget: Math.round((bud * mult) / 100) },
-      gmax_budget_adjust_setting: { ...(ad.gmax_budget_adjust_setting || {}), effective_budget: bud },
+      audience: ad.audience || { brand_safety: 1 },
+      promotion_days_setting: { ...pds, adjusted_budget: ((bud * mult) / 100).toFixed(2) },
+      // keep the campaign's own gmax_budget_adjust_setting (incl. effective_budget) as-is.
     },
     risk_info: apiRiskInfo(),
   };
