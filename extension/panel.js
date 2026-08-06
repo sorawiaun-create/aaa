@@ -488,23 +488,21 @@ function renderReport() {
   const chans = (STORE.channelList || []).length ? STORE.channelList : STORE.channels || [];
   const rows = chans
     .map((ch) => {
-      const all = campaignsOf(ch.id);
-      const worked = all.filter((c) => (c.cost || 0) > 0 || (c.gmv || 0) > 0);
-      const sales = worked.reduce((a, c) => a + (c.gmv || 0), 0);
-      const cost = worked.reduce((a, c) => a + (c.cost || 0), 0);
-      const orders = worked.reduce((a, c) => a + (c.orders || 0), 0);
+      const camps = campaignsOf(ch.id).filter((c) => isOn(c));
+      const sales = camps.reduce((a, c) => a + (c.gmv || 0), 0);
+      const cost = camps.reduce((a, c) => a + (c.cost || 0), 0);
+      const orders = camps.reduce((a, c) => a + (c.orders || 0), 0);
       return {
         name: ch.name,
         icon: ch.icon,
-        running: all.filter((c) => c.delivering).length,
-        active: worked.length,
+        running: camps.length,
         sales,
         cost,
         orders,
         roi: cost > 0 ? sales / cost : 0,
       };
     })
-    .filter((r) => r.active > 0 || r.sales > 0);
+    .filter((r) => r.running > 0 || r.sales > 0);
   rows.sort((a, b) => b.sales - a.sales);
 
   const tSales = rows.reduce((a, r) => a + r.sales, 0);
@@ -514,7 +512,7 @@ function renderReport() {
 
   const app = $("app");
   app.innerHTML = `
-    <div class="muted" style="margin-bottom:8px">ยอดรวมของช่องวันนี้ · ${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่ซิงค์"}</div>
+    <div class="muted" style="margin-bottom:8px">รวมเฉพาะแคมเปญที่เปิดอยู่ · ${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : "ยังไม่ซิงค์"}</div>
     <div class="card">
       <div class="metrics">
         <div class="metric"><div class="v">${fmt(tSales, 0)}</div><div class="l">ยอดขายรวม (฿)</div></div>
@@ -523,7 +521,7 @@ function renderReport() {
       </div>
       <div style="margin-top:10px">
         <div class="kv"><span class="k">Orders รวม</span><span class="val">${fmt(tOrders, 0)}</span></div>
-        <div class="kv"><span class="k">ช่องที่มียอดวันนี้</span><span class="val">${rows.length} / ${chans.length}</span></div>
+        <div class="kv"><span class="k">ช่องที่กำลังรัน</span><span class="val">${rows.filter((r) => r.running > 0).length} / ${chans.length}</span></div>
         <div class="kv"><span class="k">กำไรคร่าวๆ (ยอด − ค่าแอด)</span><span class="val" style="color:${tSales - tCost >= 0 ? "var(--green)" : "var(--red)"}">${fmt(tSales - tCost, 0)} ฿</span></div>
       </div>
     </div>
@@ -542,7 +540,7 @@ function renderReport() {
           <span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${fmt(r.roi, 2)}</span>
         </div>
         <div class="row" style="margin-top:8px">
-          <span class="muted">🟢 ไลฟ์ ${r.running}</span>
+          <span class="muted">🟢 รัน ${r.running}</span>
           <span class="muted">ยอด ${fmt(r.sales, 0)}฿</span>
           <span class="muted">แอด ${fmt(r.cost, 0)}฿</span>
           <span class="muted">${fmt(r.orders, 0)} ออร์เดอร์</span>
@@ -561,18 +559,15 @@ function renderDetail() {
   if (!ch) return go("main");
   const s = ch.settings || defaultSettings();
   const camps = campaignsOf(ch.id);
-  const delivering = camps.filter((c) => c.delivering);
-  // Dashboard metrics = this channel's TODAY totals across every campaign that
-  // spent/sold today (a campaign keeps its day's numbers even when it isn't the
-  // one currently live). The green dot separately marks what's airing right now.
-  const worked = camps.filter((c) => (c.cost || 0) > 0 || (c.gmv || 0) > 0);
-  const sales = worked.reduce((a, c) => a + (c.gmv || 0), 0);
-  const cost = worked.reduce((a, c) => a + (c.cost || 0), 0);
-  const orders = worked.reduce((a, c) => a + (c.orders || 0), 0);
+  // Metrics cover only campaigns that are open (currently delivering).
+  const active = camps.filter((c) => isOn(c));
+  const sales = active.reduce((a, c) => a + (c.gmv || 0), 0);
+  const cost = active.reduce((a, c) => a + (c.cost || 0), 0);
+  const orders = active.reduce((a, c) => a + (c.orders || 0), 0);
   const roi = cost > 0 ? sales / cost : 0;
   const cpo = orders > 0 ? cost / orders : 0;
-  const liveViewers = camps.reduce((a, c) => a + (c.liveViewers || 0), 0);
-  const budget = worked.reduce((a, c) => a + (c.budget || 0), 0);
+  const liveViewers = active.reduce((a, c) => a + (c.liveViewers || 0), 0);
+  const budget = active.reduce((a, c) => a + (c.budget || 0), 0);
   const usedPct = budget > 0 ? Math.min(100, (cost / budget) * 100) : 0;
   const triggerAt = s.scaling?.whenUsedPercent || 50;
 
@@ -586,9 +581,9 @@ function renderDetail() {
   const app = $("app");
   app.innerHTML = `
     <div class="card">
-      <div class="row"><span class="muted">🟢 ไลฟ์อยู่ตอนนี้ ${delivering.length} · มียอดวันนี้ ${worked.length} · ทั้งหมด ${camps.length}</span>
+      <div class="row"><span class="muted">🟢 เปิดอยู่ ${active.length} · ⚪ ปิด ${camps.length - active.length} · ทั้งหมด ${camps.length}</span>
         <span class="muted">${STORE.syncTs ? "ซิงค์ " + new Date(STORE.syncTs).toLocaleTimeString("th-TH") : ""}</span></div>
-      <div class="muted" style="margin-top:2px">ตัวเลข = ยอดรวมของช่องวันนี้ · จุดเขียว = แคมที่กำลังไลฟ์จริงตอนนี้</div>
+      <div class="muted" style="margin-top:2px">ตัวเลขด้านล่างคิดเฉพาะแคมเปญที่เปิด (กำลังยิงจริง) เท่านั้น</div>
       <div class="metrics" style="margin-top:10px">
         <div class="metric"><div class="v">${fmt(sales, 0)}</div><div class="l">ยอดขาย (฿)</div></div>
         <div class="metric"><div class="v">${fmt(cpo, 2)}</div><div class="l">ทุน/ซื้อ (฿)</div></div>
