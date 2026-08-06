@@ -22,7 +22,9 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fb_automation.actions import RunSummary, execute_campaign
+from fb_automation.actions import (
+    RunSummary, execute_campaign, activate_campaign_fully, _th_effective, _DELIVERING_OK,
+)
 from fb_automation.config import Config, ConfigError, load_config
 from fb_automation.fb_client import FacebookClient
 from fb_automation.logging_setup import setup_logging
@@ -74,7 +76,21 @@ def process_commands(config: Config, now_local: datetime,
             if action == "PAUSE":
                 cl.update_campaign_status(cid, "PAUSED"); detail = "สั่งปิดเอง"; summary.status_changes += 1
             elif action == "ACTIVATE":
-                cl.update_campaign_status(cid, "ACTIVE"); detail = "สั่งเปิดเอง"; summary.status_changes += 1
+                # เปิดเต็ม: แคมเปญ + ad set ข้างใน แล้วยืนยันสถานะจริง (แก้บั๊กเปิดแต่ไม่วิ่ง)
+                res = activate_campaign_fully(cl, cid); summary.status_changes += 1
+                eff = res["effective"]
+                extra = f" · เปิด ad set {res['adsets_activated']} ชุด" if res["adsets_activated"] else ""
+                if eff in _DELIVERING_OK:
+                    detail = f"สั่งเปิดเอง{extra} · สถานะจริง: {_th_effective(eff)}"
+                else:
+                    detail = (f"⚠️ สั่งเปิดเองแล้วแต่ยังไม่วิ่งจริง{extra} · "
+                              f"สถานะจริง: {_th_effective(eff)} ({eff or '?'})")
+                    summary.errors += 1
+                    log.warning("      ⚠️ เปิดเองแล้วแต่ยังไม่วิ่ง: %s", eff or "?")
+                    events.append({"account": aname, "campaign": cname, "rule": "🕹️ สั่งเอง",
+                                   "action": action, "detail": detail, "status": "error",
+                                   "error": f"effective_status={eff}"})
+                    continue
             elif action == "SET_BUDGET":
                 val = float(c.get("value"))
                 cl.update_campaign_daily_budget(cid, cl.to_minor(val))
