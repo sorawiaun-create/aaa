@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T13:00:40.154560+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_917846690184511/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
+        }
+      ]
+    },
+    {
       "t": "2026-08-07T12:50:30.379934+07:00",
       "dry_run": false,
       "summary": {
@@ -1168,17 +1189,6 @@
     },
     {
       "t": "2026-08-07T02:40:32.540143+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-07T02:10:33.286794+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
