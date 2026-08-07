@@ -17,6 +17,7 @@ const KEYS = {
   scaledTs: {}, // campaignId -> ts of last budget scale-up
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
   history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
+  liveStats: {}, // channelId -> live-dashboard stats (from shop.tiktok.com)
   logs: [],
 };
 
@@ -566,6 +567,8 @@ async function runRules() {
     const chCamps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
     const dailySpent = chCamps.reduce((a, c) => a + (c.cost || 0), 0);
     const live = chCamps.filter((c) => statusRunning(c));
+    // Live-dashboard signal for this channel (from shop.tiktok.com), if captured.
+    const liveInfo = (s.liveStats || {})[ch.id] || (s.liveStats || {})[ch.identityId] || null;
 
     // Daily loss guard: hit the spend cap -> pause everything live on the channel.
     if (cap > 0 && dailySpent >= cap) {
@@ -599,14 +602,19 @@ async function runRules() {
       }
 
       // Winner: beating target and not trending down -> scale up within the cap.
-      if (c.roi >= target && trend >= -0.15) {
+      // If we have a live signal and the room is NOT live, don't grow it.
+      if (c.roi >= target && trend >= -0.15 && !(liveInfo && liveInfo.isLive === false)) {
         if (scaledTs[c.id] && now - scaledTs[c.id] < 10 * 60 * 1000) continue;
-        let next = Math.round(budget * (1 + stepPct));
+        // Push harder when the live is genuinely hot (strong GPM).
+        const hot = liveInfo && liveInfo.gpm > 300;
+        const step = hot ? stepPct * 1.5 : stepPct;
+        let next = Math.round(budget * (1 + step));
         if (cap > 0) next = Math.min(next, budget + Math.max(0, Math.round(cap - dailySpent)));
         if (next > budget) {
           const r = await execBudget(c.id, c.name, next);
           if (r && r.ok) scaledTs[c.id] = now;
-          actions.push({ ok: r && r.ok, name: `🤖 ดันตัวทำกำไร ${c.name}`, reason: `ROI ${c.roi.toFixed(1)} ≥ ${target} · งบ ${budget}→${next}฿` });
+          const liveTag = liveInfo ? ` · ไลฟ์ GPM ${Math.round(liveInfo.gpm)}฿` : "";
+          actions.push({ ok: r && r.ok, name: `🤖 ดันตัวทำกำไร ${c.name}`, reason: `ROI ${c.roi.toFixed(1)} ≥ ${target} · งบ ${budget}→${next}฿${liveTag}` });
         }
         continue;
       }

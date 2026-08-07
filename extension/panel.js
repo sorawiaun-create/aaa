@@ -238,18 +238,25 @@ function renderMain() {
       <div class="muted" style="margin-top:2px">เปิดหน้า GMV Max บน ads.tiktok.com ค้างไว้ — ระบบดึงช่อง+แคมเปญเองอัตโนมัติ</div>
       <div class="msg" id="syncMsg"></div>
     </div>
-    <div class="card">
+    ${(() => {
+      const rooms = Object.values(STORE.liveStats || {});
+      const live = rooms.filter((r) => r.isLive).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const show = live[0] || rooms.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+      return `<div class="card">
       <div class="row"><b>📺 ไลฟ์สด (TikTok Shop)</b><span class="muted">${STORE.liveTs ? new Date(STORE.liveTs).toLocaleTimeString("th-TH") : "ยังไม่ดึง"}</span></div>
       ${
-        STORE.liveStats
-          ? `<div class="metrics" style="margin-top:8px">
-        <div class="metric"><div class="v">${fmt(STORE.liveStats.gmv, 0)}</div><div class="l">ยอดขายสด (฿)</div></div>
-        <div class="metric"><div class="v">${fmt(STORE.liveStats.orders, 0)}</div><div class="l">ออร์เดอร์</div></div>
-        <div class="metric"><div class="v">${fmt(STORE.liveStats.viewers, 0)}</div><div class="l">ผู้ชม</div></div>
-      </div><div class="muted" style="margin-top:6px">ดึงได้ ${(STORE.liveCaptures || []).length} รายการ · <b>ยังเป็นค่าเดา</b> — ส่ง debug ให้ผมล็อกให้ตรง</div>`
-          : `<div class="muted" style="margin-top:6px">เปิดหน้า <b>Live Dashboard</b> บน shop.tiktok.com ค้างไว้ → ระบบจะดึงยอดสด/ออร์เดอร์/สินค้า มาเสริมให้ AI ตัดสินใจแม่นขึ้น ${(STORE.liveCaptures || []).length ? `(ดักได้ ${STORE.liveCaptures.length} รายการแล้ว — ส่ง debug ให้ผมล็อก field)` : ""}</div>`
+        show
+          ? `<div class="muted" style="margin-top:4px">${esc(show.name || "")} ${show.isLive ? '<span class="pill" style="background:#e7f7ee;color:#16833f">🔴 LIVE</span>' : '<span class="pill" style="background:#eee;color:#999">ออฟไลน์</span>'} · ${live.length} ช่องกำลังไลฟ์</div>
+      <div class="metrics" style="margin-top:8px">
+        <div class="metric"><div class="v">${fmt(show.gmv, 0)}</div><div class="l">ยอดขายสด (฿)</div></div>
+        <div class="metric"><div class="v">${fmt(show.sales, 0)}</div><div class="l">ออร์เดอร์</div></div>
+        <div class="metric"><div class="v">${fmt(show.currentViewers || show.viewers, 0)}</div><div class="l">ผู้ชม</div></div>
+      </div>
+      <div class="muted" style="margin-top:6px">GPM ${fmt(show.gpm, 0)}฿ · ค่าแอด ${fmt(show.adsCost, 0)}฿ · ผู้ชมรวม ${fmt(show.viewers, 0)}</div>`
+          : `<div class="muted" style="margin-top:6px">เปิดหน้า <b>Live Dashboard</b> บน shop.tiktok.com ค้างไว้ตอนไลฟ์ → ระบบดึงยอดสด/ออร์เดอร์/GPM มาเสริมให้ AI ${(STORE.liveCaptures || []).length ? `(ดักได้ ${STORE.liveCaptures.length} รายการ)` : ""}</div>`
       }
-    </div>
+    </div>`;
+    })()}
     <div class="sec">อื่นๆ</div>
     <div class="card">
       <div class="row"><label>แจ้งเตือน Telegram Token</label></div>

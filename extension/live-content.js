@@ -1,65 +1,85 @@
 // Isolated-world bridge on shop.tiktok.com. Stores captured live-dashboard API
-// responses and makes a best-effort parse of live stats (GMV, orders, viewers)
-// until the exact fields are confirmed from a debug export.
+// responses and parses them into per-channel live stats, keyed by the live
+// owner's TikTok id (which equals the campaign's channel id), so the autopilot
+// can use real live signals (GMV, orders, viewers, GPM, live on/off).
 const TAG = "__CGMXLIVE__";
-const MAX = 30;
+const MAX = 40;
 
 function num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-
-// Find an object that looks like a live-stats summary (has gmv/order-ish keys).
-function findStats(node, depth) {
-  if (!node || depth > 7) return null;
-  if (Array.isArray(node)) {
-    for (const it of node) {
-      const r = findStats(it, depth + 1);
-      if (r) return r;
-    }
-    return null;
-  }
-  if (typeof node === "object") {
-    const keys = Object.keys(node).map((k) => k.toLowerCase());
-    const hasGmv = keys.some((k) => k.includes("gmv") || k.includes("gpm") || (k.includes("total") && k.includes("amount")) || k.includes("pay_amount"));
-    const hasOrder = keys.some((k) => k.includes("order") || k.includes("sku") || k.includes("sold"));
-    if (hasGmv && hasOrder) return node;
-    for (const k of Object.keys(node)) {
-      const r = findStats(node[k], depth + 1);
-      if (r) return r;
-    }
-  }
-  return null;
+function amt(o) {
+  return o && o.amount != null ? num(o.amount) : 0;
+}
+function roomIdFromUrl(url) {
+  const m = String(url).match(/room_id=(\d+)/);
+  return m ? m[1] : "";
 }
 
-function pick(obj, needles) {
-  for (const k of Object.keys(obj || {})) {
-    const lk = k.toLowerCase();
-    if (needles.some((n) => lk.includes(n)) && (typeof obj[k] === "number" || typeof obj[k] === "string")) {
-      const v = num(obj[k]);
-      if (v) return v;
+// Rebuild the per-channel live stats from all stored captures.
+function buildLiveStats(caps) {
+  const rooms = {}; // roomId -> {ownerId, name, isLive, title, ts}
+  const metrics = {}; // roomId -> {gmv, sales, viewers, ...}
+  for (const c of caps || []) {
+    let j;
+    try {
+      j = JSON.parse(c.body);
+    } catch {
+      continue;
+    }
+    const data = (j && j.data) || j;
+    if (!data || typeof data !== "object") continue;
+    const url = c.url || "";
+    const rid = data.room_id || roomIdFromUrl(url);
+
+    if (url.includes("/room/info")) {
+      rooms[data.room_id || rid] = {
+        ownerId: String(data.owner_tiktok_id || ""),
+        name: data.owner_name || "",
+        handle: data.owner_handle || "",
+        isLive: (data.status && data.status.status) === 1,
+        title: data.room_title || "",
+        startedAt: num(data.started_at),
+        ts: c.ts,
+      };
+    } else if (url.includes("/room/status") && rid) {
+      rooms[rid] = rooms[rid] || {};
+      rooms[rid].isLive = data.status === 1 || (data.status && data.status.status) === 1;
+      if (!rooms[rid].ts) rooms[rid].ts = c.ts;
+    } else if (url.includes("/core/stats") && !url.includes("selection") && rid) {
+      const s = (data && data.stats) || data;
+      if (s) {
+        metrics[rid] = {
+          gmv: amt(s.gmv_local),
+          sales: num(s.sales),
+          viewers: num(s.watch_uv),
+          currentViewers: num(s.current_visitor_cnt),
+          gpm: amt(s.live_show_gpm_local),
+          adsCost: amt(s.ads_cost_local),
+          gmvPerHour: amt(s.gmv_local_per_hour),
+          ctr: num(s.click_through_rate),
+          ts: c.ts,
+        };
+      }
     }
   }
-  return 0;
-}
 
-function parseLive(body, url) {
-  try {
-    const json = JSON.parse(body);
-    const s = findStats(json, 0);
-    if (!s) return null;
-    const roomMatch = String(url).match(/room_id=(\d+)/);
-    return {
-      gmv: pick(s, ["gmv", "pay_amount", "total_amount", "revenue", "sales"]),
-      orders: pick(s, ["order", "sold", "sku"]),
-      viewers: pick(s, ["pcu", "viewer", "watch", "audience", "online"]),
-      roomId: roomMatch ? roomMatch[1] : "",
-      raw: s,
-      ts: Date.now(),
+  // Merge room info + metrics, keyed by the owner's TikTok id (= channel id).
+  const byChannel = {};
+  for (const [rid, r] of Object.entries(rooms)) {
+    if (!r.ownerId) continue;
+    byChannel[r.ownerId] = {
+      channelId: r.ownerId,
+      name: r.name,
+      roomId: rid,
+      isLive: !!r.isLive,
+      title: r.title,
+      ...(metrics[rid] || {}),
+      ts: Math.max(r.ts || 0, (metrics[rid] && metrics[rid].ts) || 0),
     };
-  } catch {
-    return null;
   }
+  return byChannel;
 }
 
 window.addEventListener("message", (ev) => {
@@ -68,17 +88,18 @@ window.addEventListener("message", (ev) => {
   if (!d || d.source !== TAG || !d.entry) return;
   const e = d.entry;
 
-  chrome.storage.local.get({ liveCaptures: [], liveStats: null }, (res) => {
+  chrome.storage.local.get({ liveCaptures: [] }, (res) => {
     const list = res.liveCaptures || [];
     const key = e.url.split("?")[0];
     const idx = list.findIndex((c) => c.url.split("?")[0] === key);
-    const rec = { url: e.url, body: String(e.body).slice(0, 6000), ts: e.ts };
+    const rec = { url: e.url, body: String(e.body).slice(0, 12000), ts: e.ts };
     if (idx >= 0) list[idx] = rec;
     else list.unshift(rec);
-
-    const parsed = parseLive(e.body, e.url);
-    const patch = { liveCaptures: list.slice(0, MAX), liveTs: Date.now() };
-    if (parsed && (parsed.gmv || parsed.orders)) patch.liveStats = parsed;
-    chrome.storage.local.set(patch);
+    const caps = list.slice(0, MAX);
+    chrome.storage.local.set({
+      liveCaptures: caps,
+      liveStats: buildLiveStats(caps),
+      liveTs: Date.now(),
+    });
   });
 });
