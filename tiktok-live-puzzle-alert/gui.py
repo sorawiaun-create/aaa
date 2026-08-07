@@ -93,10 +93,15 @@ class App:
         self.lbl_channel = tk.Label(f1, text="", font=FONT, anchor="w", justify="left")
         self.lbl_channel.pack(fill="x", padx=10, pady=(8, 4))
         row1 = tk.Frame(f1)
-        row1.pack(fill="x", padx=10, pady=(0, 10))
+        row1.pack(fill="x", padx=10, pady=(0, 2))
         ttk.Button(row1, text="ตั้งค่า LINE", command=self.setup_line).pack(side="left")
-        ttk.Button(row1, text="ตั้งค่า Telegram", command=self.setup_telegram).pack(side="left", padx=6)
+        ttk.Button(row1, text="➕ เพิ่มผู้รับ Telegram", command=self.setup_telegram).pack(side="left", padx=6)
         ttk.Button(row1, text="🔔 ทดสอบแจ้งเตือน", command=self.test_alert).pack(side="left")
+        row1b = tk.Frame(f1)
+        row1b.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(row1b, text="🗑️ ล้างผู้รับ Telegram", command=self.clear_telegram_recipients).pack(side="left")
+        tk.Label(row1b, text="(เพิ่มหลายเครื่อง/หลายคน กด '➕ เพิ่มผู้รับ' ซ้ำได้)",
+                 font=("Tahoma", 8), fg="#888").pack(side="left", padx=8)
 
         # 2) หน้าต่างที่จับ
         f2 = ttk.LabelFrame(self.root, text=" 2. หน้าต่างที่จะจับภาพ (ไม่ต้องเปิดค้างหน้าจอ) ")
@@ -157,7 +162,11 @@ class App:
         tok = lc.get("channel_access_token", "")
         parts.append("LINE ✅" if (tok and not tok.startswith("ใส่ ")) else "LINE ⚪")
         tg = cfg.get("telegram", {})
-        parts.append("Telegram ✅" if (tg.get("bot_token") and tg.get("chat_id")) else "Telegram ⚪")
+        n_tg = len(self._tg_ids(tg))
+        if tg.get("bot_token") and n_tg:
+            parts.append(f"Telegram ✅ ({n_tg} ผู้รับ)")
+        else:
+            parts.append("Telegram ⚪")
         self.lbl_channel.config(text="   ".join(parts))
 
         import calibrate
@@ -227,16 +236,33 @@ class App:
         self.refresh_status()
         self.log("✅ บันทึก LINE token แล้ว")
 
+    @staticmethod
+    def _tg_ids(tg):
+        if tg.get("chat_ids"):
+            return list(tg["chat_ids"])
+        if tg.get("chat_id"):
+            return [str(tg["chat_id"])]
+        return []
+
     def setup_telegram(self):
-        token = self.ask_text(
-            "ตั้งค่า Telegram (1/2)",
-            "วาง bot token จาก @BotFather (กดปุ่ม '📋 วางจากคลิปบอร์ด' ได้):")
+        cfg = self.load_cfg()
+        tg = cfg.setdefault("telegram", {})
+        token = tg.get("bot_token", "")
         if not token:
-            return
+            token = self.ask_text(
+                "ตั้งค่า Telegram",
+                "วาง bot token จาก @BotFather (กดปุ่ม '📋 วางจากคลิปบอร์ด' ได้):")
+            if not token:
+                return
+            tg["bot_token"] = token
+            self.save_cfg(cfg)
+        # เพิ่มผู้รับ 1 ราย (กดปุ่มนี้ซ้ำเพื่อเพิ่มคนอื่น/เครื่องอื่น)
         messagebox.showinfo(
-            "ทักบอทก่อน",
-            "เปิดแชทกับบอทของคุณในแอป Telegram\nพิมพ์อะไรก็ได้ทักไป 1 ครั้ง\nแล้วกด OK",
-            parent=self.root)
+            "เพิ่มผู้รับแจ้งเตือน",
+            "ให้ 'เครื่อง/คน' ที่อยากรับแจ้งเตือน ทำอย่างใดอย่างหนึ่ง:\n\n"
+            "• แชทเดี่ยว: เปิดแชทกับบอท พิมพ์อะไรก็ได้ทักไป 1 ครั้ง\n"
+            "• ทั้งกลุ่ม: สร้างกลุ่ม เพิ่มบอทเข้ากลุ่ม แล้วพิมพ์ /start ในกลุ่ม\n\n"
+            "ทำเสร็จแล้วกด OK", parent=self.root)
         chat_id = ""
         try:
             import telegram_client
@@ -245,18 +271,31 @@ class App:
             self.log(f"หา chat id อัตโนมัติไม่ได้: {e}")
         if not chat_id:
             chat_id = self.ask_text(
-                "ตั้งค่า Telegram (2/2)",
+                "เพิ่มผู้รับ",
                 "หา chat id อัตโนมัติไม่เจอ ใส่ chat id เอง (ดูวิธีใน README):") or ""
         if not chat_id:
-            self.log("⚠️ ยังไม่มี chat id — ลองทักบอทก่อนแล้วตั้งใหม่")
+            self.log("⚠️ ยังไม่ได้เพิ่มผู้รับ — ลองทักบอทก่อนแล้วกดใหม่")
             return
-        cfg = self.load_cfg()
-        cfg.setdefault("telegram", {})
-        cfg["telegram"]["bot_token"] = token
-        cfg["telegram"]["chat_id"] = chat_id
+        ids = self._tg_ids(tg)
+        if chat_id in ids:
+            self.log(f"ผู้รับนี้มีอยู่แล้ว (chat id {chat_id})")
+        else:
+            ids.append(chat_id)
+            self.log(f"✅ เพิ่มผู้รับ Telegram แล้ว (รวม {len(ids)} ราย) — "
+                     "กดปุ่มนี้ซ้ำเพื่อเพิ่มคนอื่น")
+        tg["chat_ids"] = ids
+        tg.pop("chat_id", None)  # ย้ายจากรูปแบบเดิม
         self.save_cfg(cfg)
         self.refresh_status()
-        self.log(f"✅ บันทึก Telegram แล้ว (chat id: {chat_id})")
+
+    def clear_telegram_recipients(self):
+        cfg = self.load_cfg()
+        tg = cfg.setdefault("telegram", {})
+        tg["chat_ids"] = []
+        tg.pop("chat_id", None)
+        self.save_cfg(cfg)
+        self.refresh_status()
+        self.log("🗑️ ล้างผู้รับ Telegram แล้ว (bot token ยังอยู่) — เพิ่มใหม่ได้เลย")
 
     def test_alert(self):
         self.log("กำลังทดสอบ...")

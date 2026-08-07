@@ -32,8 +32,9 @@ def build_channels(cfg):
     if tok and not tok.startswith("ใส่ "):
         channels.append(LineClient(tok, lc.get("to_user_id")))
     tg = cfg.get("telegram", {})
-    if tg.get("bot_token") and tg.get("chat_id"):
-        channels.append(TelegramClient(tg["bot_token"], tg["chat_id"]))
+    ids = tg.get("chat_ids") or ([tg["chat_id"]] if tg.get("chat_id") else [])
+    if tg.get("bot_token") and ids:
+        channels.append(TelegramClient(tg["bot_token"], ids))
     return channels
 
 
