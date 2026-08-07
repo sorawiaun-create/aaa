@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Chobtham GMV Max Controller",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "มอนิเตอร์และควบคุมแคมเปญ GMV Max อัตโนมัติ ผ่านหน้า ads.tiktok.com",
   "permissions": ["storage", "alarms", "scripting", "sidePanel", "cookies"],
   "host_permissions": [
     "https://ads.tiktok.com/*",
+    "https://shop.tiktok.com/*",
     "https://api.telegram.org/*"
   ],
   "background": {
@@ -21,6 +22,18 @@
     {
       "matches": ["https://ads.tiktok.com/*"],
       "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://shop.tiktok.com/*"],
+      "js": ["live-inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://shop.tiktok.com/*"],
+      "js": ["live-content.js"],
       "run_at": "document_start",
       "world": "ISOLATED"
     }

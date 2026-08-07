@@ -77,6 +77,9 @@ function loadStore(cb) {
       budgetRecipe: null,
       logs: [],
       dailySummary: { enabled: false, hour: 20 },
+      liveStats: null,
+      liveCaptures: [],
+      liveTs: 0,
       lastRun: 0,
       syncTs: 0,
     },
@@ -235,6 +238,18 @@ function renderMain() {
       <div class="muted" style="margin-top:2px">เปิดหน้า GMV Max บน ads.tiktok.com ค้างไว้ — ระบบดึงช่อง+แคมเปญเองอัตโนมัติ</div>
       <div class="msg" id="syncMsg"></div>
     </div>
+    <div class="card">
+      <div class="row"><b>📺 ไลฟ์สด (TikTok Shop)</b><span class="muted">${STORE.liveTs ? new Date(STORE.liveTs).toLocaleTimeString("th-TH") : "ยังไม่ดึง"}</span></div>
+      ${
+        STORE.liveStats
+          ? `<div class="metrics" style="margin-top:8px">
+        <div class="metric"><div class="v">${fmt(STORE.liveStats.gmv, 0)}</div><div class="l">ยอดขายสด (฿)</div></div>
+        <div class="metric"><div class="v">${fmt(STORE.liveStats.orders, 0)}</div><div class="l">ออร์เดอร์</div></div>
+        <div class="metric"><div class="v">${fmt(STORE.liveStats.viewers, 0)}</div><div class="l">ผู้ชม</div></div>
+      </div><div class="muted" style="margin-top:6px">ดึงได้ ${(STORE.liveCaptures || []).length} รายการ · <b>ยังเป็นค่าเดา</b> — ส่ง debug ให้ผมล็อกให้ตรง</div>`
+          : `<div class="muted" style="margin-top:6px">เปิดหน้า <b>Live Dashboard</b> บน shop.tiktok.com ค้างไว้ → ระบบจะดึงยอดสด/ออร์เดอร์/สินค้า มาเสริมให้ AI ตัดสินใจแม่นขึ้น ${(STORE.liveCaptures || []).length ? `(ดักได้ ${STORE.liveCaptures.length} รายการแล้ว — ส่ง debug ให้ผมล็อก field)` : ""}</div>`
+      }
+    </div>
     <div class="sec">อื่นๆ</div>
     <div class="card">
       <div class="row"><label>แจ้งเตือน Telegram Token</label></div>
@@ -392,6 +407,8 @@ function downloadDebug() {
       campaigns: all.campaigns || [],
       channelList: all.channelList || [],
       captures: all.captures || [],
+      liveStats: all.liveStats || null,
+      liveCaptures: all.liveCaptures || [],
       syncRaw: all.syncRaw || null,
       channelRecipe: all.channelRecipe
         ? { url: all.channelRecipe.url, method: all.channelRecipe.method, reqBody: all.channelRecipe.reqBody }
