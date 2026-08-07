@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T22:30:40.595526+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-07T22:20:32.182292+07:00",
       "dry_run": false,
       "summary": {
@@ -732,28 +743,6 @@
           "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
           "status": "error",
           "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_917846690184511/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
-        }
-      ]
-    },
-    {
-      "t": "2026-08-07T12:50:30.379934+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=546.72 (>100) และ ทุนซื้อ=182.24 (<220) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
         }
       ]
     }
