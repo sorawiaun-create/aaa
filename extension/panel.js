@@ -53,6 +53,12 @@ function defaultSettings() {
       max: 5,
       intervalMin: 30,
     },
+    autopilot: {
+      enabled: false,
+      targetRoi: 25, // AI aims to keep ROI at/above this
+      maxDailySpend: 3000, // per-channel daily spend cap (loss guard)
+      aggressiveness: "medium", // low | medium | high (scale-up step)
+    },
   };
 }
 
@@ -675,6 +681,21 @@ function renderSettings() {
   app.innerHTML = `
     <div class="note">💻 ระบบทำงานบนเครื่องนี้ — เฝ้าแคมเปญตลอดเวลาที่เปิดคอมและ Chrome ไว้ (ปิดเครื่อง/Sleep = พัก)</div>
 
+    <div class="sec">🤖 AUTOPILOT (AI คุมเอง)</div>
+    <div class="card" style="border-color:var(--teal)">
+      <div class="row"><span><b>เปิดใช้งาน Autopilot</b></span>
+        <label class="switch"><input type="checkbox" id="apEn" ${s.autopilot?.enabled ? "checked" : ""}><span class="slider"></span></label></div>
+      <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="apRoi" value="${s.autopilot?.targetRoi ?? 25}"></div>
+      <div class="row" style="margin-top:6px"><label>งบสูงสุด/วัน (฿)</label><input type="number" id="apCap" value="${s.autopilot?.maxDailySpend ?? 3000}"></div>
+      <div class="row" style="margin-top:6px"><label>ความดุดัน</label>
+        <div class="tabs" id="apAggr">
+          ${["low:ระวัง", "medium:กลาง", "high:ดุ"].map((x) => { const [k, l] = x.split(":"); return `<button data-a="${k}" class="${(s.autopilot?.aggressiveness || "medium") === k ? "on" : ""}">${l}</button>`; }).join("")}
+        </div>
+      </div>
+      <div class="muted" style="margin-top:8px">บอกแค่ ROI เป้า + งบสูงสุด/วัน แล้ว AI จัดการเอง: <b>ดันตัวทำกำไร · ตัดตัวขาดทุน · ปรับ ROI เป้า · หยุดเมื่อถึงเพดานงบวัน</b></div>
+      <div class="note" style="margin-top:8px;margin-bottom:0">⚠️ เมื่อเปิด Autopilot ระบบจะคุมช่องนี้เองทั้งหมด (เงื่อนไข/สเกล/ปรับ ROI ด้านล่างจะถูกข้าม) · ทดสอบด้วยงบน้อยก่อน</div>
+    </div>
+
     <div class="sec">เงื่อนไข TRIGGER (OR)</div>
     <div class="card">
       <div class="row"><label>เช็คทุกๆ</label>
@@ -770,12 +791,26 @@ function renderSettings() {
       b.classList.add("on");
     })
   );
+  let aggressiveness = s.autopilot?.aggressiveness || "medium";
+  app.querySelectorAll("#apAggr button").forEach((b) =>
+    b.addEventListener("click", () => {
+      aggressiveness = b.getAttribute("data-a");
+      app.querySelectorAll("#apAggr button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+    })
+  );
 
   $("saveBtn").addEventListener("click", () => {
     ch.settings = {
       checkIntervalMin: Number($("iv").value),
       minBudgetBeforeCheck: Number($("minb").value),
       onlyWhenLive: $("onlyLive").checked,
+      autopilot: {
+        enabled: $("apEn").checked,
+        targetRoi: Number($("apRoi").value),
+        maxDailySpend: Number($("apCap").value),
+        aggressiveness,
+      },
       midnightReset: {
         enabled: $("mrEn").checked,
         budget: Number($("mrBudget").value),

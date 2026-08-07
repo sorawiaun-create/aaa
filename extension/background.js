@@ -16,8 +16,31 @@ const KEYS = {
   createdTs: {}, // channelId -> ts of last auto-create (rate-limit new campaigns)
   scaledTs: {}, // campaignId -> ts of last budget scale-up
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
+  history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
   logs: [],
 };
+
+// Append a performance snapshot per campaign (for trend/learning); keep the
+// last ~40 points each and drop campaigns no longer present.
+function recordHistory(history, campaigns, now) {
+  const out = {};
+  for (const c of campaigns) {
+    if (!c.id) continue;
+    if ((c.cost || 0) <= 0 && (c.gmv || 0) <= 0) { if (history[c.id]) out[c.id] = history[c.id]; continue; }
+    const prev = history[c.id] || [];
+    out[c.id] = [...prev, { ts: now, roi: c.roi || 0, cost: c.cost || 0, gmv: c.gmv || 0 }].slice(-40);
+  }
+  return out;
+}
+// Rough ROI trend: (latest ROI - ROI a few points ago) / older, so >0 improving,
+// <0 declining. Returns 0 when there isn't enough history yet.
+function roiTrend(points) {
+  if (!points || points.length < 3) return 0;
+  const recent = points[points.length - 1].roi;
+  const older = points[Math.max(0, points.length - 4)].roi;
+  if (older <= 0) return 0;
+  return (recent - older) / older;
+}
 
 // Minimum spacing between auto-creates on the same channel (safety brake so a
 // bad new campaign can't spawn replacements in a tight loop).
@@ -425,6 +448,7 @@ async function runRules() {
 
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
+    if (st.autopilot?.enabled) continue; // autopilot handles this channel
     if (!st.actions?.pause) continue;
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
     for (const c of camps) {
@@ -470,6 +494,7 @@ async function runRules() {
   // --- Budget scaling: grow the budget of running (healthy) campaigns. ---
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
+    if (st.autopilot?.enabled) continue; // autopilot handles this channel
     const sc = st.scaling || {};
     if (!sc.enabled) continue;
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c));
@@ -500,6 +525,7 @@ async function runRules() {
   // --- Auto ROI target: nudge roas_bid toward performance. ---
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
+    if (st.autopilot?.enabled) continue; // autopilot handles this channel
     const ra = st.roiAuto || {};
     if (!ra.enabled) continue;
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch) && statusRunning(c));
@@ -525,7 +551,80 @@ async function runRules() {
     }
   }
 
-  await chrome.storage.local.set({ actedIds: acted, createdTs, scaledTs, roiTs, lastRun: now });
+  // --- Autopilot: one target-ROI + daily-cap controller per channel. ---
+  // You set a target ROI + max daily spend; it grows winners, cuts losers,
+  // nudges the ROI bid, and stops the channel when the day's cap is hit.
+  const history = recordHistory(s.history || {}, s.campaigns || [], now);
+  for (const ch of s.channels || []) {
+    const st = ch.settings || {};
+    const ap = st.autopilot;
+    if (!ap || !ap.enabled) continue;
+    const target = Number(ap.targetRoi) || 20;
+    const cap = Number(ap.maxDailySpend) || 0;
+    const stepPct = ap.aggressiveness === "high" ? 0.4 : ap.aggressiveness === "low" ? 0.15 : 0.25;
+    const minData = st.minBudgetBeforeCheck || 50;
+    const chCamps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
+    const dailySpent = chCamps.reduce((a, c) => a + (c.cost || 0), 0);
+    const live = chCamps.filter((c) => statusRunning(c));
+
+    // Daily loss guard: hit the spend cap -> pause everything live on the channel.
+    if (cap > 0 && dailySpent >= cap) {
+      for (const c of live) {
+        if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue;
+        const res = await execStatus(c.id, 2);
+        acted[c.id] = now;
+        if (res && res.ok) await execMinBudget(c.id, c.name);
+        actions.push({ ok: res && res.ok, name: `🛑 ถึงเพดานงบวัน ปิด ${c.name}`, reason: `ใช้ ${Math.round(dailySpent)}/${cap}฿` });
+      }
+      continue;
+    }
+
+    for (const c of live) {
+      if ((c.cost || 0) < minData) continue; // wait for enough data
+      const budget = c.budget || 0;
+      const trend = roiTrend(history[c.id]);
+
+      // Loser: losing money (ROI < 1) or spending with no orders -> cut it.
+      if ((c.roi > 0 && c.roi < 1) || (c.orders === 0 && c.cost > minData * 2)) {
+        if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue;
+        const res = await execStatus(c.id, 2);
+        acted[c.id] = now;
+        if (res && res.ok) await execMinBudget(c.id, c.name);
+        if (res && res.ok && st.actions?.createNew && !(createdTs[ch.id] && now - createdTs[ch.id] < CREATE_COOLDOWN_MS)) {
+          const cr = await execCreate(c.id, ch.id, target, st.actions.createBudget || 300);
+          if (cr && cr.ok) createdTs[ch.id] = now;
+        }
+        actions.push({ ok: res && res.ok, name: `🤖 ตัดตัวขาดทุน ${c.name}`, reason: `ROI ${c.roi.toFixed(1)} · ${c.orders} ออร์เดอร์` });
+        continue;
+      }
+
+      // Winner: beating target and not trending down -> scale up within the cap.
+      if (c.roi >= target && trend >= -0.15) {
+        if (scaledTs[c.id] && now - scaledTs[c.id] < 10 * 60 * 1000) continue;
+        let next = Math.round(budget * (1 + stepPct));
+        if (cap > 0) next = Math.min(next, budget + Math.max(0, Math.round(cap - dailySpent)));
+        if (next > budget) {
+          const r = await execBudget(c.id, c.name, next);
+          if (r && r.ok) scaledTs[c.id] = now;
+          actions.push({ ok: r && r.ok, name: `🤖 ดันตัวทำกำไร ${c.name}`, reason: `ROI ${c.roi.toFixed(1)} ≥ ${target} · งบ ${budget}→${next}฿` });
+        }
+        continue;
+      }
+
+      // Underperformer (1 ≤ ROI < target): raise the ROI bid to push efficiency.
+      if (c.targetRoi > 0) {
+        if (roiTs[c.id] && now - roiTs[c.id] < 30 * 60 * 1000) continue;
+        const nextRoi = Math.min(c.targetRoi + 0.2, target + 2);
+        if (nextRoi > c.targetRoi + 0.05) {
+          const r = await execRoi(c.id, c.name, nextRoi);
+          if (r && r.ok) roiTs[c.id] = now;
+          actions.push({ ok: r && r.ok, name: `🤖 ปรับ ROI เป้า ${c.name}`, reason: `${c.targetRoi.toFixed(1)}→${nextRoi.toFixed(1)} (จริง ${c.roi.toFixed(1)})` });
+        }
+      }
+    }
+  }
+
+  await chrome.storage.local.set({ actedIds: acted, createdTs, scaledTs, roiTs, history, lastRun: now });
 
   if (actions.length) {
     await addLogs(actions.map((a) => ({ ok: a.ok, text: `${a.name} — ${a.reason}` })));
