@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T12:50:30.379934+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=546.72 (>100) และ ทุนซื้อ=182.24 (<220) และ ซื้อ=3 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-07T12:40:30.535651+07:00",
       "dry_run": false,
       "summary": {
@@ -1157,17 +1179,6 @@
     },
     {
       "t": "2026-08-07T02:10:33.286794+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-07T02:05:44.249654+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
