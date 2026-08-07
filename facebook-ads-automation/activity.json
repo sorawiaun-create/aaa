@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T15:50:28.933353+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-07T15:40:32.178280+07:00",
       "dry_run": false,
       "summary": {
@@ -856,58 +867,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=275.16 (>250) และ ทุนซื้อ=275.16 (>220)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-07T06:40:28.848330+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 4,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=213.71 (>200) และ ทุนซื้อ=∞ (>100)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=209.86 (>200) และ ทุนซื้อ=∞ (>100)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=223.65 (>200) และ ทุนซื้อ=∞ (>100)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะใหม่",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=166.84 (>150) และ ทุนทัก=166.84 (>40)",
           "status": "applied",
           "error": null
         }
