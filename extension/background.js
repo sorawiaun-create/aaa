@@ -18,6 +18,10 @@ const KEYS = {
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
   history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
   liveStats: {}, // channelId -> live-dashboard stats (from shop.tiktok.com)
+  openaiKey: "",
+  openaiModel: "gpt-4o-mini",
+  aiAnalysis: {}, // channelId -> {analysis, decisions, ts}
+  aiTs: {}, // channelId -> ts of last LLM call (rate limit / cost control)
   logs: [],
 };
 
@@ -434,6 +438,126 @@ async function execStatus(campaignId, operation) {
   return apiSetStatus(ctx, campaignId, operation);
 }
 
+/* ------------------------- LLM advisor (OpenAI / ChatGPT) ------------------------- */
+
+// Build a compact snapshot of a channel for the model: the goal, the ads
+// campaigns, and the rich live-dashboard signals.
+function buildAISnapshot(ch, st, campaigns, liveInfo) {
+  const camps = campaigns
+    .filter((c) => channelMatch(c, ch))
+    .map((c) => ({
+      id: c.id,
+      name: (c.name || "").slice(0, 40),
+      delivering: !!c.delivering,
+      budget: Math.round(c.budget || 0),
+      spent: Math.round(c.cost || 0),
+      gmv: Math.round(c.gmv || 0),
+      roi: Number((c.roi || 0).toFixed(2)),
+      orders: c.orders || 0,
+      roiTarget: c.targetRoi || 0,
+    }));
+  const dailySpent = Math.round(camps.reduce((a, c) => a + c.spent, 0));
+  return {
+    goal: {
+      targetRoi: Number(st.autopilot?.targetRoi) || 20,
+      maxDailySpend: Number(st.autopilot?.maxDailySpend) || 0,
+      dailySpent,
+      minBudget: 100,
+    },
+    channel: ch.name,
+    campaigns: camps,
+    live: liveInfo
+      ? {
+          isLive: !!liveInfo.isLive,
+          gmv: Math.round(liveInfo.gmv || 0),
+          sales: liveInfo.sales || 0,
+          currentViewers: liveInfo.currentViewers || 0,
+          totalViewers: liveInfo.viewers || 0,
+          gpm: Math.round(liveInfo.gpm || 0),
+          adsCost: Math.round(liveInfo.adsCost || 0),
+          ctr: liveInfo.ctr || 0,
+          avgViewDuration: liveInfo.avgViewDuration || 0,
+          trend: liveInfo.trend?.dir || "unknown",
+          trafficSources: liveInfo.trafficSources || [],
+          topProducts: liveInfo.topProducts || [],
+        }
+      : null,
+  };
+}
+
+const AI_SYSTEM_PROMPT =
+  "You are an expert TikTok LIVE GMV Max ads optimizer. You are given a JSON snapshot: a goal (target ROI, max daily spend, current daily spend), the ad campaigns, and rich live-stream signals (GMV, GPM, viewers, CTR, view duration, GMV trend, traffic sources, top products). Decide actions to MAXIMIZE profit while keeping ROI at/above the target and NEVER letting the channel's daily spend exceed maxDailySpend. " +
+  "Only act on campaigns where delivering=true. Allowed actions: 'scale_up' (raise budget; provide new budget, must be > current and keep dailySpent under maxDailySpend), 'pause' (turn off a losing/failing campaign), 'set_roi' (change the ROI bid, 1-10), 'hold' (do nothing). Budget must be >= 100. Prefer scaling winners when the live is hot (rising trend, strong GPM, ad-driven traffic converting) and pausing losers (ROI<1, spend with no orders, or cooling live). " +
+  'Reply with ONLY valid JSON, no markdown: {"analysis":"<2-3 sentences in Thai>","decisions":[{"campaignId":"<id>","action":"scale_up|pause|set_roi|hold","budget":<number optional>,"roi":<number optional>,"reason":"<short Thai>"}]}';
+
+async function callLLM(apiKey, model, snapshot) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+      body: JSON.stringify({
+        model: model || "gpt-4o-mini",
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: AI_SYSTEM_PROMPT },
+          { role: "user", content: JSON.stringify(snapshot) },
+        ],
+      }),
+    });
+    const j = await res.json();
+    if (!res.ok) return { error: (j.error && j.error.message) || "HTTP " + res.status };
+    const content = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if (!content) return { error: "ไม่มีคำตอบจาก AI" };
+    try {
+      const parsed = JSON.parse(content);
+      return { analysis: parsed.analysis || "", decisions: Array.isArray(parsed.decisions) ? parsed.decisions : [] };
+    } catch {
+      return { error: "แปลงคำตอบ AI ไม่ได้", raw: content.slice(0, 300) };
+    }
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+// Apply the model's decisions, clamped by the guardrails (never exceed the cap,
+// never below the minimum, ROI bounded), acting only on delivering campaigns.
+async function applyAIDecisions(ch, st, decisions, campaigns, trackers, now) {
+  const { acted, scaledTs, roiTs } = trackers;
+  const target = Number(st.autopilot?.targetRoi) || 20;
+  const cap = Number(st.autopilot?.maxDailySpend) || 0;
+  const chCamps = campaigns.filter((c) => channelMatch(c, ch));
+  const dailySpent = chCamps.reduce((a, c) => a + (c.cost || 0), 0);
+  const out = [];
+  for (const d of decisions || []) {
+    const c = chCamps.find((x) => String(x.id) === String(d.campaignId));
+    if (!c || !statusRunning(c)) continue;
+    const budget = c.budget || 0;
+    if (d.action === "scale_up") {
+      let next = Math.round(Number(d.budget) || budget * 1.25);
+      if (cap > 0) next = Math.min(next, budget + Math.max(0, Math.round(cap - dailySpent)));
+      next = Math.max(next, 100);
+      if (next > budget) {
+        const r = await execBudget(c.id, c.name, next);
+        if (r && r.ok) scaledTs[c.id] = now;
+        out.push({ ok: r && r.ok, name: `🧠 AI ดันงบ ${c.name}`, reason: `${budget}→${next}฿ · ${d.reason || ""}` });
+      }
+    } else if (d.action === "pause") {
+      if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue;
+      const res = await execStatus(c.id, 2);
+      acted[c.id] = now;
+      if (res && res.ok) await execMinBudget(c.id, c.name);
+      out.push({ ok: res && res.ok, name: `🧠 AI ปิด ${c.name}`, reason: d.reason || "" });
+    } else if (d.action === "set_roi") {
+      const roi = Math.max(1, Math.min(10, Number(d.roi) || target));
+      const r = await execRoi(c.id, c.name, roi);
+      if (r && r.ok) roiTs[c.id] = now;
+      out.push({ ok: r && r.ok, name: `🧠 AI ปรับ ROI ${c.name}`, reason: `→${roi} · ${d.reason || ""}` });
+    }
+  }
+  return out;
+}
+
 async function runRules() {
   // Always refresh data from TikTok first — this keeps the panel's numbers and
   // "last synced" time current every interval, regardless of the master toggle.
@@ -570,6 +694,44 @@ async function runRules() {
     // Live-dashboard signal for this channel (from shop.tiktok.com), if captured.
     const liveInfo = (s.liveStats || {})[ch.id] || (s.liveStats || {})[ch.identityId] || null;
 
+    // AI (LLM/ChatGPT) mode: hand the snapshot to the model and apply its plan.
+    if (ap.mode === "ai" && s.openaiKey) {
+      const aiTs = s.aiTs || {};
+      const everyMs = (ap.aiIntervalMin || 10) * 60 * 1000;
+      // Still enforce the hard daily-cap guard locally, regardless of the model.
+      if (cap > 0 && dailySpent >= cap) {
+        for (const c of live) {
+          if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue;
+          const res = await execStatus(c.id, 2);
+          acted[c.id] = now;
+          if (res && res.ok) await execMinBudget(c.id, c.name);
+          actions.push({ ok: res && res.ok, name: `🛑 ถึงเพดานงบวัน ปิด ${c.name}`, reason: `ใช้ ${Math.round(dailySpent)}/${cap}฿` });
+        }
+        continue;
+      }
+      if (aiTs[ch.id] && now - aiTs[ch.id] < everyMs) continue; // rate limit
+      if (!live.length) continue; // nothing delivering to manage
+      aiTs[ch.id] = now;
+      s.aiTs = aiTs;
+      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo);
+      const ai = await callLLM(s.openaiKey, s.openaiModel, snapshot);
+      const aiAnalysis = s.aiAnalysis || {};
+      if (ai.error) {
+        aiAnalysis[ch.id] = { analysis: "⚠️ AI: " + ai.error, decisions: [], ts: now };
+        actions.push({ ok: false, name: `🧠 AI (${ch.name})`, reason: ai.error });
+      } else {
+        let applied = [];
+        if (ap.aiAutoApply !== false) {
+          applied = await applyAIDecisions(ch, st, ai.decisions, s.campaigns || [], { acted, scaledTs, roiTs }, now);
+          for (const a of applied) actions.push(a);
+        }
+        aiAnalysis[ch.id] = { analysis: ai.analysis, decisions: ai.decisions, applied: applied.length, autoApply: ap.aiAutoApply !== false, ts: now };
+        actions.push({ ok: true, name: `🧠 AI วิเคราะห์ ${ch.name}`, reason: (ai.analysis || "").slice(0, 120) });
+      }
+      s.aiAnalysis = aiAnalysis;
+      continue; // AI handled this channel
+    }
+
     // Daily loss guard: hit the spend cap -> pause everything live on the channel.
     if (cap > 0 && dailySpent >= cap) {
       for (const c of live) {
@@ -632,7 +794,10 @@ async function runRules() {
     }
   }
 
-  await chrome.storage.local.set({ actedIds: acted, createdTs, scaledTs, roiTs, history, lastRun: now });
+  await chrome.storage.local.set({
+    actedIds: acted, createdTs, scaledTs, roiTs, history,
+    aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
+  });
 
   if (actions.length) {
     await addLogs(actions.map((a) => ({ ok: a.ok, text: `${a.name} — ${a.reason}` })));
@@ -686,6 +851,21 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   }
   if (msg?.type === "CGMX_DAILY_TEST") {
     sendDailySummary().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg?.type === "CGMX_AI_TEST") {
+    (async () => {
+      const s = await chrome.storage.local.get({ openaiKey: "", openaiModel: "gpt-4o-mini" });
+      if (!s.openaiKey) return sendResponse({ ok: false, error: "ยังไม่ได้ใส่ API key" });
+      const r = await callLLM(s.openaiKey, s.openaiModel, {
+        goal: { targetRoi: 25, maxDailySpend: 1000, dailySpent: 0, minBudget: 100 },
+        channel: "ทดสอบ",
+        campaigns: [{ id: "test", name: "ทดสอบ", delivering: true, budget: 300, spent: 120, gmv: 3600, roi: 30, orders: 8, roiTarget: 1 }],
+        live: null,
+      });
+      if (r.error) return sendResponse({ ok: false, error: r.error });
+      sendResponse({ ok: true, reply: (r.analysis || "").slice(0, 120) });
+    })();
     return true;
   }
   // Panel-triggered actions — run in the background via direct fetch (reliable).

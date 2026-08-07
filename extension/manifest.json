@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Chobtham GMV Max Controller",
-  "version": "0.19.2",
+  "version": "0.20.0",
   "description": "มอนิเตอร์และควบคุมแคมเปญ GMV Max อัตโนมัติ ผ่านหน้า ads.tiktok.com",
   "permissions": ["storage", "alarms", "scripting", "sidePanel", "cookies"],
   "host_permissions": [
     "https://ads.tiktok.com/*",
     "https://shop.tiktok.com/*",
-    "https://api.telegram.org/*"
+    "https://api.telegram.org/*",
+    "https://api.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"

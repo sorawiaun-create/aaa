@@ -58,6 +58,9 @@ function defaultSettings() {
       targetRoi: 25, // AI aims to keep ROI at/above this
       maxDailySpend: 3000, // per-channel daily spend cap (loss guard)
       aggressiveness: "medium", // low | medium | high (scale-up step)
+      mode: "heuristic", // heuristic (in-device rules) | ai (ChatGPT/LLM)
+      aiAutoApply: true, // apply the model's decisions automatically
+      aiIntervalMin: 10, // how often to consult the model
     },
   };
 }
@@ -80,6 +83,9 @@ function loadStore(cb) {
       liveStats: null,
       liveCaptures: [],
       liveTs: 0,
+      openaiKey: "",
+      openaiModel: "gpt-4o-mini",
+      aiAnalysis: {},
       lastRun: 0,
       syncTs: 0,
     },
@@ -273,6 +279,15 @@ function renderMain() {
       <div class="msg" id="dsMsg"></div>
     </div>
     <div class="card">
+      <div class="row"><label>🧠 AI (ChatGPT) — OpenAI API Key</label></div>
+      <input class="search" id="aiKey" placeholder="sk-..." value="${esc(STORE.openaiKey)}" style="width:100%;margin:6px 0" type="password">
+      <div class="row"><label>โมเดล</label>
+        <select id="aiModel">${["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"].map((m) => `<option value="${m}" ${STORE.openaiModel === m ? "selected" : ""}>${m}</option>`).join("")}</select></div>
+      <div class="row" style="margin-top:8px"><button class="ghost" id="aiSave">บันทึก key</button><button class="ghost" id="aiTest">ทดสอบ AI</button></div>
+      <div class="msg" id="aiMsg"></div>
+      <div class="muted" style="margin-top:6px">ใช้กับโหมด Autopilot = AI (ChatGPT) · key เก็บในเครื่องนี้เท่านั้น · มีค่าใช้จ่ายตาม OpenAI (gpt-4o-mini ถูกสุด)</div>
+    </div>
+    <div class="card">
       <div class="row" style="gap:8px">
         <button class="ghost" id="exportBtn" style="flex:1">⬆️ Export ตั้งค่า</button>
         <button class="ghost" id="importBtn" style="flex:1">⬇️ Import ตั้งค่า</button>
@@ -323,6 +338,17 @@ function renderMain() {
     $("dsMsg").textContent = "กำลังส่ง…";
     chrome.runtime.sendMessage({ type: "CGMX_DAILY_TEST" }, () => {
       $("dsMsg").textContent = "ส่งแล้ว — เช็ค Telegram";
+    });
+  });
+  $("aiSave").addEventListener("click", () =>
+    save({ openaiKey: $("aiKey").value.trim(), openaiModel: $("aiModel").value }, () => ($("aiMsg").textContent = "บันทึกแล้ว ✓"))
+  );
+  $("aiTest").addEventListener("click", () => {
+    save({ openaiKey: $("aiKey").value.trim(), openaiModel: $("aiModel").value });
+    $("aiMsg").textContent = "กำลังทดสอบ…";
+    chrome.runtime.sendMessage({ type: "CGMX_AI_TEST" }, (r) => {
+      if (chrome.runtime.lastError) { $("aiMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message; return; }
+      $("aiMsg").textContent = r && r.ok ? "✅ เชื่อม AI ได้ · " + (r.reply || "") : `❌ ${(r && r.error) || "?"}`;
     });
   });
   $("exportBtn").addEventListener("click", exportSettings);
@@ -632,6 +658,17 @@ function renderDetail() {
       </div>
     </div>
 
+    ${(() => {
+      const ai = (STORE.aiAnalysis || {})[ch.id];
+      if (!ai) return "";
+      return `<div class="sec">🧠 AI วิเคราะห์ล่าสุด</div>
+    <div class="card" style="border-color:var(--teal)">
+      <div>${esc(ai.analysis || "")}</div>
+      ${(ai.decisions || []).length ? `<div class="muted" style="margin-top:6px">${ai.decisions.map((dc) => `• ${esc(dc.action)} ${dc.budget ? dc.budget + "฿ " : ""}${dc.roi ? "ROI " + dc.roi + " " : ""}— ${esc(dc.reason || "")}`).join("<br>")}</div>` : ""}
+      <div class="muted" style="margin-top:6px">${ai.autoApply ? `สั่งงานจริง ${ai.applied || 0} รายการ` : "โหมดเสนอ (ไม่สั่งจริง)"} · ${ai.ts ? new Date(ai.ts).toLocaleTimeString("th-TH") : ""}</div>
+    </div>`;
+    })()}
+
     <div class="sec">เงื่อนไขที่ตั้งไว้</div>
     <div class="card">
       <div>
@@ -716,8 +753,16 @@ function renderSettings() {
           ${["low:ระวัง", "medium:กลาง", "high:ดุ"].map((x) => { const [k, l] = x.split(":"); return `<button data-a="${k}" class="${(s.autopilot?.aggressiveness || "medium") === k ? "on" : ""}">${l}</button>`; }).join("")}
         </div>
       </div>
+      <div class="row" style="margin-top:8px"><label>สมอง</label>
+        <div class="tabs" id="apMode">
+          ${["heuristic:กฎในเครื่อง", "ai:AI (ChatGPT)"].map((x) => { const [k, l] = x.split(":"); return `<button data-m="${k}" class="${(s.autopilot?.mode || "heuristic") === k ? "on" : ""}">${l}</button>`; }).join("")}
+        </div>
+      </div>
+      <label class="row" style="cursor:pointer;margin-top:8px"><span>AI สั่งงานเองอัตโนมัติ <span class="muted">(ปิด = แค่เสนอ)</span></span><input type="checkbox" id="apAuto" ${s.autopilot?.aiAutoApply !== false ? "checked" : ""}></label>
+      <div class="row" style="margin-top:6px"><label>ให้ AI คิดทุกๆ</label><select id="apAiIv">${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${(s.autopilot?.aiIntervalMin || 10) === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select></div>
       <div class="muted" style="margin-top:8px">บอกแค่ ROI เป้า + งบสูงสุด/วัน แล้ว AI จัดการเอง: <b>ดันตัวทำกำไร · ตัดตัวขาดทุน · ปรับ ROI เป้า · หยุดเมื่อถึงเพดานงบวัน</b></div>
-      <div class="note" style="margin-top:8px;margin-bottom:0">⚠️ เมื่อเปิด Autopilot ระบบจะคุมช่องนี้เองทั้งหมด (เงื่อนไข/สเกล/ปรับ ROI ด้านล่างจะถูกข้าม) · ทดสอบด้วยงบน้อยก่อน</div>
+      <div class="muted" style="margin-top:4px">โหมด <b>AI (ChatGPT)</b> = ส่งข้อมูลลึก (แคมเปญ+ไลฟ์) ให้ ChatGPT วิเคราะห์+ตัดสินใจ (ต้องใส่ OpenAI API key หน้าแรก · มีค่า API)</div>
+      <div class="note" style="margin-top:8px;margin-bottom:0">⚠️ เมื่อเปิด Autopilot ระบบจะคุมช่องนี้เองทั้งหมด · ทดสอบด้วยงบน้อยก่อน</div>
     </div>
 
     <div class="sec">เงื่อนไข TRIGGER (OR)</div>
@@ -823,6 +868,14 @@ function renderSettings() {
       b.classList.add("on");
     })
   );
+  let apMode = s.autopilot?.mode || "heuristic";
+  app.querySelectorAll("#apMode button").forEach((b) =>
+    b.addEventListener("click", () => {
+      apMode = b.getAttribute("data-m");
+      app.querySelectorAll("#apMode button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+    })
+  );
 
   $("saveBtn").addEventListener("click", () => {
     ch.settings = {
@@ -834,6 +887,9 @@ function renderSettings() {
         targetRoi: Number($("apRoi").value),
         maxDailySpend: Number($("apCap").value),
         aggressiveness,
+        mode: apMode,
+        aiAutoApply: $("apAuto").checked,
+        aiIntervalMin: Number($("apAiIv").value),
       },
       midnightReset: {
         enabled: $("mrEn").checked,
