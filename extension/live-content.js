@@ -17,10 +17,13 @@ function roomIdFromUrl(url) {
   return m ? m[1] : "";
 }
 
-// Rebuild the per-channel live stats from all stored captures.
+// Rebuild the per-channel live stats from stored captures. The dashboard shows
+// one room at a time and room_id isn't in the URLs, so we take the room from
+// room/info and merge in the latest core/stats metrics directly (no id match).
 function buildLiveStats(caps) {
-  const rooms = {}; // roomId -> {ownerId, name, isLive, title, ts}
-  const metrics = {}; // roomId -> {gmv, sales, viewers, ...}
+  let room = null;
+  let metrics = null;
+  let liveFromStatus = null;
   for (const c of caps || []) {
     let j;
     try {
@@ -31,26 +34,23 @@ function buildLiveStats(caps) {
     const data = (j && j.data) || j;
     if (!data || typeof data !== "object") continue;
     const url = c.url || "";
-    const rid = data.room_id || roomIdFromUrl(url);
 
     if (url.includes("/room/info")) {
-      rooms[data.room_id || rid] = {
+      room = {
         ownerId: String(data.owner_tiktok_id || ""),
         name: data.owner_name || "",
         handle: data.owner_handle || "",
         isLive: (data.status && data.status.status) === 1,
         title: data.room_title || "",
-        startedAt: num(data.started_at),
+        roomId: String(data.room_id || ""),
         ts: c.ts,
       };
-    } else if (url.includes("/room/status") && rid) {
-      rooms[rid] = rooms[rid] || {};
-      rooms[rid].isLive = data.status === 1 || (data.status && data.status.status) === 1;
-      if (!rooms[rid].ts) rooms[rid].ts = c.ts;
-    } else if (url.includes("/core/stats") && !url.includes("selection") && rid) {
+    } else if (url.includes("/room/status")) {
+      liveFromStatus = data.status === 1 || (data.status && data.status.status) === 1;
+    } else if (url.includes("/core/stats") && !url.includes("selection")) {
       const s = (data && data.stats) || data;
-      if (s) {
-        metrics[rid] = {
+      if (s && (s.gmv_local || s.sales != null)) {
+        metrics = {
           gmv: amt(s.gmv_local),
           sales: num(s.sales),
           viewers: num(s.watch_uv),
@@ -65,18 +65,16 @@ function buildLiveStats(caps) {
     }
   }
 
-  // Merge room info + metrics, keyed by the owner's TikTok id (= channel id).
   const byChannel = {};
-  for (const [rid, r] of Object.entries(rooms)) {
-    if (!r.ownerId) continue;
-    byChannel[r.ownerId] = {
-      channelId: r.ownerId,
-      name: r.name,
-      roomId: rid,
-      isLive: !!r.isLive,
-      title: r.title,
-      ...(metrics[rid] || {}),
-      ts: Math.max(r.ts || 0, (metrics[rid] && metrics[rid].ts) || 0),
+  if (room && room.ownerId) {
+    byChannel[room.ownerId] = {
+      channelId: room.ownerId,
+      name: room.name,
+      roomId: room.roomId,
+      isLive: liveFromStatus != null ? liveFromStatus : room.isLive,
+      title: room.title,
+      ...(metrics || {}),
+      ts: Math.max(room.ts || 0, (metrics && metrics.ts) || 0),
     };
   }
   return byChannel;
