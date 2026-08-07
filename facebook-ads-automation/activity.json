@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T23:40:36.095301+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 4,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=625.72 (>50) และ ทุนซื้อ=78.22 (<80) และ ซื้อ=8 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-07T23:31:30.938440+07:00",
       "dry_run": false,
       "summary": {
@@ -778,17 +800,6 @@
     },
     {
       "t": "2026-08-07T14:20:34.751991+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-07T14:10:27.186590+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
