@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-07T18:50:29.441862+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-07T18:40:32.115343+07:00",
       "dry_run": false,
       "summary": {
@@ -702,38 +713,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-07T09:40:41.333865+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=179.25 (>50) และ ทุนซื้อ=59.75 (<80) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=406.22 (>100) และ ทุนซื้อ=203.11 (<220) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
