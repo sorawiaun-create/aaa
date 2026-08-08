@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-08T07:40:33.649291+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-08T07:30:31.716464+07:00",
       "dry_run": false,
       "summary": {
@@ -1011,68 +1022,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-07T23:00:42.046917+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 5,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 1202 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่, ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 2095 → 396 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59) · จ่าย=624.25 (>40) และ ROAS=3.77 (>3.50) และ ทุนซื้อ=78.03 (<80) และ เวลา=23:01 (>6) และ เวลา=23:01 (>=18) · จ่าย=624.25 (>40) และ ROAS=3.77 (>3) และ ทุนซื้อ=78.03 (<80) และ เวลา=23:01 (>6) และ เวลา=23:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 2055 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 1050 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 2374 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
