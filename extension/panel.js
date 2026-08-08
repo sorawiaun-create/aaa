@@ -86,6 +86,7 @@ function loadStore(cb) {
       openaiKey: "",
       openaiModel: "gpt-4o-mini",
       aiAnalysis: {},
+      history: {},
       lastRun: 0,
       syncTs: 0,
     },
@@ -657,6 +658,26 @@ function renderDetail() {
         <div class="kv"><span class="k">ผู้ชม live</span><span class="val">${fmt(liveViewers, 0)} คน</span></div>
       </div>
     </div>
+
+    ${(() => {
+      const ids = campaignsOf(ch.id).map((c) => c.id);
+      const acc = {};
+      for (const id of ids)
+        for (const p of (STORE.history || {})[id] || []) {
+          const m = p.mode || "manual";
+          acc[m] = acc[m] || { sum: 0, n: 0 };
+          acc[m].sum += p.roi || 0;
+          acc[m].n += 1;
+        }
+      const labels = { manual: "ทำมือ", ai: "AI (ChatGPT)", auto: "กฎในเครื่อง", rules: "กฎในเครื่อง" };
+      const rows = Object.keys(acc).filter((m) => acc[m].n >= 3);
+      if (!rows.length) return "";
+      return `<div class="sec">🧠 ความจำ — ROI เฉลี่ยตามโหมด</div>
+    <div class="card">
+      ${rows.map((m) => `<div class="kv"><span class="k">${labels[m] || m}</span><span class="val">ROI ${(acc[m].sum / acc[m].n).toFixed(1)} <span class="muted">(${acc[m].n} จุด)</span></span></div>`).join("")}
+      <div class="muted" style="margin-top:6px">เทียบว่าโหมดไหนทำ ROI ได้ดีกว่า (เก็บทุกช่วง รวมตอนทำมือเอง)</div>
+    </div>`;
+    })()}
 
     ${(() => {
       const ai = (STORE.aiAnalysis || {})[ch.id];

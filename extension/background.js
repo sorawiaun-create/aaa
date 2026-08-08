@@ -25,15 +25,48 @@ const KEYS = {
   logs: [],
 };
 
-// Append a performance snapshot per campaign (for trend/learning); keep the
-// last ~40 points each and drop campaigns no longer present.
-function recordHistory(history, campaigns, now) {
+// Which mode is managing a channel right now (for the memory tag).
+function channelMode(st, enabled) {
+  if (!enabled) return "manual";
+  const ap = st && st.autopilot;
+  if (ap && ap.enabled) return ap.mode === "ai" ? "ai" : "auto";
+  return "rules";
+}
+
+// Append a performance snapshot per campaign (for trend/learning), tagged with
+// the management mode (manual/ai/auto/rules) so we can compare what works. This
+// runs every cycle — INCLUDING when the program is off and you manage by hand —
+// so the memory covers manual periods too. Keeps the last ~60 points each.
+function recordHistory(history, campaigns, channels, enabled, now) {
   const out = {};
   for (const c of campaigns) {
     if (!c.id) continue;
     if ((c.cost || 0) <= 0 && (c.gmv || 0) <= 0) { if (history[c.id]) out[c.id] = history[c.id]; continue; }
+    const ch = (channels || []).find((x) => channelMatch(c, x));
+    const mode = channelMode(ch && ch.settings, enabled);
     const prev = history[c.id] || [];
-    out[c.id] = [...prev, { ts: now, roi: c.roi || 0, cost: c.cost || 0, gmv: c.gmv || 0 }].slice(-40);
+    out[c.id] = [...prev, { ts: now, roi: c.roi || 0, cost: c.cost || 0, gmv: c.gmv || 0, budget: c.budget || 0, mode }].slice(-60);
+  }
+  return out;
+}
+
+// Summarize memory into avg ROI per management mode across a set of campaigns —
+// lets the AI (and you) see whether AI/auto actually beats manual.
+function summarizeMemory(history, campaignIds) {
+  const acc = {};
+  for (const id of campaignIds) {
+    for (const p of history[id] || []) {
+      const m = p.mode || "manual";
+      acc[m] = acc[m] || { sumRoi: 0, n: 0, gmv: 0, cost: 0 };
+      acc[m].sumRoi += p.roi || 0;
+      acc[m].n += 1;
+      acc[m].gmv += p.gmv || 0;
+      acc[m].cost += p.cost || 0;
+    }
+  }
+  const out = {};
+  for (const m of Object.keys(acc)) {
+    out[m] = { avgRoi: Number((acc[m].sumRoi / acc[m].n).toFixed(2)), samples: acc[m].n };
   }
   return out;
 }
@@ -442,9 +475,9 @@ async function execStatus(campaignId, operation) {
 
 // Build a compact snapshot of a channel for the model: the goal, the ads
 // campaigns, and the rich live-dashboard signals.
-function buildAISnapshot(ch, st, campaigns, liveInfo) {
-  const camps = campaigns
-    .filter((c) => channelMatch(c, ch))
+function buildAISnapshot(ch, st, campaigns, liveInfo, history) {
+  const chCampaigns = campaigns.filter((c) => channelMatch(c, ch));
+  const camps = chCampaigns
     .map((c) => ({
       id: c.id,
       name: (c.name || "").slice(0, 40),
@@ -482,12 +515,16 @@ function buildAISnapshot(ch, st, campaigns, liveInfo) {
           topProducts: liveInfo.topProducts || [],
         }
       : null,
+    // Learned memory: average ROI seen under each management mode (manual vs
+    // ai vs auto), so the model can judge whether AI management is helping.
+    memory: summarizeMemory(history || {}, chCampaigns.map((c) => c.id)),
   };
 }
 
 const AI_SYSTEM_PROMPT =
   "You are an expert TikTok LIVE GMV Max ads optimizer. You are given a JSON snapshot: a goal (target ROI, max daily spend, current daily spend), the ad campaigns, and rich live-stream signals (GMV, GPM, viewers, CTR, view duration, GMV trend, traffic sources, top products). Decide actions to MAXIMIZE profit while keeping ROI at/above the target and NEVER letting the channel's daily spend exceed maxDailySpend. " +
   "Only act on campaigns where delivering=true. Allowed actions: 'scale_up' (raise budget; provide new budget, must be > current and keep dailySpent under maxDailySpend), 'pause' (turn off a losing/failing campaign), 'set_roi' (change the ROI bid, 1-10), 'hold' (do nothing). Budget must be >= 100. Prefer scaling winners when the live is hot (rising trend, strong GPM, ad-driven traffic converting) and pausing losers (ROI<1, spend with no orders, or cooling live). " +
+  "IMPORTANT: while the live is active (live.isLive=true), when you 'pause' a delivering campaign the system automatically creates a fresh replacement campaign, so the live keeps selling — pause losers freely to reset a bad campaign. The 'memory' field shows average ROI historically achieved under each management mode (manual/ai/auto); use it to sanity-check your strategy. " +
   'Reply with ONLY valid JSON, no markdown: {"analysis":"<2-3 sentences in Thai>","decisions":[{"campaignId":"<id>","action":"scale_up|pause|set_roi|hold","budget":<number optional>,"roi":<number optional>,"reason":"<short Thai>"}]}';
 
 async function callLLM(apiKey, model, snapshot) {
@@ -522,8 +559,8 @@ async function callLLM(apiKey, model, snapshot) {
 
 // Apply the model's decisions, clamped by the guardrails (never exceed the cap,
 // never below the minimum, ROI bounded), acting only on delivering campaigns.
-async function applyAIDecisions(ch, st, decisions, campaigns, trackers, now) {
-  const { acted, scaledTs, roiTs } = trackers;
+async function applyAIDecisions(ch, st, decisions, campaigns, trackers, now, liveInfo) {
+  const { acted, scaledTs, roiTs, createdTs } = trackers;
   const target = Number(st.autopilot?.targetRoi) || 20;
   const cap = Number(st.autopilot?.maxDailySpend) || 0;
   const chCamps = campaigns.filter((c) => channelMatch(c, ch));
@@ -548,6 +585,19 @@ async function applyAIDecisions(ch, st, decisions, campaigns, trackers, now) {
       acted[c.id] = now;
       if (res && res.ok) await execMinBudget(c.id, c.name);
       out.push({ ok: res && res.ok, name: `🧠 AI ปิด ${c.name}`, reason: d.reason || "" });
+      // Keep the live selling: if the room is still live, create a fresh
+      // replacement (respecting the create cooldown) instead of leaving it dead.
+      const liveOn = !liveInfo || liveInfo.isLive !== false;
+      if (res && res.ok && st.actions?.createNew && liveOn && createdTs &&
+          !(createdTs[ch.id] && now - createdTs[ch.id] < CREATE_COOLDOWN_MS)) {
+        const cr = await execCreate(c.id, ch.id, st.actions.createRoi || target, st.actions.createBudget || 300);
+        if (cr && cr.ok) createdTs[ch.id] = now;
+        out.push({
+          ok: cr && cr.ok,
+          name: `↳ AI สร้างใหม่ ${ch.name}`,
+          reason: cr && cr.ok ? `ROI ${st.actions.createRoi || target}, งบ ${st.actions.createBudget || 300}฿` : `ไม่สำเร็จ: ${(cr && (cr.error || cr.msg)) || "?"}`,
+        });
+      }
     } else if (d.action === "set_roi") {
       const roi = Math.max(1, Math.min(10, Number(d.roi) || target));
       const r = await execRoi(c.id, c.name, roi);
@@ -563,7 +613,14 @@ async function runRules() {
   // "last synced" time current every interval, regardless of the master toggle.
   await tabSync();
   const s = await chrome.storage.local.get(KEYS);
-  if (!s.enabled) return; // only ACT (pause/create) when the program is on
+  const nowTs = Date.now();
+  // Record memory EVERY cycle — including when the program is off and you manage
+  // by hand — so the AI can later learn manual vs AI outcomes.
+  const history = recordHistory(s.history || {}, s.campaigns || [], s.channels || [], s.enabled, nowTs);
+  if (!s.enabled) {
+    await chrome.storage.local.set({ history, lastRun: nowTs });
+    return; // only ACT (pause/create) when the program is on
+  }
   const acted = s.actedIds || {};
   const createdTs = s.createdTs || {};
   const scaledTs = s.scaledTs || {};
@@ -679,7 +736,7 @@ async function runRules() {
   // --- Autopilot: one target-ROI + daily-cap controller per channel. ---
   // You set a target ROI + max daily spend; it grows winners, cuts losers,
   // nudges the ROI bid, and stops the channel when the day's cap is hit.
-  const history = recordHistory(s.history || {}, s.campaigns || [], now);
+  // (memory `history` was recorded at the top of runRules)
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
     const ap = st.autopilot;
@@ -713,7 +770,7 @@ async function runRules() {
       if (!live.length) continue; // nothing delivering to manage
       aiTs[ch.id] = now;
       s.aiTs = aiTs;
-      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo);
+      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo, history);
       const ai = await callLLM(s.openaiKey, s.openaiModel, snapshot);
       const aiAnalysis = s.aiAnalysis || {};
       if (ai.error) {
@@ -722,7 +779,7 @@ async function runRules() {
       } else {
         let applied = [];
         if (ap.aiAutoApply !== false) {
-          applied = await applyAIDecisions(ch, st, ai.decisions, s.campaigns || [], { acted, scaledTs, roiTs }, now);
+          applied = await applyAIDecisions(ch, st, ai.decisions, s.campaigns || [], { acted, scaledTs, roiTs, createdTs }, now, liveInfo);
           for (const a of applied) actions.push(a);
         }
         aiAnalysis[ch.id] = { analysis: ai.analysis, decisions: ai.decisions, applied: applied.length, autoApply: ap.aiAutoApply !== false, ts: now };
