@@ -1000,7 +1000,17 @@ $("back").addEventListener("click", () => {
   else go("main");
 });
 
-chrome.storage.onChanged.addListener(() => loadStore(render));
+// Re-render on background updates, but NEVER while the user is editing a form
+// or typing — otherwise their unsaved edits/toggles get wiped back to the old
+// stored value. Keep STORE fresh regardless; just skip the visual rebuild.
+function safeRender() {
+  const editing = view === "settings" || view === "add";
+  const el = document.activeElement;
+  const typing = el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
+  if (editing || typing) return;
+  render();
+}
+chrome.storage.onChanged.addListener(() => loadStore(safeRender));
 loadStore(render);
 
 // Auto-sync silently (if a TikTok tab is present) so the user rarely has to
@@ -1010,7 +1020,7 @@ function autoSync() {
     if (!tabs.length) return;
     chrome.tabs.sendMessage(tabs[0].id, { type: "CGMX_SYNC" }, () => {
       void chrome.runtime.lastError; // ignore; user can press Sync manually
-      loadStore(render);
+      loadStore(safeRender);
     });
   });
 }
