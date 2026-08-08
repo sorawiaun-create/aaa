@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-08T15:00:45.694346+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-08T14:50:32.880345+07:00",
       "dry_run": false,
       "summary": {
@@ -835,38 +846,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "เวลา=6:21 (>5) และ เวลา=6:21 (<7)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-08T06:17:05.290926+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=109.92 (>100) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
-          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=260.88 (>250) และ ทุนซื้อ=∞ (>220)",
           "status": "applied",
           "error": null
         }
