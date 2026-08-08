@@ -87,6 +87,7 @@ function loadStore(cb) {
       openaiModel: "gpt-4o-mini",
       aiAnalysis: {},
       history: {},
+      channelMemory: {},
       lastRun: 0,
       syncTs: 0,
     },
@@ -660,23 +661,23 @@ function renderDetail() {
     </div>
 
     ${(() => {
-      const ids = campaignsOf(ch.id).map((c) => c.id);
-      const acc = {};
-      for (const id of ids)
-        for (const p of (STORE.history || {})[id] || []) {
-          const m = p.mode || "manual";
-          acc[m] = acc[m] || { sum: 0, n: 0 };
-          acc[m].sum += p.roi || 0;
-          acc[m].n += 1;
-        }
-      const labels = { manual: "ทำมือ", ai: "AI (ChatGPT)", auto: "กฎในเครื่อง", rules: "กฎในเครื่อง" };
-      const rows = Object.keys(acc).filter((m) => acc[m].n >= 3);
-      if (!rows.length) return "";
-      return `<div class="sec">🧠 ความจำ — ROI เฉลี่ยตามโหมด</div>
-    <div class="card">
-      ${rows.map((m) => `<div class="kv"><span class="k">${labels[m] || m}</span><span class="val">ROI ${(acc[m].sum / acc[m].n).toFixed(1)} <span class="muted">(${acc[m].n} จุด)</span></span></div>`).join("")}
-      <div class="muted" style="margin-top:6px">เทียบว่าโหมดไหนทำ ROI ได้ดีกว่า (เก็บทุกช่วง รวมตอนทำมือเอง)</div>
-    </div>`;
+      const labels = { manual: "ทำมือ", ai: "AI", auto: "กฎ", rules: "กฎ" };
+      const days = Object.values((STORE.channelMemory || {})[ch.id] || {}).sort((a, b) => (a.date < b.date ? 1 : -1));
+      if (!days.length) return "";
+      // Per-mode ROI comparison across days.
+      const byMode = {};
+      for (const dd of days) {
+        const m = dd.mode || "manual";
+        byMode[m] = byMode[m] || { sum: 0, n: 0, profit: 0 };
+        byMode[m].sum += dd.roi || 0;
+        byMode[m].n += 1;
+        byMode[m].profit += dd.profit || 0;
+      }
+      const modeRows = Object.keys(byMode).map((m) => `<div class="kv"><span class="k">${labels[m] || m}</span><span class="val">ROI ${(byMode[m].sum / byMode[m].n).toFixed(1)} · กำไร ${fmt(byMode[m].profit, 0)}฿ <span class="muted">(${byMode[m].n} วัน)</span></span></div>`).join("");
+      const dayRows = days.slice(0, 7).map((dd) => `<div class="crow"><span class="cn">${dd.date.slice(5)} · ${labels[dd.mode] || dd.mode}</span><span class="pill" style="background:#eaf7f5;color:#0e8a7c">ROI ${(dd.roi || 0).toFixed(1)}</span><span class="muted" style="min-width:60px;text-align:right;color:${dd.profit >= 0 ? "var(--green)" : "var(--red)"}">${fmt(dd.profit, 0)}฿</span></div>`).join("");
+      return `<div class="sec">🧠 ความจำระยะยาว (เทียบโหมด)</div>
+    <div class="card">${modeRows}<div class="muted" style="margin-top:6px">เทียบว่าโหมดไหน (ทำมือ vs AI) ทำ ROI/กำไรดีกว่า จากข้อมูลจริงหลายวัน</div></div>
+    <div class="card clist"><div class="muted" style="margin-bottom:4px">รายวันล่าสุด</div>${dayRows}</div>`;
     })()}
 
     ${(() => {

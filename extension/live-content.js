@@ -83,6 +83,12 @@ function parseTrend(data) {
   return { dir, recent: pts.slice(-6) };
 }
 
+// Per-tab accumulator: each shop.tiktok.com tab watches ONE live room, so we
+// keep this tab's room in memory and merge only THIS channel into the shared
+// map — multiple dashboard tabs (multiple channels) then coexist without
+// clobbering each other.
+let cur = {};
+
 window.addEventListener("message", (ev) => {
   if (ev.source !== window) return;
   const d = ev.data;
@@ -98,8 +104,7 @@ window.addEventListener("message", (ev) => {
   if (!data || typeof data !== "object") return;
   const url = e.url || "";
 
-  chrome.storage.local.get({ liveCurrent: {}, liveCaptures: [] }, (res) => {
-    const cur = res.liveCurrent || {};
+  {
     if (url.includes("/room/info")) {
       cur.channelId = String(data.owner_tiktok_id || cur.channelId || "");
       cur.name = data.owner_name || cur.name || "";
@@ -121,16 +126,20 @@ window.addEventListener("message", (ev) => {
     }
     cur.ts = Date.now();
 
-    // Keep a small debug trail of which endpoints we've seen.
-    const caps = res.liveCaptures || [];
-    const key = url.split("?")[0];
-    const idx = caps.findIndex((c) => c.url.split("?")[0] === key);
-    const rec = { url, body: String(e.body).slice(0, 8000), ts: e.ts };
-    if (idx >= 0) caps[idx] = rec;
-    else caps.unshift(rec);
+    // Merge THIS channel into the shared map (preserving other tabs' channels)
+    // and keep a small debug trail of endpoints seen.
+    chrome.storage.local.get({ liveStats: {}, liveCaptures: [] }, (res) => {
+      const liveStats = res.liveStats || {};
+      if (cur.channelId) liveStats[cur.channelId] = cur;
 
-    const patch = { liveCurrent: cur, liveCaptures: caps.slice(0, 30), liveTs: cur.ts };
-    if (cur.channelId) patch.liveStats = { [cur.channelId]: cur };
-    chrome.storage.local.set(patch);
-  });
+      const caps = res.liveCaptures || [];
+      const key = url.split("?")[0];
+      const idx = caps.findIndex((c) => c.url.split("?")[0] === key);
+      const rec = { url, body: String(e.body).slice(0, 8000), ts: e.ts };
+      if (idx >= 0) caps[idx] = rec;
+      else caps.unshift(rec);
+
+      chrome.storage.local.set({ liveStats, liveCaptures: caps.slice(0, 30), liveTs: cur.ts });
+    });
+  }
 });

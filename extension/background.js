@@ -17,6 +17,7 @@ const KEYS = {
   scaledTs: {}, // campaignId -> ts of last budget scale-up
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
   history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
+  channelMemory: {}, // channelId -> { 'YYYY-MM-DD': {gmv,cost,roi,profit,mode,liveGpm} }
   liveStats: {}, // channelId -> live-dashboard stats (from shop.tiktok.com)
   openaiKey: "",
   openaiModel: "gpt-4o-mini",
@@ -46,6 +47,39 @@ function recordHistory(history, campaigns, channels, enabled, now) {
     const mode = channelMode(ch && ch.settings, enabled);
     const prev = history[c.id] || [];
     out[c.id] = [...prev, { ts: now, roi: c.roi || 0, cost: c.cost || 0, gmv: c.gmv || 0, budget: c.budget || 0, mode }].slice(-60);
+  }
+  return out;
+}
+
+// Long-term per-channel memory: roll up each channel's TODAY totals into a
+// daily bucket (overwritten each cycle with the latest cumulative), tagged with
+// the management mode, kept for ~30 days. This survives campaign churn (new
+// campaign ids) and is the real cross-live learning record.
+function updateChannelMemory(mem, channels, campaigns, liveStats, enabled, now) {
+  const date = bangkokDateStr();
+  const out = { ...(mem || {}) };
+  for (const ch of channels || []) {
+    const worked = (campaigns || []).filter((c) => channelMatch(c, ch) && ((c.cost || 0) > 0 || (c.gmv || 0) > 0));
+    if (!worked.length) continue;
+    const gmv = worked.reduce((a, c) => a + (c.gmv || 0), 0);
+    const cost = worked.reduce((a, c) => a + (c.cost || 0), 0);
+    const orders = worked.reduce((a, c) => a + (c.orders || 0), 0);
+    const live = (liveStats || {})[ch.id] || (liveStats || {})[ch.identityId];
+    const days = { ...(out[ch.id] || {}) };
+    days[date] = {
+      date,
+      gmv: Math.round(gmv),
+      cost: Math.round(cost),
+      orders,
+      roi: cost > 0 ? Number((gmv / cost).toFixed(2)) : 0,
+      profit: Math.round(gmv - cost),
+      mode: channelMode(ch.settings, enabled),
+      liveGpm: live ? Math.round(live.gpm || 0) : 0,
+      ts: now,
+    };
+    const keys = Object.keys(days).sort();
+    while (keys.length > 30) delete days[keys.shift()];
+    out[ch.id] = days;
   }
   return out;
 }
@@ -475,7 +509,7 @@ async function execStatus(campaignId, operation) {
 
 // Build a compact snapshot of a channel for the model: the goal, the ads
 // campaigns, and the rich live-dashboard signals.
-function buildAISnapshot(ch, st, campaigns, liveInfo, history) {
+function buildAISnapshot(ch, st, campaigns, liveInfo, history, memoryDays) {
   const chCampaigns = campaigns.filter((c) => channelMatch(c, ch));
   const camps = chCampaigns
     .map((c) => ({
@@ -518,6 +552,11 @@ function buildAISnapshot(ch, st, campaigns, liveInfo, history) {
     // Learned memory: average ROI seen under each management mode (manual vs
     // ai vs auto), so the model can judge whether AI management is helping.
     memory: summarizeMemory(history || {}, chCampaigns.map((c) => c.id)),
+    // Long-term per-channel daily history (last ~10 days) for cross-live learning.
+    recentDays: Object.values(memoryDays || {})
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .slice(0, 10)
+      .map((dd) => ({ date: dd.date, roi: dd.roi, profit: dd.profit, mode: dd.mode, gpm: dd.liveGpm })),
   };
 }
 
@@ -617,8 +656,9 @@ async function runRules() {
   // Record memory EVERY cycle — including when the program is off and you manage
   // by hand — so the AI can later learn manual vs AI outcomes.
   const history = recordHistory(s.history || {}, s.campaigns || [], s.channels || [], s.enabled, nowTs);
+  const channelMemory = updateChannelMemory(s.channelMemory || {}, s.channels || [], s.campaigns || [], s.liveStats || {}, s.enabled, nowTs);
   if (!s.enabled) {
-    await chrome.storage.local.set({ history, lastRun: nowTs });
+    await chrome.storage.local.set({ history, channelMemory, lastRun: nowTs });
     return; // only ACT (pause/create) when the program is on
   }
   const acted = s.actedIds || {};
@@ -770,7 +810,7 @@ async function runRules() {
       if (!live.length) continue; // nothing delivering to manage
       aiTs[ch.id] = now;
       s.aiTs = aiTs;
-      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo, history);
+      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo, history, channelMemory[ch.id]);
       const ai = await callLLM(s.openaiKey, s.openaiModel, snapshot);
       const aiAnalysis = s.aiAnalysis || {};
       if (ai.error) {
@@ -852,7 +892,7 @@ async function runRules() {
   }
 
   await chrome.storage.local.set({
-    actedIds: acted, createdTs, scaledTs, roiTs, history,
+    actedIds: acted, createdTs, scaledTs, roiTs, history, channelMemory,
     aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
   });
 
