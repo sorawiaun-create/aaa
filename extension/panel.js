@@ -1022,14 +1022,19 @@ $("back").addEventListener("click", () => {
   else go("main");
 });
 
-// Re-render on background updates, but NEVER while the user is editing a form
-// or typing — otherwise their unsaved edits/toggles get wiped back to the old
-// stored value. Keep STORE fresh regardless; just skip the visual rebuild.
+// Re-render on background updates, but NEVER while the user is interacting —
+// otherwise unsaved edits/toggles get wiped back to the old stored value.
+// Toggles (switches) don't keep focus, so a focus check alone misses them;
+// we also pause auto-render for a few seconds after ANY input/change/click.
+let lastInteract = 0;
+document.addEventListener("input", () => (lastInteract = Date.now()), true);
+document.addEventListener("change", () => (lastInteract = Date.now()), true);
+document.addEventListener("click", () => (lastInteract = Date.now()), true);
 function safeRender() {
   const editing = view === "settings" || view === "add";
   const el = document.activeElement;
   const typing = el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
-  if (editing || typing) return;
+  if (editing || typing || Date.now() - lastInteract < 4000) return;
   render();
 }
 chrome.storage.onChanged.addListener(() => loadStore(safeRender));
