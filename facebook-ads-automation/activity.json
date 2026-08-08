@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-08T07:20:29.416185+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=105.74 (>100) และ ทุนซื้อ=∞ (>80)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-08T07:10:36.409607+07:00",
       "dry_run": false,
       "summary": {
@@ -1051,28 +1073,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-07T22:40:27.843031+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 2055 → 2374 บาท",
-          "reason": "จ่าย=236.17 (>80) และ ROAS=10.59 (>3.50) และ ทุนซื้อ=118.08 (<180) และ เวลา=22:40 (>6) และ เวลา=22:40 (>=18) · จ่าย=236.17 (>100) และ ROAS=10.59 (>3) และ ทุนซื้อ=118.08 (<220) และ เวลา=22:40 (>6) และ เวลา=22:40 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
