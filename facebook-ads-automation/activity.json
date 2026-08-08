@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-09T04:49:35.787473+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-09T04:40:36.120304+07:00",
       "dry_run": false,
       "summary": {
@@ -809,28 +820,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "งบ 1618 → 1780 บาท",
           "reason": "จ่าย=223.99 (>80) และ ROAS=6.21 (>3.50) และ ทุนซื้อ=112.00 (<180) และ เวลา=20:55 (>6) และ เวลา=20:55 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-08T20:50:32.631458+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 1,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 1541 → 1618 บาท",
-          "reason": "จ่าย=223.85 (>100) และ ROAS=6.21 (>3) และ ทุนซื้อ=111.92 (<220) และ เวลา=20:51 (>6) และ เวลา=20:51 (>=18)",
           "status": "applied",
           "error": null
         }
