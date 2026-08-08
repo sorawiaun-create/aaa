@@ -1034,7 +1034,7 @@ function safeRender() {
   const editing = view === "settings" || view === "add";
   const el = document.activeElement;
   const typing = el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
-  if (editing || typing || Date.now() - lastInteract < 4000) return;
+  if (editing || typing || Date.now() - lastInteract < 30000) return;
   render();
 }
 chrome.storage.onChanged.addListener(() => loadStore(safeRender));
