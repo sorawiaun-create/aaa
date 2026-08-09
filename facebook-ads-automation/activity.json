@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-09T07:20:32.388890+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-09T07:10:27.916541+07:00",
       "dry_run": false,
       "summary": {
@@ -861,138 +872,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-08T23:00:40.950335+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 12,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 396 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 3000 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 2374 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 1102 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 1273 → 1000 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
