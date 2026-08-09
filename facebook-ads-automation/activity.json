@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-09T18:20:29.210139+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 3,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-09T18:10:31.977723+07:00",
       "dry_run": false,
       "summary": {
@@ -821,38 +832,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-09T09:40:32.007465+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=102.14 (>100) และ ทุนซื้อ=102.14 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=179.89 (>100) และ ทุนซื้อ=179.89 (<220) และ ซื้อ=1 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
