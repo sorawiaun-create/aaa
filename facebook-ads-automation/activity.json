@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-10T01:30:38.034588+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-10T01:20:30.254631+07:00",
       "dry_run": false,
       "summary": {
@@ -876,28 +887,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=209.64 (>100) และ ทุนซื้อ=69.88 (<75) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-09T17:30:34.339202+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=162.18 (>100) และ ทุนซื้อ=81.09 (>80)",
           "status": "applied",
           "error": null
         }
