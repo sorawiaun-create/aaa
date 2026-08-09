@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-10T01:40:26.775595+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-10T01:30:38.034588+07:00",
       "dry_run": false,
       "summary": {
@@ -869,28 +880,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-09T17:36:44.905718+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=209.64 (>100) และ ทุนซื้อ=69.88 (<75) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
