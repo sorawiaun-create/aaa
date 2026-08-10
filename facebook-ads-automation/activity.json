@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-11T00:30:45.251632+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-11T00:20:31.820900+07:00",
       "dry_run": false,
       "summary": {
@@ -817,28 +828,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=200.52 (>200) และ ทุนทัก=66.84 (>50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-10T15:40:37.999539+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=200.41 (>200) และ ทุนซื้อ=100.20 (>100)",
           "status": "applied",
           "error": null
         }
