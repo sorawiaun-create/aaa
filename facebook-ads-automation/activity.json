@@ -1,6 +1,137 @@
 {
   "runs": [
     {
+      "t": "2026-08-11T05:00:39.770902+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 11,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:01 (>5) และ เวลา=5:01 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1071363213703790/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
+        }
+      ]
+    },
+    {
       "t": "2026-08-11T04:50:35.737349+07:00",
       "dry_run": false,
       "summary": {
@@ -712,28 +843,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-10T20:00:43.153513+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 1334 → 1541 บาท",
-          "reason": "จ่าย=206.98 (>80) และ ROAS=9.66 (>3.50) และ ทุนซื้อ=103.49 (<180) และ เวลา=20:01 (>6) และ เวลา=20:01 (>=18) · จ่าย=206.98 (>100) และ ROAS=9.66 (>3) และ ทุนซื้อ=103.49 (<220) และ เวลา=20:01 (>6) และ เวลา=20:01 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
