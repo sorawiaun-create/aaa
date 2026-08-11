@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-11T23:20:31.249093+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 33,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 300 → 390 บาท",
+          "reason": "จ่าย=394.02 (>100) และ ROAS=3.05 (>3) และ ทุนซื้อ=65.67 (<75) และ เวลา=23:21 (>6) และ เวลา=23:21 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-11T23:10:32.048950+07:00",
       "dry_run": false,
       "summary": {
@@ -1346,17 +1368,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-11T14:41:52.908981+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
