@@ -58,6 +58,7 @@ function defaultSettings() {
       targetRoi: 25, // AI aims to keep ROI at/above this
       maxDailySpend: 3000, // per-channel daily spend cap (loss guard)
       aggressiveness: "medium", // low | medium | high (scale-up step)
+      scaleCooldownMin: 15, // min minutes between budget scale-ups per campaign
       mode: "heuristic", // heuristic (in-device rules) | ai (ChatGPT/LLM)
       aiAutoApply: true, // apply the model's decisions automatically
       aiIntervalMin: 10, // how often to consult the model
@@ -770,6 +771,7 @@ function renderSettings() {
         <label class="switch"><input type="checkbox" id="apEn" ${s.autopilot?.enabled ? "checked" : ""}><span class="slider"></span></label></div>
       <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="apRoi" value="${s.autopilot?.targetRoi ?? 25}"></div>
       <div class="row" style="margin-top:6px"><label>งบสูงสุด/วัน (฿)</label><input type="number" id="apCap" value="${s.autopilot?.maxDailySpend ?? 3000}"></div>
+      <div class="row" style="margin-top:6px"><label>ระยะห่างการสเกล (นาที)</label><input type="number" id="apScaleCd" value="${s.autopilot?.scaleCooldownMin ?? 15}"></div>
       <div class="row" style="margin-top:6px"><label>ความดุดัน</label>
         <div class="tabs" id="apAggr">
           ${["low:ระวัง", "medium:กลาง", "high:ดุ"].map((x) => { const [k, l] = x.split(":"); return `<button data-a="${k}" class="${(s.autopilot?.aggressiveness || "medium") === k ? "on" : ""}">${l}</button>`; }).join("")}
@@ -912,6 +914,7 @@ function renderSettings() {
         mode: apMode,
         aiAutoApply: $("apAuto").checked,
         aiIntervalMin: Number($("apAiIv").value),
+        scaleCooldownMin: Number($("apScaleCd").value) || 15,
       },
       midnightReset: {
         enabled: $("mrEn").checked,

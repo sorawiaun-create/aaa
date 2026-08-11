@@ -509,20 +509,31 @@ async function execStatus(campaignId, operation) {
 
 // Build a compact snapshot of a channel for the model: the goal, the ads
 // campaigns, and the rich live-dashboard signals.
-function buildAISnapshot(ch, st, campaigns, liveInfo, history, memoryDays) {
+function buildAISnapshot(ch, st, campaigns, liveInfo, history, memoryDays, scaledTs, now) {
   const chCampaigns = campaigns.filter((c) => channelMatch(c, ch));
+  const scaleCdMin = Number(st.autopilot?.scaleCooldownMin) || 15;
+  const nowTs = now || Date.now();
   const camps = chCampaigns
-    .map((c) => ({
-      id: c.id,
-      name: (c.name || "").slice(0, 40),
-      delivering: !!c.delivering,
-      budget: Math.round(c.budget || 0),
-      spent: Math.round(c.cost || 0),
-      gmv: Math.round(c.gmv || 0),
-      roi: Number((c.roi || 0).toFixed(2)),
-      orders: c.orders || 0,
-      roiTarget: c.targetRoi || 0,
-    }));
+    .map((c) => {
+      const last = (scaledTs || {})[c.id];
+      const minsSinceScale = last ? Math.round((nowTs - last) / 60000) : null;
+      return {
+        id: c.id,
+        name: (c.name || "").slice(0, 40),
+        delivering: !!c.delivering,
+        budget: Math.round(c.budget || 0),
+        spent: Math.round(c.cost || 0),
+        gmv: Math.round(c.gmv || 0),
+        roi: Number((c.roi || 0).toFixed(2)),
+        orders: c.orders || 0,
+        roiTarget: c.targetRoi || 0,
+        // How long since this campaign's budget was last scaled up, and whether
+        // it's still inside the cooldown window (so the model holds instead of
+        // stacking scale-ups).
+        minsSinceScale,
+        canScaleNow: minsSinceScale == null || minsSinceScale >= scaleCdMin,
+      };
+    });
   const dailySpent = Math.round(camps.reduce((a, c) => a + c.spent, 0));
   return {
     goal: {
@@ -530,6 +541,7 @@ function buildAISnapshot(ch, st, campaigns, liveInfo, history, memoryDays) {
       maxDailySpend: Number(st.autopilot?.maxDailySpend) || 0,
       dailySpent,
       minBudget: 100,
+      scaleCooldownMin: scaleCdMin,
     },
     channel: ch.name,
     campaigns: camps,
@@ -564,6 +576,7 @@ const AI_SYSTEM_PROMPT =
   "You are an expert TikTok LIVE GMV Max ads optimizer. You are given a JSON snapshot: a goal (target ROI, max daily spend, current daily spend), the ad campaigns, and rich live-stream signals (GMV, GPM, viewers, CTR, view duration, GMV trend, traffic sources, top products). Decide actions to MAXIMIZE profit while keeping ROI at/above the target and NEVER letting the channel's daily spend exceed maxDailySpend. " +
   "Only act on campaigns where delivering=true. Allowed actions: 'scale_up' (raise budget; provide new budget, must be > current and keep dailySpent under maxDailySpend), 'pause' (turn off a losing/failing campaign), 'set_roi' (change the ROI bid, 1-10), 'hold' (do nothing). Budget must be >= 100. Prefer scaling winners when the live is hot (rising trend, strong GPM, ad-driven traffic converting) and pausing losers (ROI<1, spend with no orders, or cooling live). " +
   "IMPORTANT: while the live is active (live.isLive=true), when you 'pause' a delivering campaign the system automatically creates a fresh replacement campaign, so the live keeps selling — pause losers freely to reset a bad campaign. The 'memory' field shows average ROI historically achieved under each management mode (manual/ai/auto); use it to sanity-check your strategy. " +
+  "PACING: do NOT scale the same campaign repeatedly in a short window. Each campaign carries 'minsSinceScale' (minutes since its budget was last raised) and 'canScaleNow'; goal.scaleCooldownMin is the minimum spacing between scale-ups. If canScaleNow is false, do NOT 'scale_up' that campaign — 'hold' instead and let the new budget prove itself first. When you do scale a winner, take one meaningful step, not many tiny ones. " +
   'Reply with ONLY valid JSON, no markdown: {"analysis":"<2-3 sentences in Thai>","decisions":[{"campaignId":"<id>","action":"scale_up|pause|set_roi|hold","budget":<number optional>,"roi":<number optional>,"reason":"<short Thai>"}]}';
 
 async function callLLM(apiKey, model, snapshot) {
@@ -610,6 +623,14 @@ async function applyAIDecisions(ch, st, decisions, campaigns, trackers, now, liv
     if (!c || !statusRunning(c)) continue;
     const budget = c.budget || 0;
     if (d.action === "scale_up") {
+      // Space out scale-ups: honour the same cooldown as the rules engine so
+      // the model can't ramp budget every cycle when ROI looks good.
+      const scaleCdMs = (st.autopilot?.scaleCooldownMin || 15) * 60 * 1000;
+      if (scaledTs[c.id] && now - scaledTs[c.id] < scaleCdMs) {
+        const waitMin = Math.ceil((scaleCdMs - (now - scaledTs[c.id])) / 60000);
+        out.push({ ok: true, name: `🧠 AI คงงบ ${c.name}`, reason: `เพิ่งสเกลไป รออีก ${waitMin} นาที` });
+        continue;
+      }
       let next = Math.round(Number(d.budget) || budget * 1.25);
       if (cap > 0) next = Math.min(next, budget + Math.max(0, Math.round(cap - dailySpent)));
       next = Math.max(next, 100);
@@ -810,7 +831,7 @@ async function runRules() {
       if (!live.length) continue; // nothing delivering to manage
       aiTs[ch.id] = now;
       s.aiTs = aiTs;
-      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo, history, channelMemory[ch.id]);
+      const snapshot = buildAISnapshot(ch, st, s.campaigns || [], liveInfo, history, channelMemory[ch.id], scaledTs, now);
       const ai = await callLLM(s.openaiKey, s.openaiModel, snapshot);
       const aiAnalysis = s.aiAnalysis || {};
       if (ai.error) {
@@ -863,7 +884,8 @@ async function runRules() {
       // Winner: beating target and not trending down -> scale up within the cap.
       // If we have a live signal and the room is NOT live, don't grow it.
       if (c.roi >= target && trend >= -0.15 && !(liveInfo && liveInfo.isLive === false)) {
-        if (scaledTs[c.id] && now - scaledTs[c.id] < 10 * 60 * 1000) continue;
+        const scaleCdMs = (ap.scaleCooldownMin || 15) * 60 * 1000;
+        if (scaledTs[c.id] && now - scaledTs[c.id] < scaleCdMs) continue; // space out scale-ups
         // Push harder when the live is genuinely hot (strong GPM).
         const hot = liveInfo && liveInfo.gpm > 300;
         const step = hot ? stepPct * 1.5 : stepPct;
