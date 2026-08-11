@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-11T20:50:33.938401+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 690 → 911 บาท",
+          "reason": "จ่าย=397.99 (>40) และ ROAS=9.45 (>3.50) และ ทุนซื้อ=49.75 (<80) และ เวลา=20:51 (>6) และ เวลา=20:51 (>=18) · จ่าย=397.99 (>40) และ ROAS=9.45 (>3) และ ทุนซื้อ=49.75 (<80) และ เวลา=20:51 (>6) และ เวลา=20:51 (>=18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=274.25 (>100) และ ทุนซื้อ=68.56 (<75) และ ซื้อ=4 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 5%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 2460 → 3322 บาท",
+          "reason": "จ่าย=214.62 (>100) และ ROAS=4.66 (>3) และ ทุนซื้อ=214.62 (<220) และ เวลา=20:51 (>6) และ เวลา=20:51 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-11T20:40:38.269533+07:00",
       "dry_run": false,
       "summary": {
@@ -833,17 +875,6 @@
     },
     {
       "t": "2026-08-11T12:10:27.157276+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-11T12:00:40.937610+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
