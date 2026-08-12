@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T08:20:29.006941+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 50 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=51.98 (>50) และ ทัก=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-12T08:10:29.635456+07:00",
       "dry_run": false,
       "summary": {
@@ -1047,38 +1069,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=394.99 (>100) และ ทุนซื้อ=65.83 (<75) และ ซื้อ=6 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-11T23:30:39.298437+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 2,
-        "skipped_cooldown": 31,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 396 บาท",
-          "reason": "จ่าย=468.61 (>40) และ ROAS=8.51 (>3.50) และ ทุนซื้อ=52.07 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18) · จ่าย=468.61 (>40) และ ROAS=8.51 (>3) และ ทุนซื้อ=52.07 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 405 บาท",
-          "reason": "จ่าย=219.79 (>100) และ ROAS=4.55 (>3) และ ทุนซื้อ=219.79 (<220) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18)",
           "status": "applied",
           "error": null
         }
