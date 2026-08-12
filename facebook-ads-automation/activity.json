@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T20:10:31.783414+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 1,
+        "skipped_cooldown": 6,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=265.11 (>100) และ ทุนซื้อ=132.56 (<220) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
+          "action": "INCREASE_BUDGET",
+          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 300 → 608 บาท",
+          "reason": "จ่าย=265.11 (>80) และ ROAS=5.85 (>3.50) และ ทุนซื้อ=132.56 (<180) และ เวลา=20:11 (>6) และ เวลา=20:11 (>=18) · จ่าย=265.11 (>100) และ ROAS=5.85 (>3) และ ทุนซื้อ=132.56 (<220) และ เวลา=20:11 (>6) และ เวลา=20:11 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-12T20:00:42.084762+07:00",
       "dry_run": false,
       "summary": {
@@ -1021,28 +1053,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=52.95 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-12T11:10:40.238908+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=150.45 (>150) และ ทุนทัก=150.45 (>50)",
           "status": "applied",
           "error": null
         }
