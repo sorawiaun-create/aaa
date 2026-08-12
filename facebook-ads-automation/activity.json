@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T17:45:42.969716+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-12T17:40:33.754667+07:00",
       "dry_run": false,
       "summary": {
@@ -1118,48 +1129,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=114.66 (>50) และ ทุนซื้อ=57.33 (<80) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-12T08:40:31.478911+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=52.15 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=51.19 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=51.63 (>50) และ ทัก=0 (<1)",
           "status": "applied",
           "error": null
         }
