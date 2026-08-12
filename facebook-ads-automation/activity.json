@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T23:40:29.452982+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 3,
+        "budget_changes": 0,
+        "skipped_cooldown": 8,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "⚠️ สั่งเปิดแล้วแต่ยังไม่วิ่งจริง · สถานะจริง: ปิดอยู่ (PAUSED)",
+          "reason": "จ่าย=435.06 (>50) และ ทุนซื้อ=72.51 (<80) และ ซื้อ=6 (>0)",
+          "status": "error",
+          "error": "effective_status=PAUSED"
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=210.43 (>100) และ ทุนซื้อ=70.14 (<75) และ ซื้อ=3 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=355.53 (>100) และ ทุนซื้อ=177.76 (<220) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-12T23:30:34.502820+07:00",
       "dry_run": false,
       "summary": {
@@ -1187,17 +1229,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-12T14:40:32.777069+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
