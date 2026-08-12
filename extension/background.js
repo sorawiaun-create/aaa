@@ -244,7 +244,6 @@ function channelMatch(c, ch) {
   return false;
 }
 
-// Evaluate a campaign against a channel's trigger settings (OR logic).
 // Evaluate the manual pause rules for one running campaign. Returns:
 //   { hit }  — a reason string when a pause trigger fires (else null)
 //   { diag } — a short, stable Thai note explaining the decision either way,

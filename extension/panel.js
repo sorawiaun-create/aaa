@@ -458,6 +458,25 @@ function downloadDebug() {
       createRecipe: all.createRecipe
         ? { url: all.createRecipe.url, method: all.createRecipe.method, reqBody: all.createRecipe.reqBody }
         : null,
+      // --- Control state (needed to diagnose "why won't it pause") ---
+      version: (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || "?",
+      enabled: all.enabled,
+      lastRun: all.lastRun || 0,
+      channels: (all.channels || []).map((ch) => ({
+        id: ch.id,
+        name: ch.name,
+        identityId: ch.identityId || "",
+        settings: ch.settings || null,
+      })),
+      pauseDiag: all.pauseDiag || {},
+      actedIds: all.actedIds || {},
+      createdTs: all.createdTs || {},
+      scaledTs: all.scaledTs || {},
+      aiTs: all.aiTs || {},
+      logs: (all.logs || []).slice(0, 40),
+      hasTelegram: !!(all.telegramToken && all.telegramChatId),
+      hasOpenaiKey: !!all.openaiKey,
+      openaiModel: all.openaiModel || "",
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
