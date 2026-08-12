@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T04:10:39.118337+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-13T04:00:47.001774+07:00",
       "dry_run": false,
       "summary": {
@@ -1059,38 +1070,6 @@
           "reason": "จ่าย=219.62 (>100) และ ROAS=3.41 (>3) และ ทุนซื้อ=219.62 (<220) และ เวลา=19:01 (>6) และ เวลา=19:01 (>=18)",
           "status": "applied",
           "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-12T18:50:35.266617+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 7,
-        "errors": 1
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=128.09 (>100) และ ทุนซื้อ=64.05 (<75) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 390 บาท",
-          "reason": "จ่าย=128.09 (>100) และ ROAS=3.12 (>3) และ ทุนซื้อ=64.05 (<75) และ เวลา=18:51 (>6) และ เวลา=18:51 (>=18)",
-          "status": "error",
-          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252747676790359/\n  Params:  {'daily_budget': 39000}\n\n  Status:  400\n  Response:\n    {\n      \"error\":"
         }
       ]
     }
