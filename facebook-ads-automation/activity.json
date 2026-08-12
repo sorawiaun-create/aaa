@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T15:50:27.878508+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=252.35 (>250) และ ทุนซื้อ=252.35 (>220)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-12T15:40:32.775602+07:00",
       "dry_run": false,
       "summary": {
@@ -1145,17 +1167,6 @@
     },
     {
       "t": "2026-08-12T06:50:31.799309+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-12T06:40:28.546147+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
