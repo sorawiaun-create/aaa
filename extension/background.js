@@ -24,6 +24,7 @@ const KEYS = {
   aiAnalysis: {}, // channelId -> {analysis, decisions, ts}
   aiTs: {}, // channelId -> ts of last LLM call (rate limit / cost control)
   logs: [],
+  pauseDiag: {}, // campaignId/ch -> last "why not paused" note (dedupe log spam)
 };
 
 // Which mode is managing a channel right now (for the memory tag).
@@ -244,17 +245,33 @@ function channelMatch(c, ch) {
 }
 
 // Evaluate a campaign against a channel's trigger settings (OR logic).
-function triggered(c, st) {
-  if (c.cost < (st.minBudgetBeforeCheck || 0)) return null;
+// Evaluate the manual pause rules for one running campaign. Returns:
+//   { hit }  — a reason string when a pause trigger fires (else null)
+//   { diag } — a short, stable Thai note explaining the decision either way,
+//              so the activity log can show WHY a campaign wasn't paused.
+function evalPause(c, st) {
   const T = st.triggers || {};
+  const minB = st.minBudgetBeforeCheck || 0;
   const cpo = c.orders > 0 ? c.cost / c.orders : c.cost;
-  if (T.roi?.on && c.roi > 0 && c.roi < T.roi.value)
-    return `ROI ${c.roi.toFixed(2)} < ${T.roi.value}`;
+  if (c.cost < minB)
+    return { hit: null, diag: `รอเก็บข้อมูล: ใช้งบยังไม่ถึงขั้นต่ำ ${minB}฿` };
+  if (!(T.roi?.on || T.cost?.on || T.spentNoOrder?.on))
+    return { hit: null, diag: "ยังไม่ได้เปิดกฎปิดแอดสักข้อ" };
+  // ROI below target — includes ROI 0 (spent with no return); we gate on spend,
+  // not on roi>0, so a burning campaign with zero GMV is caught too.
+  if (T.roi?.on && c.cost > 0 && c.roi < T.roi.value)
+    return { hit: `ROI ${c.roi.toFixed(2)} < ${T.roi.value}`, diag: "" };
   if (T.cost?.on && cpo > T.cost.value)
-    return `ต้นทุน/ซื้อ ${cpo.toFixed(0)} > ${T.cost.value}`;
+    return { hit: `ต้นทุน/ซื้อ ${cpo.toFixed(0)} > ${T.cost.value}`, diag: "" };
   if (T.spentNoOrder?.on && c.orders === 0 && c.cost > T.spentNoOrder.value)
-    return `ใช้งบ ${c.cost.toFixed(0)} แต่ไม่มีออร์เดอร์`;
-  return null;
+    return { hit: `ใช้งบ ${c.cost.toFixed(0)} แต่ไม่มีออร์เดอร์`, diag: "" };
+  // Nothing fired — describe how close each active rule is (rounded, so the
+  // note stays stable across cycles and doesn't spam the log).
+  const parts = [];
+  if (T.roi?.on) parts.push(`ROI ${c.roi.toFixed(0)} (ปิดเมื่อ <${T.roi.value})`);
+  if (T.cost?.on) parts.push(`ต้นทุน/ซื้อ ${Math.round(cpo / 10) * 10} (ปิดเมื่อ >${T.cost.value})`);
+  if (T.spentNoOrder?.on) parts.push(`${c.orders} ออร์เดอร์`);
+  return { hit: null, diag: `ยังไม่เข้าเงื่อนไขปิด: ${parts.join(", ")}` };
 }
 
 // Send a message to the TikTok tab's content script. If the content script is
@@ -679,7 +696,13 @@ async function runRules() {
   const history = recordHistory(s.history || {}, s.campaigns || [], s.channels || [], s.enabled, nowTs);
   const channelMemory = updateChannelMemory(s.channelMemory || {}, s.channels || [], s.campaigns || [], s.liveStats || {}, s.enabled, nowTs);
   if (!s.enabled) {
-    await chrome.storage.local.set({ history, channelMemory, lastRun: nowTs });
+    // Program is off — no pause/create will run. Note it once (deduped) so the
+    // "ทำไมแอดไม่ปิด" answer is visible in the log instead of silent.
+    const pd = s.pauseDiag || {};
+    if (pd.__master !== "off") {
+      await addLogs([{ ok: false, text: "⛔ โปรแกรมปิดอยู่ (สวิตช์หลัก) จึงไม่ควบคุม/ปิดแอดให้ — เปิดสวิตช์ก่อน" }]);
+    }
+    await chrome.storage.local.set({ history, channelMemory, lastRun: nowTs, pauseDiag: { __master: "off" } });
     return; // only ACT (pause/create) when the program is on
   }
   const acted = s.actedIds || {};
@@ -688,17 +711,37 @@ async function runRules() {
   const roiTs = s.roiTs || {};
   const now = Date.now();
   const actions = [];
+  // "Why not paused" diagnostics: written to the log (not Telegram) and only
+  // when the note changes, so you can always see what the manual rules decided.
+  const prevDiag = s.pauseDiag || {};
+  const nextDiag = {};
+  const diags = [];
+  const note = (key, msg, ok) => {
+    nextDiag[key] = msg;
+    if (prevDiag[key] !== msg) diags.push({ ok: ok !== false, text: msg });
+  };
 
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
     if (st.autopilot?.enabled) continue; // autopilot handles this channel
-    if (!st.actions?.pause) continue;
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
-    for (const c of camps) {
-      if (!statusRunning(c)) continue;
-      if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) continue; // cooldown 30m
-      const reason = triggered(c, st);
-      if (!reason) continue;
+    const running = camps.filter((c) => statusRunning(c));
+    if (!st.actions?.pause) {
+      // Pausing is off for this channel — surface it so "ไม่ปิดให้" isn't a mystery.
+      if (running.length) note(`ch:${ch.id}`, `⚪ ${ch.name}: ยังไม่ได้เปิด "ปิดแอดอัตโนมัติ" จึงไม่ปิดให้`, false);
+      continue;
+    }
+    for (const c of running) {
+      if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) {
+        nextDiag[c.id] = `cooldown`; // recently acted — stay quiet this window
+        continue;
+      }
+      const { hit, diag } = evalPause(c, st);
+      if (!hit) {
+        note(c.id, `🔎 ${c.name} — ${diag}`);
+        continue;
+      }
+      const reason = hit;
       const res = await execStatus(c.id, 2); // 2 = pause FIRST
       acted[c.id] = now;
       actions.push({ ok: res && res.ok, name: c.name, reason });
@@ -916,7 +959,11 @@ async function runRules() {
   await chrome.storage.local.set({
     actedIds: acted, createdTs, scaledTs, roiTs, history, channelMemory,
     aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
+    pauseDiag: nextDiag,
   });
+
+  // Log the "why not paused" notes separately (never sent to Telegram).
+  if (diags.length) await addLogs(diags);
 
   if (actions.length) {
     await addLogs(actions.map((a) => ({ ok: a.ok, text: `${a.name} — ${a.reason}` })));
