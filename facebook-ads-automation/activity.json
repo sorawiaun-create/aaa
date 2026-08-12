@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T20:20:31.469365+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 8,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-12T20:10:31.783414+07:00",
       "dry_run": false,
       "summary": {
@@ -1035,28 +1046,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-12T11:16:22.463073+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=52.95 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
