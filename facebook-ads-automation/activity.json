@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-12T19:50:29.486081+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 6,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
+          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=250.89 (>250) และ ทุนซื้อ=250.89 (>220)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-12T19:40:28.817139+07:00",
       "dry_run": false,
       "summary": {
@@ -1011,48 +1033,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=154.47 (>150) และ ทุนทัก=154.47 (>50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-12T10:50:30.674778+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=54.53 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=154.24 (>150) และ ทุนทัก=77.12 (>50)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=154.81 (>150) และ ทุนทัก=154.81 (>50)",
           "status": "applied",
           "error": null
         }
