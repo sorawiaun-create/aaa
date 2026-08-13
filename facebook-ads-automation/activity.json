@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T08:40:31.581627+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=103.97 (>100) และ ทุนทัก=103.97 (>50)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=100.77 (>100) และ ทุนทัก=100.77 (>50)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T08:30:38.882965+07:00",
       "dry_run": false,
       "summary": {
@@ -1121,28 +1153,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=355.53 (>100) และ ทุนซื้อ=177.76 (<220) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-12T23:30:34.502820+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 15,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 396 บาท",
-          "reason": "จ่าย=434.95 (>40) และ ROAS=6.78 (>3.50) และ ทุนซื้อ=72.49 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18) · จ่าย=434.95 (>40) และ ROAS=6.78 (>3) และ ทุนซื้อ=72.49 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18)",
           "status": "applied",
           "error": null
         }
