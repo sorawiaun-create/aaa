@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T09:30:38.591925+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=119.69 (>100) และ ทุนซื้อ=59.84 (<75) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T09:23:42.635388+07:00",
       "dry_run": false,
       "summary": {
@@ -1170,17 +1192,6 @@
     },
     {
       "t": "2026-08-13T00:30:36.706759+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-13T00:20:34.581367+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
