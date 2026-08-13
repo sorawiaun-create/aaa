@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T08:20:31.157431+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=100.83 (>100) และ ทุนซื้อ=∞ (>80)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T08:10:32.991309+07:00",
       "dry_run": false,
       "summary": {
@@ -1106,17 +1128,6 @@
     },
     {
       "t": "2026-08-12T23:20:27.724962+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 17,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-12T23:13:21.959900+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
