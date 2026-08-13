@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T20:20:32.779145+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 12,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-13T20:10:36.729164+07:00",
       "dry_run": false,
       "summary": {
@@ -1112,48 +1123,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-13T11:40:30.498692+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=150.88 (>100) และ ทุนทัก=50.29 (>50)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=152.89 (>150) และ ทุนทัก=50.96 (>50)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=153.61 (>150) และ ทุนทัก=76.81 (>50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
