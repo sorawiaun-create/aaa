@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T10:20:43.182619+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=152.63 (>100) และ ทุนซื้อ=76.31 (<220) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T10:10:27.935423+07:00",
       "dry_run": false,
       "summary": {
@@ -1244,17 +1266,6 @@
     },
     {
       "t": "2026-08-13T01:11:37.923688+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-13T01:10:34.638588+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
