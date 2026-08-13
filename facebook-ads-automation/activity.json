@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T10:50:39.616972+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=101.43 (>100) และ ทุนทัก=50.72 (>50)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=104.73 (>100) และ ทัก=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T10:40:31.105675+07:00",
       "dry_run": false,
       "summary": {
@@ -1317,17 +1349,6 @@
     },
     {
       "t": "2026-08-13T01:40:33.143343+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-13T01:30:38.193062+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
