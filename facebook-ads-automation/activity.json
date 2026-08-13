@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-13T07:40:32.933879+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 50 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=53.64 (>50) และ ทัก=0 (<1)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 50 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=51.14 (>50) และ ทัก=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-13T07:30:35.312017+07:00",
       "dry_run": false,
       "summary": {
@@ -1165,17 +1197,6 @@
     },
     {
       "t": "2026-08-12T22:50:34.489779+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 6,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-12T22:40:33.332845+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
