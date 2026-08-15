@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-15T11:40:36.189030+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=160.53 (>100) และ ทุนทัก=80.27 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ บิส 200 - สำเนา - สำเนา",
+          "rule": "จ่าย 220    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=223.37 (>220) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-15T11:30:33.992074+07:00",
       "dry_run": false,
       "summary": {
@@ -1357,17 +1389,6 @@
     },
     {
       "t": "2026-08-15T03:07:55.648758+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-15T03:00:39.423570+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
