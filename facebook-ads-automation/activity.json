@@ -1,6 +1,90 @@
 {
   "runs": [
     {
+      "t": "2026-08-16T01:50:33.185919+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 8
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_917846690184511/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fiel"
+        },
+        {
+          "account": "ถุงปลูก T2",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1573597526898836/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fie"
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_577764989308009/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fiel"
+        },
+        {
+          "account": "ถุงปลูก T-2",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1068219414427801/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fie"
+        },
+        {
+          "account": "อ่างบัว บิช",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_6996394137081516/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fie"
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1071363213703790/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fie"
+        },
+        {
+          "account": "เทส ถุงปลูก",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_784122890209902/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fiel"
+        },
+        {
+          "account": "ขุยมะพร้าว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_744793814183081/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fiel"
+        }
+      ]
+    },
+    {
       "t": "2026-08-16T01:40:29.071155+07:00",
       "dry_run": false,
       "summary": {
@@ -3638,88 +3722,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-15T18:00:36.473168+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 7,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 585 บาท",
-          "reason": "จ่าย=143.19 (>30) และ ROAS=6.29 (>3.50) และ ทุนซื้อ=47.73 (<60) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=143.19 (>30) และ ROAS=6.29 (>2.80) และ ทุนซื้อ=47.73 (<75) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 500 → 1013 บาท",
-          "reason": "จ่าย=314.31 (>80) และ ROAS=4.42 (>3.50) และ ทุนซื้อ=157.16 (<180) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=314.31 (>100) และ ROAS=4.42 (>3) และ ทุนซื้อ=157.16 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 500 → 1013 บาท",
-          "reason": "จ่าย=455.77 (>80) และ ROAS=8.68 (>3.50) และ ทุนซื้อ=91.15 (<180) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=455.77 (>100) และ ROAS=8.68 (>3) และ ทุนซื้อ=91.15 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 405 บาท",
-          "reason": "จ่าย=215.11 (>100) และ ROAS=9.30 (>3) และ ทุนซื้อ=215.11 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 405 → 820 บาท",
-          "reason": "จ่าย=118.54 (>80) และ ROAS=8.44 (>3.50) และ ทุนซื้อ=118.54 (<180) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=118.54 (>100) และ ROAS=8.44 (>3) และ ทุนซื้อ=118.54 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 405 → 547 บาท",
-          "reason": "จ่าย=185.96 (>100) และ ROAS=5.38 (>3) และ ทุนซื้อ=185.96 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%, ADS ดี เพิ่มงบ 5%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 608 บาท",
-          "reason": "จ่าย=138.32 (>80) และ ROAS=14.46 (>3.50) และ ทุนซื้อ=138.32 (<180) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=138.32 (>100) และ ROAS=14.46 (>3) และ ทุนซื้อ=138.32 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
