@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-15T09:00:36.659459+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=89.07 (>50) และ ทุนซื้อ=44.53 (<75) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 80    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=81.41 (>80) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-15T08:50:33.080015+07:00",
       "dry_run": false,
       "summary": {
@@ -1157,17 +1189,6 @@
     },
     {
       "t": "2026-08-15T00:30:36.737588+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-15T00:29:34.166517+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
