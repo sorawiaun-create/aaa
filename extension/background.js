@@ -277,11 +277,34 @@ function channelMatch(c, ch) {
   return false;
 }
 
-// Evaluate the manual pause rules for one running campaign. Returns:
+// Marginal ROI over the last `windowMin` minutes: the ROI of the money spent
+// recently, from the per-campaign history snapshots. The cumulative ROI
+// (gmv/cost over the whole session) lags badly — early good sales prop it up,
+// so it can stay above the threshold long after recent spend has gone bad. This
+// looks only at the delta since ~windowMin ago, so the rule reacts fast.
+// Returns null when there isn't a snapshot old enough or too little recent
+// spend to judge (also naturally handles the midnight reset -> negative delta).
+function windowRoi(points, now, windowMin, curCost, curGmv) {
+  if (!points || points.length < 2 || !(windowMin > 0)) return null;
+  const cutoff = now - windowMin * 60 * 1000;
+  let base = null;
+  for (const p of points) {
+    if (p.ts <= cutoff) base = p; // latest snapshot at/older than cutoff
+    else break; // snapshots are chronological
+  }
+  if (!base) return null; // campaign younger than the window — fall back to cumulative
+  const dCost = curCost - (base.cost || 0);
+  const dGmv = curGmv - (base.gmv || 0);
+  if (dCost < 5) return null; // <5฿ spent in the window — not enough signal
+  return { roi: dCost > 0 ? dGmv / dCost : 0, dCost: Math.round(dCost), dGmv: Math.round(dGmv), mins: windowMin };
+}
+
+// Evaluate the manual pause rules for one running campaign. `points` is this
+// campaign's history (for recent-window ROI). Returns:
 //   { hit }  — a reason string when a pause trigger fires (else null)
 //   { diag } — a short, stable Thai note explaining the decision either way,
 //              so the activity log can show WHY a campaign wasn't paused.
-function evalPause(c, st) {
+function evalPause(c, st, points, now) {
   const T = st.triggers || {};
   const minB = st.minBudgetBeforeCheck || 0;
   const cpo = c.orders > 0 ? c.cost / c.orders : c.cost;
@@ -289,19 +312,27 @@ function evalPause(c, st) {
     return { hit: null, diag: `รอเก็บข้อมูล: ใช้งบยังไม่ถึงขั้นต่ำ ${minB}฿` };
   if (!(T.roi?.on || T.cost?.on || T.spentNoOrder?.on))
     return { hit: null, diag: "ยังไม่ได้เปิดกฎปิดแอดสักข้อ" };
-  // ROI below target — includes ROI 0 (spent with no return); we gate on spend,
-  // not on roi>0, so a burning campaign with zero GMV is caught too.
-  if (T.roi?.on && c.cost > 0 && c.roi < T.roi.value)
-    return { hit: `ROI ${c.roi.toFixed(2)} < ${T.roi.value}`, diag: "" };
+  // ROI rule: react to RECENT (marginal) ROI first, then the cumulative one.
+  // We gate on spend, not roi>0, so a burning campaign with zero GMV is caught.
+  const win = st.roiWindowMin ?? 5;
+  if (T.roi?.on && c.cost > 0) {
+    const w = windowRoi(points, now || Date.now(), win, c.cost, c.gmv);
+    if (w && w.roi < T.roi.value)
+      return { hit: `ROI ${w.mins}น.ล่าสุด ${w.roi.toFixed(1)} < ${T.roi.value} (ใช้ ${w.dCost}฿ ได้ ${w.dGmv}฿)`, diag: "" };
+    if (c.roi < T.roi.value)
+      return { hit: `ROI สะสม ${c.roi.toFixed(2)} < ${T.roi.value}`, diag: "" };
+  }
   if (T.cost?.on && cpo > T.cost.value)
     return { hit: `ต้นทุน/ซื้อ ${cpo.toFixed(0)} > ${T.cost.value}`, diag: "" };
   if (T.spentNoOrder?.on && c.orders === 0 && c.cost > T.spentNoOrder.value)
     return { hit: `ใช้งบ ${c.cost.toFixed(0)} แต่ไม่มีออร์เดอร์`, diag: "" };
   // Nothing fired — describe how close each active rule is (rounded, so the
   // note stays stable across cycles and doesn't spam the log).
+  const w = T.roi?.on ? windowRoi(points, now || Date.now(), win, c.cost, c.gmv) : null;
   const parts = [];
-  if (T.roi?.on) parts.push(`ROI ${c.roi.toFixed(0)} (ปิดเมื่อ <${T.roi.value})`);
-  if (T.cost?.on) parts.push(`ต้นทุน/ซื้อ ${Math.round(cpo / 10) * 10} (ปิดเมื่อ >${T.cost.value})`);
+  if (T.roi?.on)
+    parts.push(w ? `ROI ${w.mins}น. ${w.roi.toFixed(0)} (ปิด <${T.roi.value})` : `ROI สะสม ${c.roi.toFixed(0)} (ปิด <${T.roi.value})`);
+  if (T.cost?.on) parts.push(`ต้นทุน/ซื้อ ${Math.round(cpo / 10) * 10} (ปิด >${T.cost.value})`);
   if (T.spentNoOrder?.on) parts.push(`${c.orders} ออร์เดอร์`);
   return { hit: null, diag: `ยังไม่เข้าเงื่อนไขปิด: ${parts.join(", ")}` };
 }
@@ -776,7 +807,7 @@ async function runRules() {
         nextDiag[c.id] = `cooldown`; // recently acted — stay quiet this window
         continue;
       }
-      const { hit, diag } = evalPause(c, st);
+      const { hit, diag } = evalPause(c, st, history[c.id], now);
       if (!hit) {
         note(c.id, `🔎 ${c.name} — ${diag}`);
         continue;

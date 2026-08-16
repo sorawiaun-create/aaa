@@ -18,6 +18,7 @@ function defaultSettings() {
   return {
     checkIntervalMin: 1,
     minBudgetBeforeCheck: 10,
+    roiWindowMin: 5, // check ROI over the last N minutes (marginal), not just cumulative; 0 = cumulative only
     triggers: {
       roi: { on: true, value: 20 },
       cost: { on: true, value: 20 },
@@ -817,6 +818,10 @@ function renderSettings() {
       <div class="muted">เริ่มเช็คเงื่อนไขหลังใช้งบเกินนี้</div>
     </div>
     ${triggerCard("roi", "เช็คถ้า ROI ต่ำกว่า", "ROI ขั้นต่ำที่ยอมรับได้", s.triggers.roi)}
+    <div class="card" style="margin-top:-4px">
+      <div class="row"><label>ROI เช็คช่วงล่าสุด (นาที)</label><input type="number" id="roiWin" value="${s.roiWindowMin ?? 5}"></div>
+      <div class="muted">ดู ROI ของ <b>เงินที่เพิ่งใช้ไปช่วงนี้</b> (ตอบไวกว่า) แทน ROI สะสมทั้งไลฟ์ที่ค่าลากช้า · ใส่ 0 = ใช้ ROI สะสมแบบเดิม</div>
+    </div>
     ${triggerCard("cost", "เช็คถ้า ต้นทุน/ซื้อ สูงกว่า", "ต้นทุน/ซื้อ สูงสุดที่ยอมรับได้ (฿)", s.triggers.cost)}
     ${triggerCard("spentNoOrder", "เช็คถ้า ใช้งบแล้วไม่มียอด", "งบที่ใช้ไปแล้วสูงสุด (฿)", s.triggers.spentNoOrder)}
 
@@ -924,6 +929,7 @@ function renderSettings() {
     ch.settings = {
       checkIntervalMin: Number($("iv").value),
       minBudgetBeforeCheck: Number($("minb").value),
+      roiWindowMin: Number($("roiWin").value) || 0,
       onlyWhenLive: $("onlyLive").checked,
       autopilot: {
         enabled: $("apEn").checked,
