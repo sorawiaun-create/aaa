@@ -314,7 +314,7 @@ function evalPause(c, st, points, now) {
     return { hit: null, diag: "ยังไม่ได้เปิดกฎปิดแอดสักข้อ" };
   // ROI rule: react to RECENT (marginal) ROI first, then the cumulative one.
   // We gate on spend, not roi>0, so a burning campaign with zero GMV is caught.
-  const win = st.roiWindowMin ?? 5;
+  const win = st.roiWindowMin ?? 0; // 0 = cumulative (on-screen) ROI only, as expected
   if (T.roi?.on && c.cost > 0) {
     const w = windowRoi(points, now || Date.now(), win, c.cost, c.gmv);
     if (w && w.roi < T.roi.value)

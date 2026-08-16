@@ -18,7 +18,7 @@ function defaultSettings() {
   return {
     checkIntervalMin: 1,
     minBudgetBeforeCheck: 10,
-    roiWindowMin: 5, // check ROI over the last N minutes (marginal), not just cumulative; 0 = cumulative only
+    roiWindowMin: 0, // 0 = pause on the live's ROI shown on screen (like you expect); >0 = also pause earlier on recent-window ROI
     triggers: {
       roi: { on: true, value: 20 },
       cost: { on: true, value: 20 },
@@ -819,8 +819,8 @@ function renderSettings() {
     </div>
     ${triggerCard("roi", "เช็คถ้า ROI ต่ำกว่า", "ROI ขั้นต่ำที่ยอมรับได้", s.triggers.roi)}
     <div class="card" style="margin-top:-4px">
-      <div class="row"><label>ROI เช็คช่วงล่าสุด (นาที)</label><input type="number" id="roiWin" value="${s.roiWindowMin ?? 5}"></div>
-      <div class="muted">ดู ROI ของ <b>เงินที่เพิ่งใช้ไปช่วงนี้</b> (ตอบไวกว่า) แทน ROI สะสมทั้งไลฟ์ที่ค่าลากช้า · ใส่ 0 = ใช้ ROI สะสมแบบเดิม</div>
+      <div class="row"><label>ปิดไวขึ้น: ROI ช่วงล่าสุด (นาที)</label><input type="number" id="roiWin" value="${s.roiWindowMin ?? 0}"></div>
+      <div class="muted"><b>ปกติใส่ 0</b> = ปิดตาม ROI ที่เห็นบนจอ (พอต่ำกว่าเกณฑ์ก็ปิดทันที) · ใส่เลข เช่น 5 = ปิดไวขึ้นอีก โดยดู ROI ของเงินช่วง 5 นาทีล่าสุด (จะปิดก่อนที่ ROI รวมจะไหลลงมาถึงเกณฑ์)</div>
     </div>
     ${triggerCard("cost", "เช็คถ้า ต้นทุน/ซื้อ สูงกว่า", "ต้นทุน/ซื้อ สูงสุดที่ยอมรับได้ (฿)", s.triggers.cost)}
     ${triggerCard("spentNoOrder", "เช็คถ้า ใช้งบแล้วไม่มียอด", "งบที่ใช้ไปแล้วสูงสุด (฿)", s.triggers.spentNoOrder)}
