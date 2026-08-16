@@ -19,7 +19,6 @@ function defaultSettings() {
     checkIntervalMin: 1,
     minBudgetBeforeCheck: 10,
     roiWindowMin: 0, // 0 = pause on the live's ROI shown on screen (like you expect); >0 = also pause earlier on recent-window ROI
-    newCampaignGraceMin: 15, // don't let the ROI rule pause a just-created campaign for this many min (GMV Max learning); stops pause/create churn
     triggers: {
       roi: { on: true, value: 20 },
       cost: { on: true, value: 20 },
@@ -845,9 +844,7 @@ function renderSettings() {
         <label class="switch"><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""}><span class="slider"></span></label></div>
       <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
       <div class="row" style="margin-top:6px"><label>งบเริ่มต้น (฿)</label><input type="number" id="cBudget" value="${s.actions.createBudget}"></div>
-      <div class="row" style="margin-top:6px"><label>ให้แคมใหม่เรียนรู้ก่อน (นาที)</label><input type="number" id="graceMin" value="${s.newCampaignGraceMin ?? 15}"></div>
       <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ROI + งบ)</div>
-      <div class="muted" style="margin-top:6px"><b>สำคัญ:</b> แคมใหม่ช่วงแรก ROI มักต่ำเพราะยังเรียนรู้ · เว้นเวลานี้ก่อนค่อยเริ่มเช็ค ROI ปิด เพื่อไม่ให้ปิด-สร้างวนไม่จบ (0 = เช็คทันที เสี่ยงวน)</div>
       <div class="muted" style="margin-top:6px">โคลนจากแคมเปญเดิมของช่องนี้อัตโนมัติ (ไม่ต้องสร้างมือก่อน)</div>
       <button class="ghost" id="testCreate" style="width:100%;margin-top:8px">🧪 ทดสอบสร้าง 1 ตัวเลย (ใช้ค่าด้านบน)</button>
       <div class="msg" id="createMsg"></div>
@@ -933,7 +930,6 @@ function renderSettings() {
       checkIntervalMin: Number($("iv").value),
       minBudgetBeforeCheck: Number($("minb").value),
       roiWindowMin: Number($("roiWin").value) || 0,
-      newCampaignGraceMin: Number($("graceMin").value) || 0,
       onlyWhenLive: $("onlyLive").checked,
       autopilot: {
         enabled: $("apEn").checked,

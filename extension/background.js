@@ -822,16 +822,6 @@ async function runRules() {
         nextDiag[c.id] = `cooldown`; // recently acted — stay quiet this window
         continue;
       }
-      // Give a freshly-created replacement time to get through GMV Max's
-      // learning phase before the ROI rule can kill it. Otherwise every new
-      // campaign is judged mid-warmup (low ROI), paused and replaced — an
-      // endless churn that burns warm-up money each round. GMV Max LIVE runs
-      // one campaign per channel, so a channel-level grace protects the new one.
-      const graceMs = (st.newCampaignGraceMin ?? 15) * 60 * 1000;
-      if (graceMs > 0 && createdTs[ch.id] && now - createdTs[ch.id] < graceMs) {
-        note(c.id, `🐣 ${c.name} — แคมใหม่กำลังเรียนรู้ ยังไม่ปิด (ให้เวลาก่อน)`);
-        continue;
-      }
       const { hit, diag } = evalPause(c, st, history[c.id], now);
       if (!hit) {
         note(c.id, `🔎 ${c.name} — ${diag}`);
