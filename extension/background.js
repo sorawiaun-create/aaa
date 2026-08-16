@@ -443,7 +443,7 @@ async function apiUpdate(ctx, campaignId, opts) {
     },
     risk_info: apiRiskInfo(),
   };
-  const j = await apiFetch(apiBuildUrl(API.UPDATE, apiCtxParams(ctx)), { method: "POST", body: JSON.stringify(payload) });
+  const j = await apiPostRetry(apiBuildUrl(API.UPDATE, apiCtxParams(ctx)), { method: "POST", body: JSON.stringify(payload) });
   return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
 }
 function apiParseMinBudget(resp) {
@@ -476,12 +476,27 @@ async function apiReduceToMin(ctx, campaignId, campaignName) {
   return { ok: false, error: (last && (last.msg || last.error)) || "ลองหลายครั้งแล้วยังไม่ได้", resp: last && last.resp };
 }
 async function apiSetStatus(ctx, campaignId, operation) {
-  const j = await apiFetch(apiBuildUrl(API.STATUS, apiCtxParams(ctx)), {
+  const j = await apiPostRetry(apiBuildUrl(API.STATUS, apiCtxParams(ctx)), {
     method: "POST", body: JSON.stringify({ campaign_list: [String(campaignId)], operation }),
   });
   return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
 }
 function apiPad2(n) { return String(n).padStart(2, "0"); }
+function sleep(ms) { return new Promise((res) => setTimeout(res, ms)); }
+// POST that retries TikTok's "optimistic locking" rejection (code 6 — "don't
+// use simultaneous requests / decrease your request frequency"), which happens
+// when pause/reduce/create hit the same campaign in quick succession. Back off
+// and retry a few times before giving up.
+async function apiPostRetry(url, opts, tries = 3) {
+  let j = await apiFetch(url, opts);
+  let i = 0;
+  while (j && j.code === 6 && i < tries) {
+    await sleep(800 * (i + 1));
+    j = await apiFetch(url, opts);
+    i++;
+  }
+  return j;
+}
 function apiBuildCreate(detail, ctx, roi, budget, accountName) {
   const ad = (detail && detail.ad_info) || {};
   const now = new Date();
@@ -492,7 +507,7 @@ function apiBuildCreate(detail, ctx, roi, budget, accountName) {
     ? ad.identity_list : [{ tt_uid: ad.template_ad_identity_id || "", identity_type: 8 }];
   return {
     campaign_info: {
-      campaign_id: "", campaign_name: `${yy}/${MM}/${dd} - ${accountName || "ช่อง"} - ${hh}${mm}`,
+      campaign_id: "", campaign_name: `${yy}/${MM}/${dd} - ${accountName || "ช่อง"} - ${hh}${mm}${ss}`,
       budget_mode: 0, budget: bud, shop_automation_type: 2, shop_image_aigc_mode: 0,
     },
     ad_info: {
@@ -529,7 +544,7 @@ function apiBuildCreate(detail, ctx, roi, budget, accountName) {
 async function apiCreate(ctx, templateCampaignId, roi, budget, accountName) {
   const detail = await apiGetDetail(ctx, templateCampaignId);
   if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญต้นแบบไม่ได้" };
-  const j = await apiFetch(apiBuildUrl(API.CREATE, apiCtxParams(ctx)), {
+  const j = await apiPostRetry(apiBuildUrl(API.CREATE, apiCtxParams(ctx)), {
     method: "POST", body: JSON.stringify(apiBuildCreate(detail, ctx, roi, budget, accountName)),
   });
   return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
@@ -807,6 +822,16 @@ async function runRules() {
         nextDiag[c.id] = `cooldown`; // recently acted — stay quiet this window
         continue;
       }
+      // Give a freshly-created replacement time to get through GMV Max's
+      // learning phase before the ROI rule can kill it. Otherwise every new
+      // campaign is judged mid-warmup (low ROI), paused and replaced — an
+      // endless churn that burns warm-up money each round. GMV Max LIVE runs
+      // one campaign per channel, so a channel-level grace protects the new one.
+      const graceMs = (st.newCampaignGraceMin ?? 15) * 60 * 1000;
+      if (graceMs > 0 && createdTs[ch.id] && now - createdTs[ch.id] < graceMs) {
+        note(c.id, `🐣 ${c.name} — แคมใหม่กำลังเรียนรู้ ยังไม่ปิด (ให้เวลาก่อน)`);
+        continue;
+      }
       const { hit, diag } = evalPause(c, st, history[c.id], now);
       if (!hit) {
         note(c.id, `🔎 ${c.name} — ${diag}`);
@@ -818,8 +843,11 @@ async function runRules() {
       actions.push({ ok: res && res.ok, name: c.name, reason });
       // Then drop the budget to the minimum — TikTok only allows lowering the
       // budget once the campaign is paused. This stops a high (scaled-up)
-      // budget from continuing to spend after the pause.
+      // budget from continuing to spend after the pause. Small gap first so the
+      // pause is committed before we modify the same campaign (avoids the
+      // "optimistic locking" concurrent-modification rejection).
       if (res && res.ok && st.actions?.reduceBudgetBeforePause !== false) {
+        await sleep(700);
         const mb = await execMinBudget(c.id, c.name);
         actions.push({
           ok: mb && mb.ok,
@@ -836,6 +864,7 @@ async function runRules() {
         if (createdTs[ch.id] && now - createdTs[ch.id] < CREATE_COOLDOWN_MS) {
           actions.push({ ok: true, name: "↳ ข้ามการสร้างใหม่", reason: "เพิ่งสร้างไปเมื่อครู่ (กันสร้างรัว)" });
         } else {
+          await sleep(700); // let the pause/reduce settle before creating (avoids lock/mutex clash)
           const cr = await execCreate(c.id, ch.id, st.actions.createRoi, st.actions.createBudget);
           if (cr && cr.ok) createdTs[ch.id] = now;
           actions.push({
