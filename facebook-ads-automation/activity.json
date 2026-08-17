@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-17T16:57:45.626665+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-17T16:50:32.271068+07:00",
       "dry_run": false,
       "summary": {
@@ -1105,58 +1116,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-17T08:20:26.928221+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 4,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=100.39 (>100) และ ทุนซื้อ=∞ (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=59.81 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=55.89 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=52.61 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
