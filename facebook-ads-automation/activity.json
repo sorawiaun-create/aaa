@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-17T09:40:32.304209+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่ - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=101.18 (>80) และ ทุนทัก=50.59 (>50)",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252903389500359/\n  Params:  {'status': 'PAUSED'}\n\n  Status:  500\n  Response:\n    {\n      \"error\": {\n"
+        }
+      ]
+    },
+    {
       "t": "2026-08-17T09:30:34.375991+07:00",
       "dry_run": false,
       "summary": {
@@ -1311,17 +1333,6 @@
     },
     {
       "t": "2026-08-17T02:09:08.192361+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-17T02:00:37.279349+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
