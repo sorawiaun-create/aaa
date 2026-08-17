@@ -871,7 +871,15 @@ async function runRules() {
       scanRow(ch, c, st, `🔴 เข้าเงื่อนไขปิด: ${hit}`);
       const res = await execStatus(c.id, 2); // 2 = pause FIRST
       acted[c.id] = now;
-      actions.push({ ok: res && res.ok, name: c.name, reason });
+      // Explicit close record: the ROI (and spend/orders) at the exact moment we
+      // paused — so you can see whether it closed near the target (e.g. 49, good)
+      // or had already flowed well below it (e.g. 25).
+      const closeCtx = `${hit} · ใช้ ${Math.round(c.cost || 0)}฿ · ${c.orders || 0} ออเดอร์ · งบ ${Math.round(c.budget || 0)}฿`;
+      actions.push({
+        ok: res && res.ok,
+        name: res && res.ok ? `🔴 ปิดแล้ว: ${c.name}` : `⚠️ สั่งปิดไม่สำเร็จ: ${c.name}`,
+        reason: res && res.ok ? closeCtx : `${(res && (res.msg || res.error)) || "?"} · เงื่อนไข: ${hit}`,
+      });
       // Then drop the budget to the minimum — TikTok only allows lowering the
       // budget once the campaign is paused. This stops a high (scaled-up)
       // budget from continuing to spend after the pause. Small gap first so the
