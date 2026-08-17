@@ -92,6 +92,8 @@ function loadStore(cb) {
       channelMemory: {},
       lastRun: 0,
       syncTs: 0,
+      lastScan: [],
+      lastScanTs: 0,
     },
     (s) => {
       STORE = s;
@@ -541,11 +543,44 @@ function addChannel(id) {
   save({ channels }, () => go("settings", id));
 }
 
+function scanReadout() {
+  const scan = STORE.lastScan || [];
+  const ts = STORE.lastScanTs
+    ? new Date(STORE.lastScanTs).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "-";
+  const rows = scan
+    .map((r) => {
+      // Which ROI rule threshold, and is this campaign below it?
+      const below = r.roiThr != null && r.cost > 0 && r.roi < r.roiThr;
+      const roiColor = r.roiThr == null ? "var(--muted)" : below ? "var(--red)" : "var(--green)";
+      const thr = [];
+      if (r.roiThr != null) thr.push(`ROI<${r.roiThr}`);
+      if (r.costThr != null) thr.push(`ทุน/ซื้อ>${r.costThr}`);
+      if (r.noOrderThr != null) thr.push(`ไม่มียอด>${r.noOrderThr}฿`);
+      return `<div class="crow" style="flex-wrap:wrap">
+        <span class="cn" style="white-space:normal;font-weight:600">${esc(r.name)}</span>
+        <span style="width:100%;margin-top:2px">
+          <b style="color:${roiColor}">ROI ${r.roi}</b>
+          <span class="muted">· ยอด ${r.gmv}฿ · ใช้ ${r.cost}฿ · ${r.orders} ออเดอร์ · ทุน/ซื้อ ${r.cpo}฿ · งบ ${r.budget}฿</span>
+        </span>
+        <span style="width:100%;margin-top:2px">${esc(r.decision)}</span>
+        ${thr.length ? `<span class="muted" style="width:100%;font-size:11px">เกณฑ์: ${thr.join(" · ")}</span>` : ""}
+      </div>`;
+    })
+    .join("");
+  return `
+    <div class="muted" style="margin-bottom:6px">สแกนล่าสุด ${ts} · แคมที่เปิดอยู่ ${scan.length} ตัว (ค่าที่ระบบดึงมาจริง)</div>
+    <div class="card clist" style="margin-bottom:12px">
+      ${scan.length ? rows : '<div class="muted">ยังไม่มีข้อมูลสแกน — เปิดสวิตช์หลัก + เปิดหน้า TikTok ค้างไว้ รอ 1 นาที</div>'}
+    </div>`;
+}
+
 function renderLog() {
   setHeader("ประวัติการทำงาน", true, '<span id="clearLog" title="ล้าง" style="cursor:pointer">🗑</span>');
   const logs = STORE.logs || [];
   const app = $("app");
   app.innerHTML = `
+    ${scanReadout()}
     <div class="muted" style="margin-bottom:8px">บันทึกการปิด / สร้าง / สเกลงบ / ปรับ ROI / รีเซต (ล่าสุด ${logs.length})</div>
     <div class="card clist">
       ${
@@ -996,10 +1031,16 @@ function renderSettings() {
     $("createMsg").textContent = "กำลังสร้าง…";
     chrome.runtime.sendMessage({ type: "CGMX_DO_CREATE", channelId: ch.id, roi, budget }, (r) => {
       if (chrome.runtime.lastError) { $("createMsg").textContent = "ผิดพลาด: " + chrome.runtime.lastError.message; return; }
-      $("createMsg").textContent =
-        r && r.ok
-          ? "✅ สร้างสำเร็จ! เช็คในหน้า GMV Max ได้เลย"
-          : `❌ ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`;
+      if (r && r.ok) {
+        $("createMsg").textContent = `✅ สร้างสำเร็จ!${r.tries > 1 ? ` (ลอง ${r.tries} ครั้ง)` : ""} เช็คในหน้า GMV Max ได้เลย`;
+      } else {
+        const msg = (r && (r.msg || r.error)) || "?";
+        const hasLive = campaignsOf(ch.id).some((c) => isOn(c));
+        // GMV Max = 1 delivering campaign per channel: a manual test-create while
+        // one is already live will be rejected. Explain instead of a raw error.
+        const hint = hasLive ? "\nℹ️ ช่องนี้มีแคมเปญทำงานอยู่แล้ว (GMV Max Live = 1 ช่อง 1 แคม) ต้องปิดตัวเดิมก่อนถึงจะสร้างใหม่ได้ — ปุ่มนี้ไว้ทดสอบตอนช่องว่างเท่านั้น" : "";
+        $("createMsg").textContent = `❌ ไม่สำเร็จ [code ${(r && r.code) ?? "?"}]: ${msg}${hint}`;
+      }
     });
   });
   $("testReduce").addEventListener("click", () => {

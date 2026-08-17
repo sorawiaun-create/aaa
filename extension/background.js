@@ -25,6 +25,8 @@ const KEYS = {
   aiTs: {}, // channelId -> ts of last LLM call (rate limit / cost control)
   logs: [],
   pauseDiag: {}, // campaignId/ch -> last "why not paused" note (dedupe log spam)
+  lastScan: [], // per-campaign readout from the latest cycle (numbers + decision)
+  lastScanTs: 0,
 };
 
 // Current date in Bangkok (UTC+7) as "YYYY-MM-DD" — the key for daily memory
@@ -817,28 +819,56 @@ async function runRules() {
     nextDiag[key] = msg;
     if (prevDiag[key] !== msg) diags.push({ ok: ok !== false, text: msg });
   };
+  // Live per-campaign readout, rebuilt every cycle (overwritten, not appended),
+  // so the panel can show EXACTLY what was read and decided this minute.
+  const scan = [];
+  const scanRow = (chn, c, st, decision) => {
+    const T = st.triggers || {};
+    scan.push({
+      ch: chn.name, name: c.name, id: c.id,
+      roi: Number((c.roi || 0).toFixed(2)),
+      gmv: Math.round(c.gmv || 0), cost: Math.round(c.cost || 0),
+      orders: c.orders || 0, budget: Math.round(c.budget || 0),
+      cpo: Math.round(c.cpo || (c.orders > 0 ? c.cost / c.orders : c.cost) || 0),
+      roiThr: T.roi?.on ? T.roi.value : null,
+      costThr: T.cost?.on ? T.cost.value : null,
+      noOrderThr: T.spentNoOrder?.on ? T.spentNoOrder.value : null,
+      decision, ts: now,
+    });
+  };
 
   for (const ch of s.channels || []) {
     const st = ch.settings || {};
-    if (st.autopilot?.enabled) continue; // autopilot handles this channel
+    if (st.autopilot?.enabled) {
+      // autopilot handles this channel — still show it in the scan so the
+      // readout isn't mysteriously empty.
+      for (const c of (s.campaigns || []).filter((x) => channelMatch(x, ch) && statusRunning(x)))
+        scanRow(ch, c, st, "🤖 ออโต้ไพลอตดูแลช่องนี้");
+      continue;
+    }
     const camps = (s.campaigns || []).filter((c) => channelMatch(c, ch));
     const running = camps.filter((c) => statusRunning(c));
     if (!st.actions?.pause) {
       // Pausing is off for this channel — surface it so "ไม่ปิดให้" isn't a mystery.
       if (running.length) note(`ch:${ch.id}`, `⚪ ${ch.name}: ยังไม่ได้เปิด "ปิดแอดอัตโนมัติ" จึงไม่ปิดให้`, false);
+      for (const c of running) scanRow(ch, c, st, '⚪ ยังไม่เปิด "ปิดแอดอัตโนมัติ"');
       continue;
     }
     for (const c of running) {
       if (acted[c.id] && now - acted[c.id] < 30 * 60 * 1000) {
+        const mins = Math.ceil((30 * 60 * 1000 - (now - acted[c.id])) / 60000);
         nextDiag[c.id] = `cooldown`; // recently acted — stay quiet this window
+        scanRow(ch, c, st, `💤 เพิ่งจัดการไป รออีก ${mins} นาที`);
         continue;
       }
       const { hit, diag } = evalPause(c, st, history[c.id], now);
       if (!hit) {
         note(c.id, `🔎 ${c.name} — ${diag}`);
+        scanRow(ch, c, st, `⏳ ${diag}`);
         continue;
       }
       const reason = hit;
+      scanRow(ch, c, st, `🔴 เข้าเงื่อนไขปิด: ${hit}`);
       const res = await execStatus(c.id, 2); // 2 = pause FIRST
       acted[c.id] = now;
       actions.push({ ok: res && res.ok, name: c.name, reason });
@@ -871,7 +901,9 @@ async function runRules() {
           actions.push({
             ok: cr && cr.ok,
             name: `↳ สร้างใหม่ (ROI ${st.actions.createRoi}, งบ ${st.actions.createBudget}฿)`,
-            reason: cr && cr.ok ? "สำเร็จ" : `ไม่สำเร็จ: ${(cr && (cr.error || cr.msg)) || "?"}`,
+            reason: cr && cr.ok
+              ? `สำเร็จ${cr.tries > 1 ? ` (ลอง ${cr.tries} ครั้ง)` : ""}`
+              : `ไม่สำเร็จ [code ${(cr && cr.code) ?? "?"}]: ${(cr && (cr.msg || cr.error)) || "?"}`,
           });
         }
       }
@@ -1060,7 +1092,7 @@ async function runRules() {
   await chrome.storage.local.set({
     actedIds: acted, createdTs, scaledTs, roiTs, history, channelMemory,
     aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
-    pauseDiag: nextDiag,
+    pauseDiag: nextDiag, lastScan: scan, lastScanTs: now,
   });
 
   // Log the "why not paused" notes separately (never sent to Telegram).
