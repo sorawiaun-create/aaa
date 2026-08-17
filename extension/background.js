@@ -544,10 +544,21 @@ function apiBuildCreate(detail, ctx, roi, budget, accountName) {
 async function apiCreate(ctx, templateCampaignId, roi, budget, accountName) {
   const detail = await apiGetDetail(ctx, templateCampaignId);
   if (!detail || !detail.ad_info) return { ok: false, error: "อ่านรายละเอียดแคมเปญต้นแบบไม่ได้" };
-  const j = await apiPostRetry(apiBuildUrl(API.CREATE, apiCtxParams(ctx)), {
-    method: "POST", body: JSON.stringify(apiBuildCreate(detail, ctx, roi, budget, accountName)),
-  });
-  return { ok: j && j.code === 0, code: j && j.code, msg: j && j.msg, resp: j };
+  // Create can fail intermittently right after a pause: the channel may still
+  // be held by the just-paused campaign (GMV Max = one campaign per channel),
+  // or the request collides. Retry a few times with backoff so it succeeds once
+  // the channel frees up, instead of giving up and leaving the channel empty.
+  // apiBuildCreate stamps a fresh HHMMSS name each attempt, so names stay unique.
+  let last = null;
+  for (let i = 0; i < 3; i++) {
+    if (i > 0) await sleep(1500 * i);
+    const j = await apiPostRetry(apiBuildUrl(API.CREATE, apiCtxParams(ctx)), {
+      method: "POST", body: JSON.stringify(apiBuildCreate(detail, ctx, roi, budget, accountName)),
+    });
+    last = j;
+    if (j && j.code === 0) return { ok: true, code: 0, msg: j.msg, resp: j, tries: i + 1 };
+  }
+  return { ok: false, code: last && last.code, msg: last && last.msg, resp: last };
 }
 function execOnTikTok(req) {
   return sendTab({ type: "CGMX_EXEC", req });
