@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-17T07:00:38.799328+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "ถุงปลูก T2",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1573597526898836/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
+        }
+      ]
+    },
+    {
       "t": "2026-08-17T06:53:43.679619+07:00",
       "dry_run": false,
       "summary": {
@@ -1042,17 +1063,6 @@
     },
     {
       "t": "2026-08-16T23:50:33.879346+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-16T23:40:31.365094+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
