@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-17T19:10:39.641151+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 8,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-17T19:00:44.888241+07:00",
       "dry_run": false,
       "summary": {
@@ -930,58 +941,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=101.87 (>100) และ ทุนทัก=101.87 (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-17T10:50:29.637561+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 4,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=150.45 (>80) และ ทุนทัก=50.15 (>50)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=103.46 (>100) และ ทุนทัก=103.46 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=81.16 (>80) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=100.23 (>100) และ ทุนทัก=100.23 (>80)",
           "status": "applied",
           "error": null
         }
