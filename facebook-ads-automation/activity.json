@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-17T12:09:02.520393+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมใหม่",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=81.51 (>80) และ ทุนทัก=81.51 (>50)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-17T12:00:40.289748+07:00",
       "dry_run": false,
       "summary": {
@@ -1503,17 +1525,6 @@
     },
     {
       "t": "2026-08-17T04:15:30.841576+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-17T04:07:31.827623+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
