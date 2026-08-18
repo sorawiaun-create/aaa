@@ -108,6 +108,7 @@ async function postOne(meta, settings) {
     }
 
     tab = await openUploadTab();
+    await ensureInjected(tab.id); // ฉีดสคริปต์เวอร์ชันล่าสุดเข้าแท็บ (ไม่ต้อง F5)
     // ⚠️ chrome messaging ทำให้ ArrayBuffer/Blob หาย ต้องส่งเป็น base64 string
     const bytesB64 = abToBase64(await clip.blob.arrayBuffer());
     const res = await sendToTab(tab.id, {
@@ -188,6 +189,17 @@ function waitForComplete(tabId) {
       resolve();
     }, 20000);
   });
+}
+
+// ฉีด content script ล่าสุดเข้าแท็บ กันปัญหา "Receiving end does not exist"
+// (เกิดตอนรีโหลด extension แต่ยังไม่ได้ F5 แท็บ) — เนื้อสคริปต์เคลียร์ listener เก่าให้เอง
+async function ensureInjected(tabId) {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content-upload.js'] });
+    await delay(300);
+  } catch (e) {
+    console.warn('ensureInjected failed', e);
+  }
 }
 
 function sendToTab(tabId, msg) {

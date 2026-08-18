@@ -5,13 +5,13 @@
 // แต่มีโอกาสต้องปรับให้ตรงกับหน้าจริง — ดูวิธีปรับใน README (โหมด dry-run + inspectCandidates)
 
 (() => {
-  if (window.__ttSchedulerLoaded) return;
-  window.__ttSchedulerLoaded = true;
-
   const VER = (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '?';
-  console.log('%c[tt-scheduler] content script พร้อมแล้ว v' + VER, 'color:#22c55e;font-weight:bold', 'ที่หน้า', location.pathname);
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // ฉีดซ้ำได้ (โดย background) โดยไม่เกิด listener ซ้อน: เคลียร์ตัวเก่าก่อนเสมอ
+  if (window.__ttSchedulerCleanup) {
+    try { window.__ttSchedulerCleanup(); } catch {}
+  }
+  const listener = (msg, _sender, sendResponse) => {
     console.log('[tt-scheduler] ได้รับคำสั่ง:', msg?.type);
     if (msg?.type === 'POST_CLIP') {
       runPost(msg.job)
@@ -23,7 +23,16 @@
       sendResponse({ ok: true, candidates: inspectCandidates() });
       return true;
     }
-  });
+    if (msg?.type === 'PING') {
+      sendResponse({ ok: true, version: VER });
+      return true;
+    }
+  };
+  chrome.runtime.onMessage.addListener(listener);
+  window.__ttSchedulerCleanup = () => {
+    try { chrome.runtime.onMessage.removeListener(listener); } catch {}
+  };
+  console.log('%c[tt-scheduler] content script พร้อมแล้ว v' + VER, 'color:#22c55e;font-weight:bold', 'ที่หน้า', location.pathname);
 
   // selector ค่าเริ่มต้น — ปรับทับได้จากการ์ด "ปรับ selector" ในแผง (job.selectors)
   const DEFAULT_CFG = {
