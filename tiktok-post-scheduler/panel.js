@@ -150,8 +150,11 @@ $('saveBtn').addEventListener('click', async () => {
 $('runBtn').addEventListener('click', () => {
   flash('state', 'กำลังลองโพสต์ตัวถัดไป...');
   chrome.runtime.sendMessage({ type: 'RUN_NOW' }, (r) => {
-    flash('state', r?.ok ? 'สั่งทำงานแล้ว — ดูสถานะในคิว' : 'ผิดพลาด: ' + (r?.error || chrome.runtime.lastError?.message || ''));
-    setTimeout(render, 1500);
+    if (chrome.runtime.lastError) flash('state', 'ผิดพลาด: ' + chrome.runtime.lastError.message);
+    else if (!r?.ok) flash('state', 'ผิดพลาด: ' + (r?.error || ''));
+    else if (r.ran) flash('state', `กำลังโพสต์: ${r.clip} — ดูหน้า TikTok + Console`);
+    else flash('state', 'ยังไม่ทำงาน: ' + (r.reason || 'ไม่ทราบสาเหตุ'));
+    setTimeout(render, 2000);
   });
 });
 

@@ -2,7 +2,7 @@
 // ทำงานเป็น service worker: ตื่นทุก 1 นาทีด้วย chrome.alarms เช็กว่ามีคลิปถึงกำหนดไหม
 // ถ้ามี → เปิด/หาแท็บหน้าอัปโหลด TikTok แล้วสั่ง content script ให้โพสต์ทีละตัว
 
-import { dueClips, getClip, updateClip } from './db.js';
+import { dueClips, queuedClips, getClip, updateClip } from './db.js';
 import { generateCaption } from './ai.js';
 import { sendTelegram } from './telegram.js';
 
@@ -33,7 +33,7 @@ chrome.alarms.onAlarm.addListener((a) => {
 // ให้ panel สั่ง "ลองโพสต์ตัวถัดไปเดี๋ยวนี้" ได้
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'RUN_NOW') {
-    tick(true).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: String(e) }));
+    tick(true).then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
   if (msg?.type === 'GET_STATE') {
@@ -53,21 +53,29 @@ async function getStore(key, def = {}) {
 }
 
 async function tick(force = false) {
-  if (busy) return;
+  if (busy) return { ran: false, reason: 'กำลังทำงานอยู่ รอสักครู่' };
   const settings = await getSettings();
-  if (!settings.enabled && !force) return;
+  if (!settings.enabled && !force) return { ran: false, reason: 'ปิดตัวตั้งเวลาอยู่' };
 
   const now = Date.now();
-  if (!force && now - lastPostAt < settings.minGapMin * 60_000) return; // เว้นระยะขั้นต่ำ
+  if (!force && now - lastPostAt < settings.minGapMin * 60_000) return { ran: false, reason: 'ยังไม่ถึงเวลาเว้นระยะ' };
 
-  const due = await dueClips(now);
-  if (due.length === 0) return;
+  let due = await dueClips(now);
+  // กด "ลองโพสต์เดี๋ยวนี้" (force): หยิบคลิปในคิวตัวถัดไปเลย ไม่ต้องรอถึงเวลา
+  if (force && due.length === 0) {
+    const q = await queuedClips();
+    if (q.length) due = [q[0]];
+  }
+  if (due.length === 0) {
+    return { ran: false, reason: 'ไม่มีคลิปพร้อมโพสต์ (ยังไม่ได้เพิ่มคลิป หรือโพสต์/ข้ามไปหมดแล้ว)' };
+  }
 
   busy = true;
   try {
     const job = due[0];
     await postOne(job, settings);
     lastPostAt = Date.now();
+    return { ran: true, clip: job.name };
   } finally {
     busy = false;
   }

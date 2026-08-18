@@ -106,6 +106,14 @@ export async function dueClips(nowMs) {
     .sort((a, b) => a.scheduledAt - b.scheduledAt);
 }
 
+/** คลิปที่ยังรอคิว (ไม่ว่าตั้งเวลาไว้หรือยัง) — ใช้ตอนกด "ลองโพสต์เดี๋ยวนี้" */
+export async function queuedClips() {
+  const all = await tx('readonly', (s) => promisify(s.getAll()));
+  return all
+    .filter((c) => c.status === 'queued')
+    .sort((a, b) => (a.scheduledAt ?? a.createdAt ?? 0) - (b.scheduledAt ?? b.createdAt ?? 0));
+}
+
 export async function clearAll() {
   await tx('readwrite', (s) => s.clear());
 }
