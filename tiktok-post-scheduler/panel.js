@@ -41,6 +41,7 @@ $('addBtn').addEventListener('click', async () => {
   if (files.length === 0) return alert('เลือกไฟล์วิดีโอก่อน');
   const channel = $('channel').value.trim();
   const productKeyword = $('product').value.trim();
+  const productId = $('productId').value.trim();
   const baseCaption = $('caption').value.trim();
   const baseTags = $('hashtags').value.trim().split(/\s+/).filter(Boolean);
   const useAi = $('useAi').checked;
@@ -58,6 +59,7 @@ $('addBtn').addEventListener('click', async () => {
     caption: useAi ? '' : baseCaption,
     hashtags: useAi ? [] : baseTags,
     productKeyword,
+    productId,
     channel,
     status: 'queued',
     scheduledAt: null,
@@ -251,7 +253,7 @@ async function render() {
         <span class="tag st-${c.status}">${statusLabel(c.status)}</span>
         &nbsp;🕒 ${when}
         ${c.channel ? '&nbsp;📺 ' + esc(c.channel) : ''}
-        ${c.productKeyword ? '&nbsp;🛒 ' + esc(c.productKeyword) : ''}
+        ${c.productId ? '&nbsp;🛒 ID ' + esc(c.productId) : c.productKeyword ? '&nbsp;🛒 ' + esc(c.productKeyword) : ''}
         ${c.lastError ? '<br><span style="color:#fca5a5">' + esc(c.lastError) + '</span>' : ''}
       </div>
       ${c.caption || tags ? `<div class="cap">${esc(c.caption)}${tags ? '\n' + esc(tags) : ''}</div>` : ''}`;

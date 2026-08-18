@@ -117,6 +117,7 @@ async function postOne(meta, settings) {
         bytes,
         caption: composeCaption(clip),
         productKeyword: clip.productKeyword,
+        productId: clip.productId,
         autoSubmit: settings.autoSubmit,
         dryRun: settings.dryRun,
         selectors,

@@ -79,8 +79,10 @@
     <input type="file" id="files" accept="video/*" multiple />
     <div class="row">
       <div><label>ช่อง (label ไว้จัดกลุ่ม)</label><input id="channel" placeholder="เช่น ช่องหลัก / ช่องรอง" /></div>
-      <div><label>คำค้นสินค้าที่จะปักตะกร้า</label><input id="product" placeholder="ชื่อ/คำค้นสินค้า" /></div>
+      <div><label>รหัสสินค้า (Product ID) — แม่นสุด</label><input id="productId" placeholder="เช่น 172xxxxxxxxxxxxxx" /></div>
     </div>
+    <label>คำค้นสินค้า (ถ้าไม่มีรหัส) — ต้องตรงชื่อ ไม่งั้นข้าม</label>
+    <input id="product" placeholder="ชื่อสินค้าให้ตรง เพื่อกันปักผิด" />
     <div class="switch"><div><b>ให้ AI คิดแคปชั่นให้แต่ละคลิป</b><small>คลิปละไม่ซ้ำ (ต้องเปิด AI ด้านบน)</small></div>
       <input type="checkbox" id="useAi" /></div>
     <label>แคปชั่น (ถ้าไม่ใช้ AI — ใช้ร่วมทุกคลิปรอบนี้)</label>

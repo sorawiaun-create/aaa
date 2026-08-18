@@ -76,9 +76,11 @@
     }
 
     // 4) ปักตะกร้า (best-effort) — บัญชีต้องมีสิทธิ์ Shop/Affiliate อยู่แล้ว
-    if (job.productKeyword) {
-      const tagged = await tryTagProduct(job.productKeyword, job.dryRun, note, cfg);
-      if (!tagged) note('⚠️ ปักตะกร้าไม่สำเร็จอัตโนมัติ — อาจต้องเลือกสินค้าด้วยมือ');
+    if (job.productKeyword || job.productId) {
+      const r = await tryTagProduct(job, note, cfg);
+      if (r === 'skip-notfound')
+        return { ok: false, error: 'ไม่เจอสินค้าที่ตรง (กันปักผิด) — เช็กชื่อ/รหัสสินค้า แล้วลองใหม่' };
+      if (!r) note('⚠️ ปักตะกร้าไม่สำเร็จอัตโนมัติ — อาจต้องเลือกสินค้าด้วยมือ');
     }
 
     // 5) โพสต์ (ถ้าเปิด autoSubmit และไม่ใช่ dry-run)
@@ -92,33 +94,76 @@
   }
 
   // ---------- ปักตะกร้าสินค้า ----------
-  async function tryTagProduct(keyword, dryRun, note, cfg) {
-    // หา section/ปุ่มที่เกี่ยวกับสินค้า จากข้อความบนปุ่ม (ไทย/อังกฤษ)
+  // job: { productKeyword, productId, dryRun }
+  // คืน true=ปักแล้ว, false=ทำไม่ได้(หาปุ่ม/ช่องไม่เจอ), 'skip-notfound'=ไม่เจอตัวที่ตรง (กันปักผิด)
+  async function tryTagProduct(job, note, cfg) {
+    const keyword = job.productKeyword || '';
+    const productId = (job.productId || '').trim();
+
     const addBtn = findByText(cfg.productTexts, ['button', 'div[role="button"]', 'span', 'a']);
     if (!addBtn) return false;
-    if (dryRun) {
-      note('(dry-run) เจอปุ่มเพิ่มสินค้า');
+    if (job.dryRun) {
+      note('(dry-run) เจอปุ่มเพิ่มสินค้า — จะค้นด้วย: ' + (productId ? 'ID ' + productId : keyword));
       return true;
     }
     addBtn.click();
     await delay(1200);
 
-    // ช่องค้นหาสินค้า
+    // ช่องค้นหาสินค้า → พิมพ์รหัส (แม่นสุด) หรือคำค้น
     const search = await waitFor(() => document.querySelector(cfg.searchSelector), 6000);
     if (!search) return false;
-    setInputValue(search, keyword);
-    await delay(2000);
+    setInputValue(search, productId || keyword);
+    await delay(2200);
 
-    // เลือกผลลัพธ์แรก
-    const first = findByText(cfg.addTexts, ['button', 'div[role="button"]']);
-    if (first) {
-      first.click();
-      await delay(800);
+    // เลือกแถวผลลัพธ์ที่ "ตรง" เท่านั้น — ไม่กดอันแรกมั่ว
+    const row = findProductRow(productId, keyword);
+    if (!row) {
+      // ปิด dialog แล้วรายงานว่าไม่เจอ (ปลอดภัยกว่าปักผิด)
+      note('ไม่เจอสินค้าที่ตรงกับ: ' + (productId ? 'ID ' + productId : keyword));
+      return 'skip-notfound';
     }
+    // กดปุ่ม เพิ่ม/เลือก ที่อยู่ในแถวนั้น (fallback: ปุ่มที่ใกล้ที่สุด)
+    const addInRow = buttonInside(row, cfg.addTexts) || nearestButton(row, cfg.addTexts);
+    if (!addInRow) return false;
+    addInRow.click();
+    await delay(800);
+
     const confirm = findByText(cfg.confirmTexts, ['button', 'div[role="button"]']);
     if (confirm) confirm.click();
-    note('ปักตะกร้าสินค้า: ' + keyword);
+    note('ปักตะกร้าสินค้า: ' + (productId ? 'ID ' + productId : keyword));
     return true;
+  }
+
+  // หาแถวสินค้าที่ตรง: ถ้ามี productId ต้องเจอ id นั้นใน text/attribute; ไม่งั้นใช้ชื่อตรง (case-insensitive)
+  function findProductRow(productId, keyword) {
+    const rows = document.querySelectorAll('li, tr, div[role="listitem"], div[role="option"], div[class*="item"], div[class*="product"]');
+    const kw = keyword.trim().toLowerCase();
+    let nameMatch = null;
+    for (const el of rows) {
+      const txt = (el.textContent || '').toLowerCase();
+      const html = el.outerHTML || '';
+      if (productId) {
+        if (txt.includes(productId.toLowerCase()) || html.includes(productId)) return el; // ID ตรง = ชนะทันที
+      }
+      if (!nameMatch && kw && txt.includes(kw) && txt.length < 400) nameMatch = el;
+    }
+    return productId ? null : nameMatch; // ถ้ากำหนด ID แต่ไม่เจอ = ไม่ปัก
+  }
+
+  function buttonInside(row, texts) {
+    for (const b of row.querySelectorAll('button, div[role="button"], a')) {
+      const t = (b.textContent || '').trim().toLowerCase();
+      if (texts.some((w) => t.includes(w.toLowerCase()))) return b;
+    }
+    return null;
+  }
+  function nearestButton(row, texts) {
+    let p = row;
+    for (let i = 0; i < 4 && p; i++, p = p.parentElement) {
+      const b = buttonInside(p, texts);
+      if (b) return b;
+    }
+    return null;
   }
 
   // ---------- กดปุ่มโพสต์ ----------
