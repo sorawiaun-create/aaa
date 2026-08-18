@@ -316,11 +316,12 @@
         visible: r.width > 0 && r.height > 0,
       };
     };
-    const grab = (sel, n = 10) => Array.from(document.querySelectorAll(sel)).slice(0, n).map(desc);
+    const grab = (sel, n = 12) => Array.from(document.querySelectorAll(sel)).slice(0, n).map(desc);
     return {
       fileInputs: grab('input[type="file"]'),
+      inputs: grab('input:not([type="file"])'), // ช่องค้นหาสินค้า/ตำแหน่ง = input
       editables: grab('[contenteditable]:not([contenteditable="false"]), textarea'),
-      buttons: grab('button, div[role="button"]', 20).filter((b) => b.text),
+      buttons: grab('button, div[role="button"]', 25).filter((b) => b.text),
     };
   }
 

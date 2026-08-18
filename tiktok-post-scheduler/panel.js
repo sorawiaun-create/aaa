@@ -214,13 +214,13 @@ $('selInspect').addEventListener('click', async () => {
   chrome.tabs.sendMessage(tab.id, { type: 'INSPECT' }, (r) => {
     if (chrome.runtime.lastError || !r?.ok) return flash('selInfo', 'ตรวจไม่ได้: ' + (chrome.runtime.lastError?.message || ''));
     const c = r.candidates;
-    const ed = c.editables
-      .map((e) => `• ${e.tag}${e.editable ? ' ce=' + e.editable : ''}${e.placeholder ? ' ph="' + e.placeholder + '"' : ''}${e.e2e ? ' e2e=' + e.e2e : ''}${e.visible ? '' : ' (ซ่อน)'}`)
-      .join('\n');
+    const fmtEl = (e) => `• ${e.tag}${e.editable ? ' ce=' + e.editable : ''}${e.placeholder ? ' ph="' + e.placeholder + '"' : ''}${e.e2e ? ' e2e=' + e.e2e : ''}${e.visible ? '' : ' (ซ่อน)'}`;
+    const inputs = (c.inputs || []).filter((e) => e.visible).map(fmtEl).join('\n');
+    const ed = c.editables.map(fmtEl).join('\n');
     const out =
-      `📄 file input: ${c.fileInputs.length}\n` +
-      `✏️ ช่องแก้ไขที่เจอ: ${c.editables.length}\n${ed || '(ไม่เจอเลย)'}\n\n` +
-      `🔘 ปุ่ม: ` + c.buttons.slice(0, 10).map((b) => b.text).join(' | ');
+      `🔎 ช่อง input ที่เห็น:\n${inputs || '(ไม่เจอ)'}\n\n` +
+      `✏️ ช่องแก้ไข: ${ed || '(ไม่เจอ)'}\n\n` +
+      `🔘 ปุ่ม: ` + c.buttons.slice(0, 14).map((b) => b.text).join(' | ');
     flash('selInfo', out);
     console.log('[tt-scheduler] INSPECT', c);
   });
