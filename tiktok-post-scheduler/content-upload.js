@@ -111,18 +111,28 @@
     if (!caption) return { ok: false, error: 'อัปโหลดแล้วแต่หาช่องแคปชั่นไม่เจอ (ลองกด 🔍 ตรวจหน้า TikTok ในการ์ด selector ตอนหน้าตัดต่อขึ้นแล้ว ส่งผลมาให้)' };
     note('เจอช่องแคปชั่นแล้ว');
 
-    // 3) ใส่แคปชั่น
-    if (job.caption) {
-      if (!job.dryRun) setEditableText(caption, job.caption);
-      note('ใส่แคปชั่นแล้ว');
+    // 3) ใส่แคปชั่น (ข้ามได้ด้วย doCaption=false เพื่อหาสาเหตุ)
+    if (job.caption && job.doCaption !== false) {
+      if (!job.dryRun) {
+        try {
+          setEditableText(caption, job.caption);
+          await delay(600); // ให้ editor นิ่งก่อนไปขั้นต่อไป
+          note('ใส่แคปชั่นแล้ว');
+        } catch (e) {
+          note('⚠️ ใส่แคปชั่นพลาด: ' + (e?.message || e));
+        }
+      } else note('(dry-run) ข้ามการพิมพ์แคปชั่น');
     }
 
-    // 4) ปักตะกร้า (best-effort) — บัญชีต้องมีสิทธิ์ Shop/Affiliate อยู่แล้ว
-    if (job.productKeyword || job.productId) {
-      const r = await tryTagProduct(job, note, cfg);
-      if (r === 'skip-notfound')
-        return { ok: false, error: 'ไม่เจอสินค้าที่ตรง (กันปักผิด) — เช็กชื่อ/รหัสสินค้า แล้วลองใหม่' };
-      if (!r) note('⚠️ ปักตะกร้าไม่สำเร็จอัตโนมัติ — อาจต้องเลือกสินค้าด้วยมือ');
+    // 4) ปักตะกร้า (ข้ามได้ด้วย doProduct=false เพื่อหาสาเหตุ)
+    if ((job.productKeyword || job.productId) && job.doProduct !== false && !job.dryRun) {
+      try {
+        const r = await tryTagProduct(job, note, cfg);
+        if (r === 'skip-notfound') note('⚠️ ไม่เจอสินค้าที่ตรง (กันปักผิด) — เช็กรหัส/ชื่อสินค้า');
+        else if (!r) note('⚠️ ปักตะกร้าไม่สำเร็จอัตโนมัติ — อาจต้องเลือกสินค้าด้วยมือ');
+      } catch (e) {
+        note('⚠️ ปักตะกร้าพลาด: ' + (e?.message || e));
+      }
     }
 
     // 5) โพสต์ (ถ้าเปิด autoSubmit และไม่ใช่ dry-run)
@@ -229,13 +239,31 @@
       setInputValue(el, text);
       return;
     }
-    // contenteditable (DraftJS ฯลฯ) — ใช้ execCommand เพื่อให้ event ครบ
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    document.execCommand('insertText', false, text);
+    // contenteditable (DraftJS ฯลฯ) — จำลอง "วาง" (paste) นุ่มกว่าและเข้ากันได้ดีกว่า
+    // เลือกข้อความเดิมทั้งหมดก่อน (ชื่อไฟล์ที่ TikTok เติม) เพื่อให้ paste แทนที่
+    try {
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch {}
+    // วิธีหลัก: ClipboardEvent paste (DraftJS จับ event นี้และแทรกข้อความเอง — ไม่ทำ state พัง)
+    let handled = false;
+    try {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+      el.dispatchEvent(ev);
+      handled = ev.defaultPrevented;
+    } catch {}
+    // สำรอง: beforeinput/execCommand ถ้า paste ไม่ถูกรับ
+    if (!handled) {
+      try {
+        el.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: text, bubbles: true, cancelable: true }));
+        document.execCommand('insertText', false, text);
+      } catch {}
+    }
   }
 
   function setInputValue(el, value) {

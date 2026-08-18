@@ -91,6 +91,7 @@ async function postOne(meta, settings) {
 
   const ai = await getStore('ai', {});
   const selectors = await getStore('selectors', {});
+  const steps = await getStore('steps', { caption: true, product: true });
   const ch = clip.channel ? `[${clip.channel}] ` : '';
 
   let tab;
@@ -124,6 +125,8 @@ async function postOne(meta, settings) {
         autoSubmit: settings.autoSubmit,
         dryRun: settings.dryRun,
         selectors,
+        doCaption: steps.caption !== false,
+        doProduct: steps.product !== false,
       },
     });
     const CHUNK = 6 * 1024 * 1024; // 6MB/ชิ้น (ต่ำกว่าลิมิต 64MB)

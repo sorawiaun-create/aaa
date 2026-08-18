@@ -188,7 +188,14 @@ async function loadSel() {
   $('selSearch').value = s.searchSelector || '';
   $('selProduct').value = (s.productTexts || []).join(', ');
   $('selPost').value = (s.postTexts || []).join(', ');
+  const st = await getS('steps', { caption: true, product: true });
+  $('stepCaption').checked = st.caption !== false;
+  $('stepProduct').checked = st.product !== false;
 }
+$('stepSave').addEventListener('click', async () => {
+  await setS('steps', { caption: $('stepCaption').checked, product: $('stepProduct').checked });
+  flash('selInfo', 'บันทึกขั้นตอนแล้ว');
+});
 $('selSave').addEventListener('click', async () => {
   const csv = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
   await setS('selectors', {

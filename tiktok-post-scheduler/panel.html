@@ -143,6 +143,12 @@
 
   <details class="card">
     <summary>🔧 ปรับ selector หน้า TikTok (ขั้นสูง)</summary>
+    <div class="switch"><div><b>พิมพ์แคปชั่นอัตโนมัติ</b><small>ปิดเพื่อทดสอบหาสาเหตุ</small></div>
+      <input type="checkbox" id="stepCaption" checked /></div>
+    <div class="switch"><div><b>ปักตะกร้าอัตโนมัติ</b><small>ปิดเพื่อทดสอบหาสาเหตุ</small></div>
+      <input type="checkbox" id="stepProduct" checked /></div>
+    <div class="foot"><button class="btn-ghost mini" id="stepSave">💾 บันทึกขั้นตอน</button></div>
+    <hr style="border-color:var(--line);margin:10px 0" />
     <div class="muted" style="font-size:11px;margin:6px 0">ปล่อยว่าง = ใช้ค่าเริ่มต้น ใส่เมื่ออัตโนมัติไม่ตรงหน้าจริง (ดู README)</div>
     <label>Selector ช่องแคปชั่น</label><input id="selCaption" placeholder="div[contenteditable='true'] ..." />
     <label>Selector ช่องค้นหาสินค้า</label><input id="selSearch" placeholder="input[type='search'] ..." />
