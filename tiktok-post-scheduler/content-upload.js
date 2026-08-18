@@ -21,15 +21,38 @@
     }
   });
 
+  // selector ค่าเริ่มต้น — ปรับทับได้จากการ์ด "ปรับ selector" ในแผง (job.selectors)
+  const DEFAULT_CFG = {
+    fileSelector: 'input[type="file"][accept*="video"], input[type="file"]',
+    captionSelector:
+      'div[contenteditable="true"], textarea[placeholder], [data-e2e="caption"] div[contenteditable="true"]',
+    searchSelector: 'input[placeholder*="ค้นหา"], input[placeholder*="Search"], input[type="search"]',
+    productTexts: ['เพิ่มลิงก์', 'เพิ่มสินค้า', 'สินค้า', 'Add link', 'Add product', 'Products', 'Showcase'],
+    addTexts: ['เพิ่ม', 'Add', 'เลือก', 'Select'],
+    confirmTexts: ['ยืนยัน', 'เสร็จ', 'Confirm', 'Done', 'ตกลง', 'OK'],
+    postTexts: ['โพสต์', 'เผยแพร่', 'Post', 'Publish'],
+  };
+  function mergeCfg(over) {
+    const o = over || {};
+    const arr = (k) => (Array.isArray(o[k]) && o[k].length ? o[k] : DEFAULT_CFG[k]);
+    return {
+      fileSelector: o.fileSelector || DEFAULT_CFG.fileSelector,
+      captionSelector: o.captionSelector || DEFAULT_CFG.captionSelector,
+      searchSelector: o.searchSelector || DEFAULT_CFG.searchSelector,
+      productTexts: arr('productTexts'),
+      addTexts: arr('addTexts'),
+      confirmTexts: arr('confirmTexts'),
+      postTexts: arr('postTexts'),
+    };
+  }
+
   async function runPost(job) {
     const log = [];
     const note = (m) => (log.push(m), console.log('[tt-scheduler]', m));
+    const cfg = mergeCfg(job.selectors);
 
     // 1) หา input ไฟล์วิดีโอ แล้วยัดไฟล์เข้าไป
-    const input = await waitFor(
-      () => document.querySelector('input[type="file"][accept*="video"], input[type="file"]'),
-      15000
-    );
+    const input = await waitFor(() => document.querySelector(cfg.fileSelector), 15000);
     if (!input) return { ok: false, error: 'หา input อัปโหลดไฟล์ไม่เจอ (หน้าอาจยังไม่โหลด/เปลี่ยนโครงสร้าง)' };
 
     const file = new File([job.bytes], job.name || 'clip.mp4', { type: job.mime || 'video/mp4' });
@@ -40,13 +63,7 @@
     note('ใส่ไฟล์วิดีโอแล้ว');
 
     // 2) รอ editor (ช่องแคปชั่น) ขึ้น
-    const caption = await waitFor(
-      () =>
-        document.querySelector(
-          'div[contenteditable="true"], textarea[placeholder], [data-e2e="caption"] div[contenteditable="true"]'
-        ),
-      60000
-    );
+    const caption = await waitFor(() => document.querySelector(cfg.captionSelector), 60000);
     if (!caption) return { ok: false, error: 'อัปโหลดแล้วแต่หาช่องแคปชั่นไม่เจอ (รอ editor นานเกินไป)' };
 
     // 3) ใส่แคปชั่น
@@ -57,13 +74,13 @@
 
     // 4) ปักตะกร้า (best-effort) — บัญชีต้องมีสิทธิ์ Shop/Affiliate อยู่แล้ว
     if (job.productKeyword) {
-      const tagged = await tryTagProduct(job.productKeyword, job.dryRun, note);
+      const tagged = await tryTagProduct(job.productKeyword, job.dryRun, note, cfg);
       if (!tagged) note('⚠️ ปักตะกร้าไม่สำเร็จอัตโนมัติ — อาจต้องเลือกสินค้าด้วยมือ');
     }
 
     // 5) โพสต์ (ถ้าเปิด autoSubmit และไม่ใช่ dry-run)
     if (job.autoSubmit && !job.dryRun) {
-      const posted = await tryClickPost(note);
+      const posted = await tryClickPost(note, cfg);
       if (!posted) return { ok: false, error: 'เติมข้อมูลครบแต่กดปุ่มโพสต์ไม่สำเร็จ' };
       return { ok: true, note: 'โพสต์แล้ว | ' + log.join(' · ') };
     }
@@ -72,12 +89,9 @@
   }
 
   // ---------- ปักตะกร้าสินค้า ----------
-  async function tryTagProduct(keyword, dryRun, note) {
+  async function tryTagProduct(keyword, dryRun, note, cfg) {
     // หา section/ปุ่มที่เกี่ยวกับสินค้า จากข้อความบนปุ่ม (ไทย/อังกฤษ)
-    const addBtn = findByText(
-      ['เพิ่มลิงก์', 'เพิ่มสินค้า', 'สินค้า', 'Add link', 'Add product', 'Products', 'Showcase'],
-      ['button', 'div[role="button"]', 'span', 'a']
-    );
+    const addBtn = findByText(cfg.productTexts, ['button', 'div[role="button"]', 'span', 'a']);
     if (!addBtn) return false;
     if (dryRun) {
       note('(dry-run) เจอปุ่มเพิ่มสินค้า');
@@ -87,29 +101,26 @@
     await delay(1200);
 
     // ช่องค้นหาสินค้า
-    const search = await waitFor(
-      () => document.querySelector('input[placeholder*="ค้นหา"], input[placeholder*="Search"], input[type="search"]'),
-      6000
-    );
+    const search = await waitFor(() => document.querySelector(cfg.searchSelector), 6000);
     if (!search) return false;
     setInputValue(search, keyword);
     await delay(2000);
 
     // เลือกผลลัพธ์แรก
-    const first = findByText(['เพิ่ม', 'Add', 'เลือก', 'Select'], ['button', 'div[role="button"]']);
+    const first = findByText(cfg.addTexts, ['button', 'div[role="button"]']);
     if (first) {
       first.click();
       await delay(800);
     }
-    const confirm = findByText(['ยืนยัน', 'เสร็จ', 'Confirm', 'Done', 'ตกลง', 'OK'], ['button', 'div[role="button"]']);
+    const confirm = findByText(cfg.confirmTexts, ['button', 'div[role="button"]']);
     if (confirm) confirm.click();
     note('ปักตะกร้าสินค้า: ' + keyword);
     return true;
   }
 
   // ---------- กดปุ่มโพสต์ ----------
-  async function tryClickPost(note) {
-    const btn = findByText(['โพสต์', 'เผยแพร่', 'Post', 'Publish'], ['button', 'div[role="button"]']);
+  async function tryClickPost(note, cfg) {
+    const btn = findByText(cfg.postTexts, ['button', 'div[role="button"]']);
     if (!btn) return false;
     // ข้ามปุ่มที่ยัง disabled
     if (btn.getAttribute('aria-disabled') === 'true' || btn.disabled) {

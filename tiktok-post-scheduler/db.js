@@ -59,6 +59,7 @@ export async function addClip(clip) {
     caption: clip.caption || '',
     hashtags: clip.hashtags || [],
     productKeyword: clip.productKeyword || '',
+    channel: clip.channel || '',
     scheduledAt: clip.scheduledAt ?? null,
     status: clip.status || 'queued',
     attempts: 0,

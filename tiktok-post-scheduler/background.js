@@ -3,6 +3,8 @@
 // ถ้ามี → เปิด/หาแท็บหน้าอัปโหลด TikTok แล้วสั่ง content script ให้โพสต์ทีละตัว
 
 import { dueClips, getClip, updateClip } from './db.js';
+import { generateCaption } from './ai.js';
+import { sendTelegram } from './telegram.js';
 
 const ALARM = 'tt-scheduler-tick';
 const UPLOAD_URL = 'https://www.tiktok.com/tiktokstudio/upload';
@@ -45,6 +47,11 @@ async function getSettings() {
   return { ...DEFAULTS, ...(s.settings || {}) };
 }
 
+async function getStore(key, def = {}) {
+  const s = await chrome.storage.local.get(key);
+  return { ...def, ...(s[key] || {}) };
+}
+
 async function tick(force = false) {
   if (busy) return;
   const settings = await getSettings();
@@ -74,8 +81,24 @@ async function postOne(meta, settings) {
   }
   await updateClip(meta.id, { status: 'posting', attempts: (clip.attempts || 0) + 1 });
 
+  const ai = await getStore('ai', {});
+  const selectors = await getStore('selectors', {});
+  const ch = clip.channel ? `[${clip.channel}] ` : '';
+
   let tab;
   try {
+    // ถ้ายังไม่มีแคปชั่น และเปิด AI ไว้ → ให้ ChatGPT คิดตอนจะโพสต์
+    if (!clip.caption && ai.apiKey && ai.enabled) {
+      try {
+        const g = await generateCaption({ ...ai, product: clip.productKeyword, filename: clip.name });
+        clip.caption = g.caption;
+        if ((!clip.hashtags || clip.hashtags.length === 0) && g.hashtags.length) clip.hashtags = g.hashtags;
+        await updateClip(meta.id, { caption: clip.caption, hashtags: clip.hashtags });
+      } catch (e) {
+        console.warn('AI caption fallback failed', e);
+      }
+    }
+
     tab = await openUploadTab();
     const bytes = await blobToArrayBuffer(clip.blob);
     const res = await sendToTab(tab.id, {
@@ -88,24 +111,39 @@ async function postOne(meta, settings) {
         productKeyword: clip.productKeyword,
         autoSubmit: settings.autoSubmit,
         dryRun: settings.dryRun,
+        selectors,
       },
     });
 
     if (res?.ok) {
+      const label = settings.dryRun ? '(dry-run) ' + (res.note || '') : settings.autoSubmit ? 'โพสต์แล้ว' : 'เติมข้อมูลครบ รอกดโพสต์';
       await updateClip(meta.id, {
         status: settings.dryRun ? 'queued' : settings.autoSubmit ? 'posted' : 'skipped',
         postedAt: settings.autoSubmit && !settings.dryRun ? Date.now() : null,
         lastError: settings.dryRun ? '(dry-run) ' + (res.note || '') : res.note || '',
       });
-      notify('โพสต์คลิป', `${clip.name}: ${res.note || (settings.autoSubmit ? 'โพสต์แล้ว' : 'เติมข้อมูลครบ รอกดโพสต์')}`);
+      notify('โพสต์คลิป', `${ch}${clip.name}: ${label}`);
+      if (!settings.dryRun) await tg(`✅ <b>${ch}${esc(clip.name)}</b>\n${esc(label)}`);
     } else {
       await updateClip(meta.id, { status: 'failed', lastError: res?.error || 'ไม่ทราบสาเหตุ' });
-      notify('โพสต์ไม่สำเร็จ', `${clip.name}: ${res?.error || ''}`);
+      notify('โพสต์ไม่สำเร็จ', `${ch}${clip.name}: ${res?.error || ''}`);
+      await tg(`❌ <b>${ch}${esc(clip.name)}</b>\nโพสต์ไม่สำเร็จ: ${esc(res?.error || '')}`);
     }
   } catch (e) {
     await updateClip(meta.id, { status: 'failed', lastError: String(e) });
-    notify('โพสต์ผิดพลาด', `${clip.name}: ${e}`);
+    notify('โพสต์ผิดพลาด', `${ch}${clip.name}: ${e}`);
+    await tg(`⚠️ <b>${ch}${esc(clip.name)}</b>\nผิดพลาด: ${esc(String(e))}`);
   }
+}
+
+async function tg(text) {
+  const t = await getStore('telegram', {});
+  if (!t.enabled || !t.token || !t.chatId) return;
+  await sendTelegram({ token: t.token, chatId: t.chatId, text }).catch(() => {});
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 }
 
 function composeCaption(clip) {

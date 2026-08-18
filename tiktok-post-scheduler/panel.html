@@ -14,10 +14,12 @@
   .wrap { padding:12px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:12px; }
   .card h2 { font-size:12px; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  details.card > summary { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; cursor:pointer; list-style:none; }
+  details.card > summary::-webkit-details-marker { display:none; }
   label { display:block; font-size:11px; color:var(--muted); margin:8px 0 3px; }
   input, textarea, select { width:100%; background:#0a1120; color:var(--text); border:1px solid var(--line);
           border-radius:7px; padding:7px 8px; font-family:inherit; font-size:12px; }
-  textarea { resize:vertical; min-height:48px; }
+  textarea { resize:vertical; min-height:44px; }
   .row { display:flex; gap:8px; }
   .row > * { flex:1; }
   button { cursor:pointer; border:none; border-radius:7px; padding:8px 10px; font-weight:600; font-size:12px; }
@@ -25,12 +27,13 @@
   .btn-ghost { background:var(--chip); color:var(--text); }
   .btn-warn { background:var(--amber); color:#1b1300; }
   .btn-danger { background:transparent; color:var(--red); border:1px solid var(--red); }
-  .switch { display:flex; align-items:center; justify-content:space-between; padding:6px 0; }
+  .switch { display:flex; align-items:center; justify-content:space-between; padding:6px 0; gap:8px; }
   .switch small { color:var(--muted); display:block; font-weight:400; }
   .list { max-height:320px; overflow:auto; }
   .clip { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:6px; }
   .clip .name { font-weight:600; font-size:12px; word-break:break-all; }
   .clip .meta { color:var(--muted); font-size:11px; margin-top:2px; }
+  .clip .cap { font-size:11px; margin-top:4px; color:#cbd5e1; white-space:pre-wrap; }
   .tag { display:inline-block; font-size:10px; padding:1px 6px; border-radius:20px; }
   .st-queued { background:#1e293b; color:#93c5fd; }
   .st-posting { background:#3a2e00; color:#fcd34d; }
@@ -39,37 +42,60 @@
   .st-skipped { background:#2a2340; color:#c4b5fd; }
   .warnbox { background:#3a2e00; border:1px solid var(--amber); color:#fde68a; border-radius:8px; padding:8px; font-size:11px; margin-bottom:12px; }
   .muted { color:var(--muted); }
-  .foot { display:flex; gap:8px; margin-top:6px; }
+  .foot { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  .mini { padding:3px 8px; font-size:11px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>TikTok Clip Scheduler</h1>
-  <div class="sub">ตั้งเวลาทยอยโพสต์คลิปช่องตัวเอง + ปักตะกร้า</div>
+  <div class="sub">ตั้งเวลาทยอยโพสต์คลิปช่องตัวเอง + ปักตะกร้า + AI คิดแคปชั่น</div>
 
   <div class="warnbox">
     ⚠️ ทำงานนอก API ทางการของ TikTok มีความเสี่ยง ToS/บัญชี — ใช้กับช่องตัวเอง ทยอยลงในอัตราธรรมชาติ
     และ <b>ทดสอบด้วย dry-run + คลิปเดียวก่อน</b> เสมอ
   </div>
 
+  <details class="card">
+    <summary>🤖 AI คิดแคปชั่น/แฮชแท็ก (ChatGPT / OpenAI)</summary>
+    <div class="switch"><div><b>เปิดใช้ AI</b><small>ให้ ChatGPT คิดแคปชั่น+แฮชแท็กให้อัตโนมัติ</small></div>
+      <input type="checkbox" id="aiEnabled" /></div>
+    <label>OpenAI API Key (เก็บในเครื่องเท่านั้น)</label>
+    <input type="password" id="aiKey" placeholder="sk-..." />
+    <div class="row">
+      <div><label>โมเดล</label><input id="aiModel" value="gpt-4o-mini" /></div>
+      <div><label>จำนวนแฮชแท็กสูงสุด</label><input type="number" id="aiMaxTags" value="5" min="0" max="15" /></div>
+    </div>
+    <label>โทน/สไตล์</label>
+    <input id="aiTone" value="สนุก เป็นกันเอง กระตุ้นให้กดตะกร้า" />
+    <label>คำสั่งเพิ่มเติม (ไม่บังคับ)</label>
+    <textarea id="aiExtra" placeholder="เช่น เน้นโปรลดราคา, ใส่ราคา 199 บาท, กลุ่มเป้าหมายวัยรุ่น"></textarea>
+    <div class="foot"><button class="btn-ghost mini" id="aiSave">💾 บันทึกค่า AI</button></div>
+  </details>
+
   <div class="card">
     <h2>1 · เพิ่มคลิปเข้าคิว</h2>
     <label>เลือกไฟล์วิดีโอ (เลือกหลายไฟล์ได้)</label>
     <input type="file" id="files" accept="video/*" multiple />
-    <label>แคปชั่น (ใช้ร่วมกันทุกคลิปที่เพิ่มรอบนี้)</label>
-    <textarea id="caption" placeholder="เช่น รองเท้าวิ่งรุ่นใหม่ เบา ใส่สบาย 👟"></textarea>
     <div class="row">
-      <div><label>แฮชแท็ก (คั่นด้วยเว้นวรรค)</label><input id="hashtags" placeholder="#รองเท้า #ลดราคา" /></div>
+      <div><label>ช่อง (label ไว้จัดกลุ่ม)</label><input id="channel" placeholder="เช่น ช่องหลัก / ช่องรอง" /></div>
       <div><label>คำค้นสินค้าที่จะปักตะกร้า</label><input id="product" placeholder="ชื่อ/คำค้นสินค้า" /></div>
     </div>
+    <div class="switch"><div><b>ให้ AI คิดแคปชั่นให้แต่ละคลิป</b><small>คลิปละไม่ซ้ำ (ต้องเปิด AI ด้านบน)</small></div>
+      <input type="checkbox" id="useAi" /></div>
+    <label>แคปชั่น (ถ้าไม่ใช้ AI — ใช้ร่วมทุกคลิปรอบนี้)</label>
+    <textarea id="caption" placeholder="เช่น รองเท้าวิ่งรุ่นใหม่ เบา ใส่สบาย 👟"></textarea>
+    <label>แฮชแท็ก (คั่นด้วยเว้นวรรค)</label>
+    <input id="hashtags" placeholder="#รองเท้า #ลดราคา" />
     <div class="foot"><button class="btn" id="addBtn">➕ เพิ่มเข้าคิว</button></div>
+    <div id="addInfo" class="muted" style="margin-top:6px;font-size:11px;"></div>
   </div>
 
   <div class="card">
     <h2>2 · กระจายเวลาโพสต์อัตโนมัติ</h2>
     <div class="row">
       <div><label>เริ่มโพสต์ตั้งแต่</label><input type="datetime-local" id="startAt" /></div>
-      <div><label>โพสต์/วัน</label><input type="number" id="perDay" value="12" min="1" /></div>
+      <div><label>โพสต์/วัน (ต่อช่อง)</label><input type="number" id="perDay" value="12" min="1" /></div>
     </div>
     <div class="row">
       <div><label>ชั่วโมงเริ่ม</label><input type="number" id="dayStart" value="9" min="0" max="23" /></div>
@@ -79,17 +105,15 @@
       <div><label>เว้นขั้นต่ำ (นาที)</label><input type="number" id="minGap" value="25" min="1" /></div>
       <div><label>สุ่มบวก (นาที)</label><input type="number" id="jitter" value="7" min="0" /></div>
     </div>
-    <div class="foot">
-      <button class="btn-ghost" id="planBtn">📅 จัดตารางให้คิวที่ยังไม่ตั้งเวลา</button>
-    </div>
+    <div class="foot"><button class="btn-ghost" id="planBtn">📅 จัดตารางให้คิวที่ยังไม่ตั้งเวลา</button></div>
     <div id="planInfo" class="muted" style="margin-top:6px;font-size:11px;"></div>
   </div>
 
   <div class="card">
     <h2>3 · โหมดการทำงาน</h2>
-    <div class="switch"><div><b>เปิดตัวตั้งเวลา</b><small>ให้ระบบทยอยโพสต์ตามตารางเอง</small></div>
+    <div class="switch"><div><b>เปิดตัวตั้งเวลา</b><small>ให้ระบบทยอยโพสต์เองตามตาราง</small></div>
       <input type="checkbox" id="enabled" /></div>
-    <div class="switch"><div><b>โพสต์อัตโนมัติ (กดปุ่มโพสต์ให้)</b><small>ปิด = เติมข้อมูลครบแล้วหยุดรอคุณกดเอง (ปลอดภัยกว่า)</small></div>
+    <div class="switch"><div><b>โพสต์อัตโนมัติ (กดปุ่มโพสต์ให้)</b><small>ปิด = เติมข้อมูลครบแล้วรอคุณกดเอง (ปลอดภัยกว่า)</small></div>
       <input type="checkbox" id="autoSubmit" /></div>
     <div class="switch"><div><b>Dry-run (ลองระบบ ไม่โพสต์จริง)</b><small>เดินทุกขั้นแต่ไม่พิมพ์/ไม่กดจริง</small></div>
       <input type="checkbox" id="dryRun" checked /></div>
@@ -99,6 +123,35 @@
     </div>
     <div id="state" class="muted" style="margin-top:6px;font-size:11px;"></div>
   </div>
+
+  <details class="card">
+    <summary>📣 แจ้งเตือน Telegram</summary>
+    <div class="switch"><div><b>เปิดแจ้งเตือน</b><small>ส่งเมื่อโพสต์เสร็จ/ล้มเหลว</small></div>
+      <input type="checkbox" id="tgEnabled" /></div>
+    <label>Bot Token (@BotFather)</label>
+    <input type="password" id="tgToken" placeholder="123456:ABC..." />
+    <label>Chat ID (@userinfobot)</label>
+    <input id="tgChat" placeholder="เช่น 123456789" />
+    <div class="foot">
+      <button class="btn-ghost mini" id="tgSave">💾 บันทึก</button>
+      <button class="btn-ghost mini" id="tgTest">ทดสอบส่ง</button>
+    </div>
+    <div id="tgInfo" class="muted" style="margin-top:6px;font-size:11px;"></div>
+  </details>
+
+  <details class="card">
+    <summary>🔧 ปรับ selector หน้า TikTok (ขั้นสูง)</summary>
+    <div class="muted" style="font-size:11px;margin:6px 0">ปล่อยว่าง = ใช้ค่าเริ่มต้น ใส่เมื่ออัตโนมัติไม่ตรงหน้าจริง (ดู README)</div>
+    <label>Selector ช่องแคปชั่น</label><input id="selCaption" placeholder="div[contenteditable='true'] ..." />
+    <label>Selector ช่องค้นหาสินค้า</label><input id="selSearch" placeholder="input[type='search'] ..." />
+    <label>ข้อความปุ่ม "เพิ่มสินค้า" (คั่น ,)</label><input id="selProduct" placeholder="เพิ่มสินค้า, Add product" />
+    <label>ข้อความปุ่ม "โพสต์" (คั่น ,)</label><input id="selPost" placeholder="โพสต์, Post" />
+    <div class="foot">
+      <button class="btn-ghost mini" id="selSave">💾 บันทึก</button>
+      <button class="btn-ghost mini" id="selInspect">🔍 ตรวจหน้า TikTok</button>
+    </div>
+    <div id="selInfo" class="muted" style="margin-top:6px;font-size:11px;white-space:pre-wrap;"></div>
+  </details>
 
   <div class="card">
     <h2>คิวคลิป (<span id="count">0</span>)</h2>
