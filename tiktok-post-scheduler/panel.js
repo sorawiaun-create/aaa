@@ -207,8 +207,15 @@ $('selInspect').addEventListener('click', async () => {
   chrome.tabs.sendMessage(tab.id, { type: 'INSPECT' }, (r) => {
     if (chrome.runtime.lastError || !r?.ok) return flash('selInfo', 'ตรวจไม่ได้: ' + (chrome.runtime.lastError?.message || ''));
     const c = r.candidates;
-    flash('selInfo', `ไฟล์อินพุต: ${c.fileInputs.length}\nช่องแก้ไข: ${c.editables.length}\nปุ่ม (ตัวอย่าง): ` +
-      c.buttons.slice(0, 6).map((b) => b.text).filter(Boolean).join(' | '));
+    const ed = c.editables
+      .map((e) => `• ${e.tag}${e.editable ? ' ce=' + e.editable : ''}${e.placeholder ? ' ph="' + e.placeholder + '"' : ''}${e.e2e ? ' e2e=' + e.e2e : ''}${e.visible ? '' : ' (ซ่อน)'}`)
+      .join('\n');
+    const out =
+      `📄 file input: ${c.fileInputs.length}\n` +
+      `✏️ ช่องแก้ไขที่เจอ: ${c.editables.length}\n${ed || '(ไม่เจอเลย)'}\n\n` +
+      `🔘 ปุ่ม: ` + c.buttons.slice(0, 10).map((b) => b.text).join(' | ');
+    flash('selInfo', out);
+    console.log('[tt-scheduler] INSPECT', c);
   });
 });
 

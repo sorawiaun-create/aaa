@@ -28,7 +28,7 @@
   const DEFAULT_CFG = {
     fileSelector: 'input[type="file"][accept*="video"], input[type="file"]',
     captionSelector:
-      'div[contenteditable="true"], textarea[placeholder], [data-e2e="caption"] div[contenteditable="true"]',
+      'div[contenteditable="true"], div[contenteditable="plaintext-only"], [contenteditable]:not([contenteditable="false"]), .public-DraftEditor-content, .DraftEditor-editorContainer [contenteditable], [data-e2e*="caption"] [contenteditable], textarea',
     searchSelector: 'input[placeholder*="ค้นหา"], input[placeholder*="Search"], input[type="search"]',
     productTexts: ['เพิ่มลิงก์', 'เพิ่มสินค้า', 'สินค้า', 'Add link', 'Add product', 'Products', 'Showcase'],
     addTexts: ['เพิ่ม', 'Add', 'เลือก', 'Select'],
@@ -58,16 +58,30 @@
     const input = await waitFor(() => document.querySelector(cfg.fileSelector), 15000);
     if (!input) return { ok: false, error: 'หา input อัปโหลดไฟล์ไม่เจอ (หน้าอาจยังไม่โหลด/เปลี่ยนโครงสร้าง)' };
 
-    const file = new File([job.bytes], job.name || 'clip.mp4', { type: job.mime || 'video/mp4' });
+    const bytes = b64ToUint8(job.bytesB64 || '');
+    if (!bytes.length) return { ok: false, error: 'ไฟล์วิดีโอว่าง (ส่งข้อมูลไม่ถึง) — ลองใหม่' };
+    const file = new File([bytes], job.name || 'clip.mp4', { type: job.mime || 'video/mp4' });
+    note(`เตรียมไฟล์ ${(bytes.length / 1048576).toFixed(1)}MB`);
+
+    // วิธีที่ 1: ใส่เข้า input โดยตรง + ยิง change
     const dt = new DataTransfer();
     dt.items.add(file);
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    note('ใส่ไฟล์วิดีโอแล้ว');
 
-    // 2) รอ editor (ช่องแคปชั่น) ขึ้น
-    const caption = await waitFor(() => document.querySelector(cfg.captionSelector), 60000);
-    if (!caption) return { ok: false, error: 'อัปโหลดแล้วแต่หาช่องแคปชั่นไม่เจอ (รอ editor นานเกินไป)' };
+    // วิธีที่ 2 (สำรอง): จำลอง drag & drop ลง drop zone เผื่อ TikTok ฟัง event drop
+    const dropZone = input.closest('div') || input.parentElement || document.body;
+    const dt2 = new DataTransfer();
+    dt2.items.add(file);
+    for (const type of ['dragenter', 'dragover', 'drop']) {
+      dropZone.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt2 }));
+    }
+    note('ใส่ไฟล์วิดีโอแล้ว (input + drop)');
+
+    // 2) รอ editor (ช่องแคปชั่น) ขึ้น — เลือกอันที่ "มองเห็นได้" ตัวแรก
+    const caption = await waitFor(() => pickVisible(cfg.captionSelector), 90000);
+    if (!caption) return { ok: false, error: 'อัปโหลดแล้วแต่หาช่องแคปชั่นไม่เจอ (ลองกด 🔍 ตรวจหน้า TikTok ในการ์ด selector ตอนหน้าตัดต่อขึ้นแล้ว ส่งผลมาให้)' };
+    note('เจอช่องแคปชั่นแล้ว');
 
     // 3) ใส่แคปชั่น
     if (job.caption) {
@@ -204,6 +218,22 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  function b64ToUint8(b64) {
+    if (!b64) return new Uint8Array(0);
+    const bin = atob(b64);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  function pickVisible(selector) {
+    for (const el of document.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return el; // มองเห็นได้จริง
+    }
+    return null;
+  }
+
   function findByText(texts, selectors) {
     const wants = texts.map((t) => t.toLowerCase());
     for (const sel of selectors) {
@@ -218,14 +248,23 @@
 
   function inspectCandidates() {
     // ไว้ debug: คืน element ที่น่าจะเกี่ยวข้อง เพื่อช่วยปรับ selector
-    const grab = (sel) =>
-      Array.from(document.querySelectorAll(sel))
-        .slice(0, 8)
-        .map((e) => ({ tag: e.tagName, text: (e.textContent || '').trim().slice(0, 30), cls: e.className?.toString?.().slice(0, 40) }));
+    const desc = (e) => {
+      const r = e.getBoundingClientRect();
+      return {
+        tag: e.tagName.toLowerCase(),
+        editable: e.getAttribute('contenteditable') || '',
+        placeholder: e.getAttribute('placeholder') || '',
+        e2e: e.getAttribute('data-e2e') || '',
+        cls: (e.className?.toString?.() || '').slice(0, 60),
+        text: (e.textContent || '').trim().slice(0, 25),
+        visible: r.width > 0 && r.height > 0,
+      };
+    };
+    const grab = (sel, n = 10) => Array.from(document.querySelectorAll(sel)).slice(0, n).map(desc);
     return {
       fileInputs: grab('input[type="file"]'),
-      editables: grab('div[contenteditable="true"], textarea'),
-      buttons: grab('button, div[role="button"]'),
+      editables: grab('[contenteditable]:not([contenteditable="false"]), textarea'),
+      buttons: grab('button, div[role="button"]', 20).filter((b) => b.text),
     };
   }
 

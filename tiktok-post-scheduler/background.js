@@ -108,13 +108,14 @@ async function postOne(meta, settings) {
     }
 
     tab = await openUploadTab();
-    const bytes = await blobToArrayBuffer(clip.blob);
+    // ⚠️ chrome messaging ทำให้ ArrayBuffer/Blob หาย ต้องส่งเป็น base64 string
+    const bytesB64 = abToBase64(await clip.blob.arrayBuffer());
     const res = await sendToTab(tab.id, {
       type: 'POST_CLIP',
       job: {
         name: clip.name,
         mime: clip.mime,
-        bytes,
+        bytesB64,
         caption: composeCaption(clip),
         productKeyword: clip.productKeyword,
         productId: clip.productId,
@@ -198,8 +199,15 @@ function sendToTab(tabId, msg) {
   });
 }
 
-function blobToArrayBuffer(blob) {
-  return blob.arrayBuffer();
+// ArrayBuffer → base64 (แบบ chunk กัน call stack ล้นกับไฟล์ใหญ่)
+function abToBase64(ab) {
+  const bytes = new Uint8Array(ab);
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
 }
 
 function notify(title, message) {
