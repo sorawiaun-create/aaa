@@ -11,10 +11,28 @@
   if (window.__ttSchedulerCleanup) {
     try { window.__ttSchedulerCleanup(); } catch {}
   }
+  // รับไฟล์เป็นชิ้นๆ (กันลิมิต 64MB ต่อข้อความของ Chrome)
+  let rxJob = null;
+  let rxChunks = [];
   const listener = (msg, _sender, sendResponse) => {
-    console.log('[tt-scheduler] ได้รับคำสั่ง:', msg?.type);
-    if (msg?.type === 'POST_CLIP') {
-      runPost(msg.job)
+    if (msg?.type !== 'UPLOAD_CHUNK') console.log('[tt-scheduler] ได้รับคำสั่ง:', msg?.type);
+    if (msg?.type === 'UPLOAD_BEGIN') {
+      rxJob = msg.job;
+      rxChunks = [];
+      sendResponse({ ok: true });
+      return true;
+    }
+    if (msg?.type === 'UPLOAD_CHUNK') {
+      rxChunks.push(msg.data);
+      sendResponse({ ok: true });
+      return true;
+    }
+    if (msg?.type === 'UPLOAD_RUN') {
+      const job = { ...(rxJob || {}), bytesB64: rxChunks.join('') };
+      rxChunks = [];
+      rxJob = null;
+      console.log('[tt-scheduler] ประกอบไฟล์ครบ เริ่มโพสต์');
+      runPost(job)
         .then((r) => sendResponse(r))
         .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true; // async

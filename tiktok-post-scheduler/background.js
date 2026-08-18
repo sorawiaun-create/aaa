@@ -109,14 +109,15 @@ async function postOne(meta, settings) {
 
     tab = await openUploadTab();
     await ensureInjected(tab.id); // ฉีดสคริปต์เวอร์ชันล่าสุดเข้าแท็บ (ไม่ต้อง F5)
-    // ⚠️ chrome messaging ทำให้ ArrayBuffer/Blob หาย ต้องส่งเป็น base64 string
+
+    // ⚠️ chrome messaging ทำให้ ArrayBuffer หาย + จำกัด 64MB/ข้อความ
+    // → ส่งเป็น base64 แบ่งเป็นชิ้นๆ แล้วประกอบกลับในหน้า TikTok
     const bytesB64 = abToBase64(await clip.blob.arrayBuffer());
-    const res = await sendToTab(tab.id, {
-      type: 'POST_CLIP',
+    await sendToTab(tab.id, {
+      type: 'UPLOAD_BEGIN',
       job: {
         name: clip.name,
         mime: clip.mime,
-        bytesB64,
         caption: composeCaption(clip),
         productKeyword: clip.productKeyword,
         productId: clip.productId,
@@ -125,6 +126,11 @@ async function postOne(meta, settings) {
         selectors,
       },
     });
+    const CHUNK = 6 * 1024 * 1024; // 6MB/ชิ้น (ต่ำกว่าลิมิต 64MB)
+    for (let i = 0; i < bytesB64.length; i += CHUNK) {
+      await sendToTab(tab.id, { type: 'UPLOAD_CHUNK', data: bytesB64.slice(i, i + CHUNK) });
+    }
+    const res = await sendToTab(tab.id, { type: 'UPLOAD_RUN' });
 
     if (res?.ok) {
       const label = settings.dryRun ? '(dry-run) ' + (res.note || '') : settings.autoSubmit ? 'โพสต์แล้ว' : 'เติมข้อมูลครบ รอกดโพสต์';
