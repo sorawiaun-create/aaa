@@ -8,7 +8,10 @@
   if (window.__ttSchedulerLoaded) return;
   window.__ttSchedulerLoaded = true;
 
+  console.log('%c[tt-scheduler] content script พร้อมแล้ว', 'color:#22c55e;font-weight:bold', 'ที่หน้า', location.pathname);
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    console.log('[tt-scheduler] ได้รับคำสั่ง:', msg?.type);
     if (msg?.type === 'POST_CLIP') {
       runPost(msg.job)
         .then((r) => sendResponse(r))
