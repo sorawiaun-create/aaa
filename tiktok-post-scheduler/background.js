@@ -2,7 +2,7 @@
 // ทำงานเป็น service worker: ตื่นทุก 1 นาทีด้วย chrome.alarms เช็กว่ามีคลิปถึงกำหนดไหม
 // ถ้ามี → เปิด/หาแท็บหน้าอัปโหลด TikTok แล้วสั่ง content script ให้โพสต์ทีละตัว
 
-import { dueClips, queuedClips, getClip, updateClip } from './db.js';
+import { dueClips, nextRunnable, getClip, updateClip } from './db.js';
 import { generateCaption } from './ai.js';
 import { sendTelegram } from './telegram.js';
 
@@ -61,13 +61,13 @@ async function tick(force = false) {
   if (!force && now - lastPostAt < settings.minGapMin * 60_000) return { ran: false, reason: 'ยังไม่ถึงเวลาเว้นระยะ' };
 
   let due = await dueClips(now);
-  // กด "ลองโพสต์เดี๋ยวนี้" (force): หยิบคลิปในคิวตัวถัดไปเลย ไม่ต้องรอถึงเวลา
+  // กด "ลองโพสต์เดี๋ยวนี้" (force): หยิบคลิปตัวถัดไปที่ยังลองได้ (รวมที่ล้มเหลว = retry)
   if (force && due.length === 0) {
-    const q = await queuedClips();
+    const q = await nextRunnable();
     if (q.length) due = [q[0]];
   }
   if (due.length === 0) {
-    return { ran: false, reason: 'ไม่มีคลิปพร้อมโพสต์ (ยังไม่ได้เพิ่มคลิป หรือโพสต์/ข้ามไปหมดแล้ว)' };
+    return { ran: false, reason: 'ไม่มีคลิปพร้อมโพสต์ (คิวว่าง หรือโพสต์ไปหมดแล้ว — ลองเพิ่มคลิปใหม่)' };
   }
 
   busy = true;

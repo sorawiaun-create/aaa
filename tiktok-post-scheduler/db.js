@@ -115,6 +115,14 @@ export async function queuedClips() {
     .sort((a, b) => (a.scheduledAt ?? a.createdAt ?? 0) - (b.scheduledAt ?? b.createdAt ?? 0));
 }
 
+/** คลิปที่ยัง "ลองได้" (รอคิว/ล้มเหลว/รอกดโพสต์) — ใช้ตอนกดลองโพสต์เอง (retry ได้) */
+export async function nextRunnable() {
+  const all = await tx('readonly', (s) => promisify(s.getAll()));
+  return all
+    .filter((c) => c.status !== 'posted' && c.status !== 'posting')
+    .sort((a, b) => (a.scheduledAt ?? a.createdAt ?? 0) - (b.scheduledAt ?? b.createdAt ?? 0));
+}
+
 export async function clearAll() {
   await tx('readwrite', (s) => s.clear());
 }
