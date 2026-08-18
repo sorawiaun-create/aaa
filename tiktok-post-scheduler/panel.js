@@ -233,6 +233,21 @@ async function regenerate(id) {
   await render();
 }
 
+async function editProduct(id) {
+  const clip = await getClip(id);
+  if (!clip) return;
+  const pid = prompt('รหัสสินค้า (Product ID) — เว้นว่างถ้าจะใช้ชื่อแทน', clip.productId || '');
+  if (pid === null) return; // กด Cancel
+  let patch = { productId: pid.trim() };
+  if (!pid.trim()) {
+    const kw = prompt('ชื่อสินค้า (ต้องตรง เพื่อกันปักผิด)', clip.productKeyword || '');
+    if (kw === null) return;
+    patch.productKeyword = kw.trim();
+  }
+  await updateClip(id, patch);
+  await render();
+}
+
 async function render() {
   const all = await listClipsMeta();
   $('count').textContent = all.length;
@@ -259,9 +274,10 @@ async function render() {
       ${c.caption || tags ? `<div class="cap">${esc(c.caption)}${tags ? '\n' + esc(tags) : ''}</div>` : ''}`;
     const foot = document.createElement('div');
     foot.className = 'foot';
+    const editP = mkBtn('✏️ สินค้า', 'btn-ghost mini', () => editProduct(c.id));
     const regen = mkBtn('🤖 คิดใหม่', 'btn-ghost mini', () => regenerate(c.id));
     const del = mkBtn('ลบ', 'btn-danger mini', async () => { await deleteClip(c.id); render(); });
-    foot.append(regen, del);
+    foot.append(editP, regen, del);
     el.appendChild(foot);
     list.appendChild(el);
   }
