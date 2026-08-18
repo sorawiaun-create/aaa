@@ -165,13 +165,12 @@ function composeCaption(clip) {
 async function openUploadTab() {
   const tabs = await chrome.tabs.query({ url: 'https://www.tiktok.com/*' });
   const existing = tabs.find((t) => t.url && t.url.includes('/upload'));
-  if (existing) {
-    await chrome.tabs.update(existing.id, { active: true });
-    return existing;
-  }
-  const tab = await chrome.tabs.create({ url: UPLOAD_URL, active: true });
+  const tab = existing || (await chrome.tabs.create({ url: UPLOAD_URL, active: true }));
+  // โหลดหน้าอัปโหลด "ใหม่สด" ทุกครั้ง เพื่อเริ่มจากหน้าเปล่า
+  // (กันเคสยัดไฟล์ทับหน้าตัดต่อของคลิปก่อน แล้ว TikTok crash "เกิดข้อผิดพลาด")
+  await chrome.tabs.update(tab.id, { url: UPLOAD_URL, active: true });
   await waitForComplete(tab.id);
-  await delay(2500); // เผื่อ SPA โหลด editor
+  await delay(3500); // รอ SPA + drop zone พร้อม
   return tab;
 }
 
