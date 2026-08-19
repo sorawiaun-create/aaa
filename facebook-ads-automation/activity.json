@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T02:10:31.088093+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-20T02:00:40.554228+07:00",
       "dry_run": false,
       "summary": {
@@ -1075,27 +1086,6 @@
           "reason": "จ่าย=317.31 (>80) และ ROAS=9.45 (>3.50) และ ทุนซื้อ=79.33 (<180) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18) · จ่าย=317.31 (>100) และ ROAS=9.45 (>3) และ ทุนซื้อ=79.33 (<220) และ เวลา=18:01 (>6) และ เวลา=18:01 (>=18)",
           "status": "applied",
           "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-19T17:50:27.831910+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 1
-      },
-      "events": [
-        {
-          "account": "อ่างบัว บิช",
-          "campaign": "-",
-          "rule": "-",
-          "action": "CONNECT",
-          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
-          "status": "error",
-          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_6996394137081516/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
         }
       ]
     }
