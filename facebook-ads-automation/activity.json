@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-19T17:50:27.831910+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว บิช",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_6996394137081516/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
+        }
+      ]
+    },
+    {
       "t": "2026-08-19T17:43:33.492503+07:00",
       "dry_run": false,
       "summary": {
@@ -788,28 +809,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-19T09:40:29.378280+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=89.42 (>80) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
