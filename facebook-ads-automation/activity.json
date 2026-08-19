@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-19T10:58:51.131716+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "จ่าย 220    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=223.86 (>220) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-19T10:50:27.257337+07:00",
       "dry_run": false,
       "summary": {
@@ -1030,17 +1052,6 @@
     },
     {
       "t": "2026-08-19T02:56:48.258342+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-19T02:50:30.395296+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
