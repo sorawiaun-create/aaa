@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-19T17:43:33.492503+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-19T17:40:31.106535+07:00",
       "dry_run": false,
       "summary": {
@@ -795,48 +806,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=89.42 (>80) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-19T09:30:40.428937+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 3,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=102.82 (>100) และ ทุนซื้อ=102.82 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=115.86 (>50) และ ทุนซื้อ=57.93 (<80) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=84.43 (>80) และ ทัก=0 (<1)",
           "status": "applied",
           "error": null
         }
