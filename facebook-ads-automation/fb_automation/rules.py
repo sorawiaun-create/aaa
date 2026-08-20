@@ -58,6 +58,77 @@ def describe_conditions(rule: dict[str, Any], metrics: dict[str, float]) -> str:
     return " และ ".join(parts)
 
 
+def condition_checks(rule: dict[str, Any], metrics: dict[str, float]) -> list[dict[str, Any]]:
+    """แตกเงื่อนไขทีละข้อ พร้อมบอกว่าผ่าน (ok) หรือไม่ — สำหรับหน้า 'เช็คทุกแคม'."""
+    out: list[dict[str, Any]] = []
+    for c in rule.get("conditions") or []:
+        m = c.get("metric"); op = c.get("operator"); thr = c.get("value")
+        act = metrics.get(m)
+        ok = evaluate_condition(c, metrics)
+        if m == "time_of_day":
+            a = _fmt_time(act) if act is not None else "?"; t = str(thr)
+        else:
+            a = _fmt_num(act); t = _fmt_num(thr)
+        out.append({"text": f"{METRIC_TH.get(m, m)}={a} ({op}{t})", "ok": ok})
+    return out
+
+
+def evaluate_campaign(rules: list[dict[str, Any]], metrics: dict[str, float],
+                      current_status: str | None) -> dict[str, Any]:
+    """สรุปการประเมินกฎของ 1 แคมเปญ ว่ารอบนี้ 'ทำ/ไม่ทำ' และเพราะกฎไหน.
+
+    ใช้ตรรกะเดียวกับตอนสั่งจริง: PAUSE ชนะ ACTIVATE เสมอ.
+    """
+    current = (current_status or "").upper()
+    reports: list[dict[str, Any]] = []
+    for idx, rule in enumerate(rules):
+        if rule.get("enabled", True) is False:
+            continue
+        checks = condition_checks(rule, metrics)
+        matched = len(checks) > 0 and all(ch["ok"] for ch in checks)
+        reports.append({
+            "name": rule.get("name") or f"rule#{idx}",
+            "action": rule.get("action"),
+            "matched": matched,
+            "checks": checks,
+        })
+
+    status_hits = [r for r in reports if r["matched"] and r["action"] in ("PAUSE", "ACTIVATE")]
+    budget_hits = [r["name"] for r in reports
+                   if r["matched"] and r["action"] in ("INCREASE_BUDGET", "DECREASE_BUDGET", "RESET_BUDGET")]
+
+    target = None
+    status_rule = None
+    if status_hits:
+        pauses = [r for r in status_hits if r["action"] == "PAUSE"]
+        winner = pauses[-1] if pauses else status_hits[-1]
+        target = "PAUSED" if winner["action"] == "PAUSE" else "ACTIVE"
+        status_rule = winner["name"]
+
+    blocked_activate = target == "PAUSED" and any(
+        r["matched"] and r["action"] == "ACTIVATE" for r in reports)
+
+    if target and target != current:
+        decision = "TO_PAUSE" if target == "PAUSED" else "TO_ACTIVATE"
+    elif target == "PAUSED":
+        decision = "KEEP_PAUSED"
+    elif target == "ACTIVE":
+        decision = "KEEP_ACTIVE"
+    elif budget_hits:
+        decision = "BUDGET_ONLY"
+    else:
+        decision = "NONE"
+
+    return {
+        "status": current,
+        "decision": decision,
+        "status_rule": status_rule,
+        "blocked_activate": blocked_activate,
+        "budget_rules": budget_hits,
+        "rules": reports,
+    }
+
+
 _OPS: dict[str, Callable[[float, float], bool]] = {
     ">": operator.gt,
     "<": operator.lt,
