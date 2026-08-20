@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T16:20:31.429190+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-20T16:19:12.720800+07:00",
       "dry_run": false,
       "summary": {
@@ -979,38 +990,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-20T07:50:26.455792+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=142.15 (>100) และ ทุนซื้อ=∞ (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมใหม่ - สำเนา",
-          "rule": "จ่าย 50 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=50.23 (>50) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
