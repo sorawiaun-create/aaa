@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T21:50:33.503222+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 1202 → 1587 บาท",
+          "reason": "จ่าย=489.50 (>40) และ ROAS=8.32 (>3.50) และ ทุนซื้อ=61.19 (<80) และ เวลา=21:51 (>6) และ เวลา=21:51 (>=18) · จ่าย=489.50 (>40) และ ROAS=8.32 (>3) และ ทุนซื้อ=61.19 (<80) และ เวลา=21:51 (>6) และ เวลา=21:51 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-20T21:47:18.712155+07:00",
       "dry_run": false,
       "summary": {
@@ -881,17 +903,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-20T13:30:33.752314+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
