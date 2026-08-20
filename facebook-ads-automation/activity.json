@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T22:00:40.479005+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "ถุงปลูก ข้อความ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-20T21:50:33.503222+07:00",
       "dry_run": false,
       "summary": {
@@ -857,48 +889,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 547 → 738 บาท",
           "reason": "จ่าย=216.40 (>100) และ ROAS=3.47 (>2.80) และ ทุนซื้อ=216.40 (<220) และ เวลา=13:50 (>6) และ เวลา=13:50 (<18) และ ROAS=3.47 (<3.50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-20T13:40:31.760197+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 2,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=200.35 (>200) และ ทุนซื้อ=100.17 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 608 → 911 บาท",
-          "reason": "จ่าย=117.15 (>80) และ ROAS=6.40 (>3.50) และ ทุนซื้อ=117.15 (<180) และ เวลา=13:41 (>6) และ เวลา=13:41 (<18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 800 → 1200 บาท",
-          "reason": "จ่าย=219.53 (>80) และ ROAS=10.89 (>3.50) และ ทุนซื้อ=73.18 (<180) และ เวลา=13:41 (>6) และ เวลา=13:41 (<18)",
           "status": "applied",
           "error": null
         }
