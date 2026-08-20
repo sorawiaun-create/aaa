@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T18:30:36.376676+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-20T18:20:35.507365+07:00",
       "dry_run": false,
       "summary": {
@@ -934,28 +945,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-20T10:20:30.393709+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=106.03 (>100) และ ทุนทัก=106.03 (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
