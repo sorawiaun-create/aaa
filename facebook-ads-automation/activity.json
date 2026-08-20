@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T09:00:40.252951+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=99.16 (>99) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-20T08:50:31.470297+07:00",
       "dry_run": false,
       "summary": {
@@ -965,17 +987,6 @@
     },
     {
       "t": "2026-08-20T01:10:31.240517+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-20T01:00:44.054639+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
