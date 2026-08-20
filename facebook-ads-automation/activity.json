@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T17:30:31.559550+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 1,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 3075 → 4613 บาท",
+          "reason": "จ่าย=119.66 (>80) และ ROAS=6.27 (>3.50) และ ทุนซื้อ=119.66 (<180) และ เวลา=17:31 (>6) และ เวลา=17:31 (<18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=660.74 (>100) และ ทุนทัก=82.59 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 4050 → 5000 บาท",
+          "reason": "จ่าย=660.74 (>80) และ ROAS=4.45 (>3.50) และ ทุนซื้อ=165.19 (<180) และ เวลา=17:31 (>6) และ เวลา=17:31 (<18)",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120249521090810122/\n  Params:  {'daily_budget': 500000}\n\n  Status:  403\n  Response:\n    {\n      \"error\""
+        }
+      ]
+    },
+    {
       "t": "2026-08-20T17:20:28.860388+07:00",
       "dry_run": false,
       "summary": {
@@ -953,28 +995,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=85.58 (>80) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-20T09:00:40.252951+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=99.16 (>99) และ ซื้อ=0 (<1)",
           "status": "applied",
           "error": null
         }
