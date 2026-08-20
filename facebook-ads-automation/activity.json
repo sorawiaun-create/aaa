@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T17:40:31.834218+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-20T17:33:28.206301+07:00",
       "dry_run": false,
       "summary": {
@@ -952,38 +963,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=87.18 (>80) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-20T09:20:28.338725+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "ถุงปลูก ข้อความ - สำเนา",
-          "rule": "จ่าย 80    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=83.15 (>80) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "แคมเปญการส่งข้อความที่ปรับให้เหมาะสม 17/8/2026 แคมเปญ",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=91.02 (>80) และ ทัก=0 (<1)",
           "status": "applied",
           "error": null
         }
