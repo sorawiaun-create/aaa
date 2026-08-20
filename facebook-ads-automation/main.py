@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import time
 from datetime import datetime
@@ -29,7 +30,7 @@ from fb_automation.config import Config, ConfigError, load_config
 from fb_automation.fb_client import FacebookClient
 from fb_automation.logging_setup import setup_logging
 from fb_automation.metrics import compute_metrics
-from fb_automation.rules import plan_campaign
+from fb_automation.rules import plan_campaign, evaluate_campaign
 from fb_automation.state import State
 from fb_automation.status import (
     PERIOD_PRESETS, account_totals_from_row, aggregate_metrics, build_status,
@@ -48,6 +49,15 @@ log = setup_logging()
 
 def _env_truthy(name: str) -> bool:
     return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _finite(v):
+    """ทำให้ค่าเป็นตัวเลขที่ JSON เขียนได้ (inf/nan -> None)."""
+    try:
+        f = float(v)
+        return round(f, 2) if math.isfinite(f) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def process_commands(config: Config, now_local: datetime,
@@ -178,9 +188,11 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
 
     status_accounts: list[dict] = []
     board_accounts: list[dict] = []
+    eval_accounts: list[dict] = []
 
     for account in config.accounts:
         board_campaigns: list[dict] = []
+        eval_campaigns: list[dict] = []
         acct_stat = {
             "name": account.name,
             "account_id": account.account_id,
@@ -196,6 +208,8 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             status_accounts.append(acct_stat)
             board_accounts.append({"name": account.name, "account_id": account.account_id,
                                    "disabled": True, "campaigns": []})
+            eval_accounts.append({"name": account.name, "account_id": account.account_id,
+                                  "disabled": True, "campaigns": []})
             continue
 
         log.info("🏦 บัญชี: %s (act_%s) — %d กฎ",
@@ -211,6 +225,8 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             status_accounts.append(acct_stat)
             board_accounts.append({"name": account.name, "account_id": account.account_id,
                                    "error": str(e)[:200], "campaigns": []})
+            eval_accounts.append({"name": account.name, "account_id": account.account_id,
+                                  "error": str(e)[:200], "campaigns": []})
             events.append({"account": account.name, "campaign": "-", "rule": "-",
                            "action": "CONNECT", "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
                            "status": "error", "error": str(e)[:200]})
@@ -242,6 +258,20 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
                 "orders": int(metrics["purchases"]),
             })
 
+            # สรุปการประเมินทุกแคมเปญ (สำหรับหน้า 'เช็คทุกแคม') — ทำไม่ทำเพราะกฎไหน
+            ev = evaluate_campaign(account.rules, metrics, campaign.get("status"))
+            ev.update({
+                "campaign": campaign.get("name", ""),
+                "spend": _finite(metrics.get("spend")),
+                "roas": _finite(metrics.get("roas")),
+                "orders": int(metrics.get("purchases", 0) or 0),
+                "cost_per_purchase": _finite(metrics.get("cost_per_purchase")),
+                "results": int(metrics.get("results", 0) or 0),
+                "cost_per_result": _finite(metrics.get("cost_per_result")),
+                "budget": round(budget, 2) if budget is not None else None,
+            })
+            eval_campaigns.append(ev)
+
             planned = plan_campaign(account.rules, metrics)
             if planned:
                 execute_campaign(
@@ -265,6 +295,9 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
         board_campaigns.sort(key=lambda c: (c["status"] != "ACTIVE", -c["spend"]))
         board_accounts.append({"name": account.name, "account_id": account.account_id,
                                "campaigns": board_campaigns})
+        eval_campaigns.sort(key=lambda c: (c["status"] != "ACTIVE", -(c.get("spend") or 0)))
+        eval_accounts.append({"name": account.name, "account_id": account.account_id,
+                              "campaigns": eval_campaigns})
 
     log.info("-" * 64)
     log.info("สรุป: เปลี่ยนสถานะ %d · ปรับงบ %d · ข้าม(รอบ) %d · error %d%s",
@@ -286,6 +319,12 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
         write_board(os.environ.get("BOARD_PATH", "board.json"), board_data)
     except Exception as e:  # noqa: BLE001
         log.warning("เขียน board.json ไม่สำเร็จ: %s", e)
+    # เขียนผลประเมินทุกแคมเปญ (หน้า 'เช็คทุกแคม') — เก็บเฉพาะรอบล่าสุด
+    try:
+        write_board(os.environ.get("EVAL_PATH", "evaluations.json"),
+                    {"updated_at": now_local.isoformat(), "dry_run": dry, "accounts": eval_accounts})
+    except Exception as e:  # noqa: BLE001
+        log.warning("เขียน evaluations.json ไม่สำเร็จ: %s", e)
 
     # 🤖 AI วิเคราะห์ (เฉพาะเมื่อสั่ง RUN_AI=1 — ไม่รันทุกรอบเพื่อคุมค่าใช้จ่าย)
     try:

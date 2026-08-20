@@ -161,6 +161,7 @@
       <button class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</button>
       <button class="tab" data-tab="board" onclick="showTab('board')">🧩 กระดานแอด</button>
       <button class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</button>
+      <button class="tab" data-tab="check" onclick="showTab('check')">🔎 เช็คทุกแคม</button>
       <button class="tab" data-tab="ai" onclick="showTab('ai')">🤖 AI วิเคราะห์</button>
       <button class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</button>
     </div>
@@ -260,6 +261,17 @@
     <div id="logList"></div>
   </section>
 
+  <!-- ===== 🔎 เช็คทุกแคม ===== -->
+  <section id="check" class="hidden">
+    <div class="muted" style="font-size:12.5px;margin-bottom:8px">
+      เช็ครอบล่าสุดว่าทุกแคมเปญ <b>ทำอะไร/ไม่ทำ เพราะกฎไหน</b> — กดที่แคมเปญเพื่อดูว่าเข้า/ไม่เข้าเงื่อนไขไหนบ้าง ·
+      <span class="tag ok">จะเปิด/ทำงาน</span> <span class="tag err">จะปิด/ปิดอยู่</span>
+      <span class="tag" style="color:#ffb454">⚠️ ควรเปิดแต่ติดกฎปิด</span> <span class="tag">คงเดิม</span>
+    </div>
+    <div id="checkMeta" class="muted" style="font-size:12px;margin-bottom:10px"></div>
+    <div id="checkList"></div>
+  </section>
+
   <!-- ===== 🤖 AI วิเคราะห์ ===== -->
   <section id="ai" class="hidden">
     <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
@@ -304,6 +316,7 @@ const ACTIVITY_PATH="facebook-ads-automation/activity.json";
 const BOARD_PATH="facebook-ads-automation/board.json";
 const COMMANDS_PATH="facebook-ads-automation/commands.json";
 const ANALYSIS_PATH="facebook-ads-automation/analysis.json";
+const EVAL_PATH="facebook-ads-automation/evaluations.json";
 const WORKFLOW="facebook-ads-automation.yml";
 const TOKEN_KEY="fbdash_gh_token";
 const DEFAULT_GROUP="กฎทั่วไป";
@@ -403,6 +416,12 @@ async function loadAnalysis(){
   if(!r.ok) throw new Error("โหลดผลวิเคราะห์ AI ไม่ได้ (HTTP "+r.status+")");
   const j=await r.json(); return JSON.parse(fromB64(j.content));
 }
+async function loadEval(){
+  let r=await apiGet(EVAL_PATH,true); if(r.status===401) r=await apiGet(EVAL_PATH,false);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error("โหลดผลเช็คแคมไม่ได้ (HTTP "+r.status+")");
+  const j=await r.json(); return JSON.parse(fromB64(j.content));
+}
 async function dispatchAI(){
   const url=`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
   const r=await fetch(url,{method:"POST",headers:authHeaders(true),body:JSON.stringify({ref:BRANCH,inputs:{dry_run:"true",force:"true",ai:"true"}})});
@@ -436,7 +455,7 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  ["overview","board","editor","logs","ai"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
+  ["overview","board","editor","logs","ai","check"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
 
 /* ===================== OVERVIEW ===================== */
 let OV_ST=null, ovPeriod="today";
@@ -837,6 +856,71 @@ function runLive(){requireToken(async()=>{
     toast("⚡ สั่งรันจริงแล้ว — ดูผลได้ในแท็บ Log อีก ~1 นาที","ok");}catch(e){toast("❌ "+e.message,"err");}});}
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
+/* ===================== 🔎 เช็คทุกแคม ===================== */
+const DECISION={
+  TO_ACTIVATE:{t:"จะเปิด",cls:"ok"},
+  KEEP_ACTIVE:{t:"ทำงานอยู่",cls:"ok"},
+  TO_PAUSE:{t:"จะปิด",cls:"err"},
+  KEEP_PAUSED:{t:"ปิดอยู่",cls:"err"},
+  BUDGET_ONLY:{t:"ปรับงบ",cls:""},
+  NONE:{t:"คงเดิม (ไม่มีกฎเข้า)",cls:""},
+};
+function renderCheck(ev){
+  const meta=document.getElementById("checkMeta"),root=document.getElementById("checkList");
+  if(!ev){meta.textContent="";
+    root.innerHTML=`<div class="muted" style="text-align:center;padding:26px">ยังไม่มีข้อมูล — รอรอบรันของคลาวด์ (หรือถ้าต่อ Facebook ไม่ได้ ให้เช็คโทเคนก่อน)</div>`;return;}
+  const when=ev.updated_at?new Date(ev.updated_at).toLocaleString("th-TH"):"-";
+  meta.innerHTML=`เช็คเมื่อ: <b>${when}</b>${ev.dry_run?' · <span class="tag">โหมดทดสอบ</span>':''}`;
+  root.innerHTML="";
+  (ev.accounts||[]).forEach(a=>root.appendChild(checkAccountEl(a)));
+}
+function checkAccountEl(a){
+  const el=document.createElement("div");el.className="folder open";
+  const camps=a.campaigns||[];
+  const head=document.createElement("div");head.className="folder-head";
+  // นับแคมที่ "ควรเปิดแต่ติดกฎปิด"
+  const blocked=camps.filter(c=>c.blocked_activate).length;
+  head.innerHTML=`<span class="fchev">▶</span>🏦 <b style="font-size:15px">${esc(a.name)}</b>
+    ${a.disabled?'<span class="tag">ปิดอยู่</span>':''}
+    ${a.error?'<span class="tag err">ต่อไม่ได้ — เช็คโทเคน</span>':`<span class="tag">${camps.length} แคม</span>`}
+    ${blocked?`<span class="tag" style="color:#ffb454">⚠️ ${blocked} แคมควรเปิดแต่ติดกฎปิด</span>`:''}`;
+  head.onclick=()=>el.classList.toggle("open");
+  const body=document.createElement("div");body.className="folder-body";body.style.padding="0";
+  if(a.error) body.innerHTML=`<div class="muted" style="padding:10px 12px">เชื่อมต่อ Facebook ไม่ได้ (โทเคนอาจหมดอายุ)</div>`;
+  else if(!camps.length) body.innerHTML='<div class="muted" style="padding:10px 12px">— ไม่มีแคมเปญ —</div>';
+  else camps.forEach(c=>body.appendChild(checkRow(c)));
+  el.append(head,body);return el;
+}
+function checkRow(c){
+  const wrap=document.createElement("div");wrap.className="folder";wrap.style.borderRadius="0";
+  const D=DECISION[c.decision]||DECISION.NONE;
+  const badge=c.blocked_activate
+    ? `<span class="tag" style="color:#ffb454;white-space:nowrap">⚠️ ควรเปิดแต่ติดกฎปิด</span>`
+    : `<span class="tag ${D.cls}" style="white-space:nowrap">${D.t}</span>`;
+  const ruleInfo=c.status_rule?` · กฎ: ${esc(c.status_rule)}`:(c.budget_rules&&c.budget_rules.length?` · ${esc(c.budget_rules.join(", "))}`:"");
+  const cpp=(c.cost_per_purchase==null?"∞":c.cost_per_purchase);
+  const head=document.createElement("div");head.className="folder-head";head.style.gap="8px";
+  head.innerHTML=`<span class="fchev">▶</span>${badge}
+    <b style="font-size:13.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.campaign||"")}</b>
+    <span class="muted" style="font-size:11.5px;white-space:nowrap">฿${Math.round(c.spend||0).toLocaleString("th-TH")} · ROAS ${(c.roas||0).toFixed(2)} · ซื้อ ${c.orders||0} · ทุนซื้อ ${cpp}</span>`;
+  head.onclick=()=>wrap.classList.toggle("open");
+  const body=document.createElement("div");body.className="folder-body";
+  let html=`<div class="muted" style="font-size:11.5px;margin-bottom:8px">สถานะตอนนี้: <b>${c.status==="ACTIVE"?"🟢 เปิด":"⏸️ ปิด"}</b>${ruleInfo}</div>`;
+  for(const r of (c.rules||[])){
+    const acol=r.matched?"#7ff0a6":"var(--muted,#8aa)";
+    html+=`<div style="padding:6px 9px;border-radius:8px;margin-bottom:5px;background:var(--panel2,rgba(127,127,127,.08))">
+      <div style="font-size:12.5px;margin-bottom:3px">
+        <b style="color:${acol}">${r.matched?"✓ เข้า":"✗ ไม่เข้า"}</b> · ${esc(r.name||"")} <span class="muted">(${esc(actionTH(r.action))})</span></div>
+      <div style="font-size:11.5px;line-height:1.7">`+
+      (r.checks||[]).map(ch=>`<span class="tag ${ch.ok?'ok':'err'}" style="margin:1px 3px 1px 0">${ch.ok?'✓':'✗'} ${esc(ch.text)}</span>`).join("")+
+      `</div></div>`;
+  }
+  if(!(c.rules||[]).length) html+=`<div class="muted" style="font-size:12px">ไม่มีกฎที่เปิดใช้งาน</div>`;
+  body.innerHTML=html;
+  wrap.append(head,body);return wrap;
+}
+function actionTH(a){return ({PAUSE:"ปิด",ACTIVATE:"เปิด",INCREASE_BUDGET:"เพิ่มงบ",DECREASE_BUDGET:"ลดงบ",RESET_BUDGET:"รีเซ็ตงบ"})[a]||a||"";}
+
 /* ===================== 🤖 AI วิเคราะห์ ===================== */
 const AI_HEALTH={good:{t:"ดี",cls:"ok"},warning:{t:"ควรระวัง",cls:""},bad:{t:"น่าห่วง",cls:"err"}};
 const AI_ACTION={
@@ -985,6 +1069,7 @@ async function boot(){
   try{renderOverview(await loadStatus());}catch(e){renderOverview(null);}
   try{renderBoard(await loadBoard());}catch(e){renderBoard(null);}
   try{renderLog(await loadActivity());}catch(e){renderLog(null);}
+  try{renderCheck(await loadEval());}catch(e){renderCheck(null);}
   // AI: แสดงผลวิเคราะห์ล่าสุดที่เก็บไว้ในเบราว์เซอร์ (ทำงานฝั่งเว็บ ไม่ต้องรอคลาวด์)
   try{const saved=localStorage.getItem(AI_RESULT_STORE);renderAI(saved?JSON.parse(saved):null);}
   catch(e){renderAI(null);}
