@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-20T13:40:31.760197+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=200.35 (>200) และ ทุนซื้อ=100.17 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 608 → 911 บาท",
+          "reason": "จ่าย=117.15 (>80) และ ROAS=6.40 (>3.50) และ ทุนซื้อ=117.15 (<180) และ เวลา=13:41 (>6) และ เวลา=13:41 (<18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 800 → 1200 บาท",
+          "reason": "จ่าย=219.53 (>80) และ ROAS=10.89 (>3.50) และ ทุนซื้อ=73.18 (<180) และ เวลา=13:41 (>6) และ เวลา=13:41 (<18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-20T13:30:33.752314+07:00",
       "dry_run": false,
       "summary": {
@@ -909,17 +951,6 @@
     },
     {
       "t": "2026-08-20T05:20:33.303593+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-20T05:10:30.916846+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
