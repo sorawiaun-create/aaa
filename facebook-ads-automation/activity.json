@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-21T18:37:43.666114+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-21T18:30:32.778610+07:00",
       "dry_run": false,
       "summary": {
@@ -827,38 +838,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "งบ 450 → 608 บาท",
           "reason": "จ่าย=129.27 (>100) และ ROAS=3.02 (>2.80) และ ทุนซื้อ=129.27 (<220) และ เวลา=10:11 (>6) และ เวลา=10:11 (<18) และ ROAS=3.02 (<3.50)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-21T10:00:40.261135+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 100 ไม่ทัก   ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=80.66 (>80) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=109.44 (>100) และ ทุนทัก=109.44 (>80)",
           "status": "applied",
           "error": null
         }
