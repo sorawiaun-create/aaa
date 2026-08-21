@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-22T06:51:03.506748+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-22T06:40:27.412528+07:00",
       "dry_run": false,
       "summary": {
@@ -830,68 +841,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-21T23:00:39.484663+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 5,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 396 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 1711 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 1285 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 911 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 608 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
