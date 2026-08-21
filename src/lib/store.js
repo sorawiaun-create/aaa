@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase, isCloud, TABLES, SETTINGS_TABLE, SETTINGS_ROW_ID } from './supabase.js';
+import { DEFAULT_SCORING } from './shopee.js';
+import { mergeProducts } from './shopeeImport.js';
+import { DEFAULT_AI } from './shopeeAI.js';
 
 // localStorage keys — used in local mode (and as nothing in cloud mode).
 const KEYS = {
@@ -9,7 +12,11 @@ const KEYS = {
   sales: 'tla_sales_v1',
   workLogs: 'tla_worklogs_v1',
   settings: 'tla_settings_v1',
+  shopeeProducts: 'tla_shopee_products_v1',
 };
+
+// ค่าตั้ง AI เก็บในเครื่องเท่านั้น — API key ไม่ถูกซิงก์ขึ้นคลาวด์
+const AI_KEY = 'tla_shopee_ai_v1';
 
 export const uid = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -39,7 +46,12 @@ export const DEFAULT_SETTINGS = {
   currency: 'THB',
   defaultCommission: { type: 'flat', rate: 3, tiers: [] },
   workDaysPerMonth: 26,
+  shopeeScoring: { ...DEFAULT_SCORING },
 };
+
+// --- ค่าตั้ง AI (เก็บใน localStorage เสมอ ไม่ขึ้นคลาวด์) ---
+export const loadShopeeAi = () => ({ ...DEFAULT_AI, ...load(AI_KEY, {}) });
+export const saveShopeeAi = (cfg) => save(AI_KEY, cfg);
 
 // --- Cloud helpers (no-ops in local mode) ---
 async function fetchTable(table) {
@@ -83,6 +95,7 @@ export function useStore() {
   const [teams, setTeams] = useState(() => (isCloud ? [] : load(KEYS.teams, [])));
   const [sales, setSales] = useState(() => (isCloud ? [] : load(KEYS.sales, [])));
   const [workLogs, setWorkLogs] = useState(() => (isCloud ? [] : load(KEYS.workLogs, [])));
+  const [shopeeProducts, setShopeeProducts] = useState(() => (isCloud ? [] : load(KEYS.shopeeProducts, [])));
   const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, ...(isCloud ? {} : load(KEYS.settings, {})) }));
 
   // Auth (cloud only). Local mode is always "ready" with no user.
@@ -96,6 +109,7 @@ export function useStore() {
   useEffect(() => { if (!isCloud) save(KEYS.teams, teams); }, [teams]);
   useEffect(() => { if (!isCloud) save(KEYS.sales, sales); }, [sales]);
   useEffect(() => { if (!isCloud) save(KEYS.workLogs, workLogs); }, [workLogs]);
+  useEffect(() => { if (!isCloud) save(KEYS.shopeeProducts, shopeeProducts); }, [shopeeProducts]);
   useEffect(() => { if (!isCloud) save(KEYS.settings, settings); }, [settings]);
 
   // Track the auth session.
@@ -110,7 +124,7 @@ export function useStore() {
   useEffect(() => {
     if (!isCloud) return;
     if (!session) {
-      setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]);
+      setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]); setShopeeProducts([]);
       setSettings({ ...DEFAULT_SETTINGS });
       setLoading(false);
       return;
@@ -118,9 +132,9 @@ export function useStore() {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [ch, emp, tm, sl, wl] = await Promise.all([
+      const [ch, emp, tm, sl, wl, sp] = await Promise.all([
         fetchTable(TABLES.channels), fetchTable(TABLES.employees), fetchTable(TABLES.teams),
-        fetchTable(TABLES.sales), fetchTable(TABLES.workLogs),
+        fetchTable(TABLES.sales), fetchTable(TABLES.workLogs), fetchTable(TABLES.shopeeProducts),
       ]);
       const st = await supabase.from(SETTINGS_TABLE).select('data').eq('id', SETTINGS_ROW_ID).maybeSingle();
       if (cancelled) return;
@@ -129,6 +143,7 @@ export function useStore() {
       if (tm) setTeams(tm);
       if (sl) setSales(sl);
       if (wl) setWorkLogs(wl);
+      if (sp) setShopeeProducts(sp);
       if (st?.data?.data) setSettings({ ...DEFAULT_SETTINGS, ...st.data.data });
       setLoading(false);
     })();
@@ -138,6 +153,7 @@ export function useStore() {
     const subs = [
       [TABLES.channels, setChannels], [TABLES.employees, setEmployees], [TABLES.teams, setTeams],
       [TABLES.sales, setSales], [TABLES.workLogs, setWorkLogs],
+      [TABLES.shopeeProducts, setShopeeProducts],
     ].map(([table, setter]) =>
       supabase.channel(`rt-${table}`).on('postgres_changes', { event: '*', schema: 'public', table }, reload(table, setter)).subscribe()
     );
@@ -231,6 +247,33 @@ export function useStore() {
     cloudDelete(TABLES.workLogs, id);
   };
 
+  // --- Shopee products (คัดกรองสินค้าสำหรับยิงแอด) ---
+  // นำเข้าแบบรวมกับของเดิม: สินค้าตัวเดียวกันจะถูกรวมรอบดีลเข้าด้วยกัน
+  const importShopeeProducts = (incoming, { replace = false } = {}) => {
+    const next = replace ? mergeProducts(incoming || []) : mergeProducts([...shopeeProducts, ...(incoming || [])]);
+    setShopeeProducts(next);
+    if (isCloud) {
+      (async () => {
+        await cloudClear(TABLES.shopeeProducts);
+        await cloudUpsertMany(TABLES.shopeeProducts, next);
+      })();
+    }
+    return next;
+  };
+  const updateShopeeProduct = (id, patch) => {
+    const cur = shopeeProducts.find((p) => p.id === id);
+    setShopeeProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    if (cur) cloudUpsert(TABLES.shopeeProducts, { ...cur, ...patch });
+  };
+  const removeShopeeProduct = (id) => {
+    setShopeeProducts((prev) => prev.filter((p) => p.id !== id));
+    cloudDelete(TABLES.shopeeProducts, id);
+  };
+  const clearShopeeProducts = () => {
+    setShopeeProducts([]);
+    cloudClear(TABLES.shopeeProducts);
+  };
+
   // --- Settings ---
   const updateSettings = (patch) => {
     const next = { ...settings, ...patch };
@@ -240,7 +283,7 @@ export function useStore() {
 
   // --- Data management ---
   const clearAll = () => {
-    setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]);
+    setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]); setShopeeProducts([]);
     setSettings({ ...DEFAULT_SETTINGS });
     if (isCloud) {
       Object.values(TABLES).forEach((t) => cloudClear(t));
@@ -252,16 +295,19 @@ export function useStore() {
     const next = {
       channels: data.channels || [], employees: data.employees || [], teams: data.teams || [],
       sales: data.sales || [], workLogs: data.workLogs || [],
+      shopeeProducts: data.shopeeProducts || [],
       settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
     };
     setChannels(next.channels); setEmployees(next.employees); setTeams(next.teams);
-    setSales(next.sales); setWorkLogs(next.workLogs); setSettings(next.settings);
+    setSales(next.sales); setWorkLogs(next.workLogs); setShopeeProducts(next.shopeeProducts);
+    setSettings(next.settings);
     if (isCloud) {
       await Promise.all(Object.values(TABLES).map((t) => cloudClear(t)));
       await Promise.all([
         cloudUpsertMany(TABLES.channels, next.channels), cloudUpsertMany(TABLES.employees, next.employees),
         cloudUpsertMany(TABLES.teams, next.teams), cloudUpsertMany(TABLES.sales, next.sales),
         cloudUpsertMany(TABLES.workLogs, next.workLogs),
+        cloudUpsertMany(TABLES.shopeeProducts, next.shopeeProducts),
       ]);
       await cloudSaveSettings(next.settings);
     }
@@ -278,12 +324,13 @@ export function useStore() {
     mode: isCloud ? 'cloud' : 'local',
     authReady, loading, user: session?.user || null,
     signIn, signUp, signOut,
-    channels, employees, teams, sales, workLogs, settings,
+    channels, employees, teams, sales, workLogs, shopeeProducts, settings,
     addChannel, updateChannel, removeChannel,
     addEmployee, updateEmployee, removeEmployee,
     addTeam, updateTeam, removeTeam,
     addSale, updateSale, removeSale,
     addWorkLog, updateWorkLog, removeWorkLog,
+    importShopeeProducts, updateShopeeProduct, removeShopeeProduct, clearShopeeProducts,
     updateSettings, clearAll, importAll, loadSample,
   };
 }

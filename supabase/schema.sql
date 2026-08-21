@@ -10,6 +10,8 @@ create table if not exists public.teams     (id text primary key, data jsonb not
 create table if not exists public.sales     (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.work_logs (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.settings  (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
+-- สินค้า Shopee ที่นำเข้ามาเพื่อคัดกรองสำหรับยิงแอด
+create table if not exists public.shopee_products (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 
 -- ------------------------------------------------------------
 -- Row Level Security: อนุญาตเฉพาะผู้ที่ "เข้าสู่ระบบ" แล้ว
@@ -18,7 +20,7 @@ create table if not exists public.settings  (id text primary key, data jsonb not
 do $$
 declare t text;
 begin
-  foreach t in array array['channels','employees','teams','sales','work_logs','settings']
+  foreach t in array array['channels','employees','teams','sales','work_logs','settings','shopee_products']
   loop
     execute format('alter table public.%I enable row level security;', t);
     execute format('drop policy if exists "auth_all" on public.%I;', t);
@@ -39,7 +41,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['channels','employees','teams','sales','work_logs','settings']
+  foreach t in array array['channels','employees','teams','sales','work_logs','settings','shopee_products']
   loop
     begin
       execute format('alter publication supabase_realtime add table public.%I;', t);

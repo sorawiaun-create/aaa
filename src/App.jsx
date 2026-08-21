@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   BarChart3, Radio, Video, ClipboardList, Trophy, Target,
-  CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart,
+  CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart, Megaphone,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { isConfigured, cloudInitError } from './lib/supabase.js';
@@ -17,11 +17,13 @@ import EmployeesView from './views/EmployeesView.jsx';
 import TeamsView from './views/TeamsView.jsx';
 import WorkLogView from './views/WorkLogView.jsx';
 import ReportsView from './views/ReportsView.jsx';
+import ShopeeAdsView from './views/ShopeeAdsView.jsx';
 import SettingsView from './views/SettingsView.jsx';
 
 const NAV = [
   { id: 'overview', label: 'ภาพรวม', icon: BarChart3 },
   { id: 'reports', label: 'รายงาน & กราฟ', icon: LineChart },
+  { id: 'shopee', label: 'คัดสินค้ายิงแอด', icon: Megaphone },
   { id: 'realtime', label: 'Realtime Live', icon: Radio },
   { id: 'channels', label: 'ช่อง TikTok', icon: Video },
   { id: 'sales', label: 'บันทึกยอดขาย', icon: ClipboardList },
@@ -132,6 +134,7 @@ export default function App() {
         <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto space-y-6">
           {view === 'overview' && <OverviewView store={store} month={month} />}
           {view === 'reports' && <ReportsView store={store} month={month} />}
+          {view === 'shopee' && <ShopeeAdsView store={store} />}
           {view === 'realtime' && <RealtimeView store={store} />}
           {view === 'channels' && <ChannelsView store={store} />}
           {view === 'sales' && <SalesView store={store} />}

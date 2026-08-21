@@ -41,6 +41,7 @@ export const TABLES = {
   teams: 'teams',
   sales: 'sales',
   workLogs: 'work_logs',
+  shopeeProducts: 'shopee_products',
 };
 
 export const SETTINGS_TABLE = 'settings';
