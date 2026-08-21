@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-21T16:08:22.836581+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 1,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-21T16:00:39.255037+07:00",
       "dry_run": false,
       "summary": {
@@ -988,27 +999,6 @@
           "reason": "จ่าย=100.56 (>100) และ ทุนซื้อ=∞ (>80)",
           "status": "applied",
           "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-21T07:00:43.972886+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 1
-      },
-      "events": [
-        {
-          "account": "ถุงปลูก T-2",
-          "campaign": "-",
-          "rule": "-",
-          "action": "CONNECT",
-          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
-          "status": "error",
-          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1068219414427801/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
         }
       ]
     }
