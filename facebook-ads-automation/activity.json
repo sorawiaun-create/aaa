@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-21T19:00:41.249666+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-21T18:51:02.483691+07:00",
       "dry_run": false,
       "summary": {
@@ -768,48 +779,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-21T10:30:33.266515+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=108.31 (>100) และ ทุนทัก=108.31 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 450 → 675 บาท",
-          "reason": "จ่าย=139.36 (>80) และ ROAS=5.38 (>3.50) และ ทุนซื้อ=139.36 (<180) และ เวลา=10:31 (>6) และ เวลา=10:31 (<18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=164.61 (>100) และ ทุนทัก=82.31 (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
