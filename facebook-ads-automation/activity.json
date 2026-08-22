@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-22T21:29:48.697187+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=220.82 (>50) และ ทุนซื้อ=73.61 (<75) และ ซื้อ=3 (>0)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-22T21:20:29.560553+07:00",
       "dry_run": false,
       "summary": {
@@ -767,38 +789,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-22T13:40:34.643416+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=189.08 (>50) และ ทุนซื้อ=189.08 (<220) และ ซื้อ=1 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=251.52 (>250) และ ทุนซื้อ=251.52 (>220)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
