@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-22T07:50:30.076914+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะใหม่",
+          "rule": "จ่าย 100 ไม่ทัก   ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=94.88 (>80) และ ทัก=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-22T07:40:33.234121+07:00",
       "dry_run": false,
       "summary": {
@@ -822,17 +844,6 @@
     },
     {
       "t": "2026-08-22T00:00:37.153896+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-21T23:50:27.397898+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
