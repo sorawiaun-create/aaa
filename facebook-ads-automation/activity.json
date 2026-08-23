@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T16:39:33.664215+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-23T16:30:33.220637+07:00",
       "dry_run": false,
       "summary": {
@@ -832,48 +843,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-23T08:10:32.909281+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=106.95 (>50) และ ทุนซื้อ=53.48 (<80) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=87.73 (>50) และ ทุนซื้อ=43.87 (<75) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 800 → 1200 บาท",
-          "reason": "จ่าย=87.73 (>30) และ ROAS=6.84 (>3.50) และ ทุนซื้อ=43.87 (<60) และ เวลา=8:11 (>6) และ เวลา=8:11 (<18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
