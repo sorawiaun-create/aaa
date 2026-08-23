@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T18:00:40.151494+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "ขุยมะพร้าว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_744793814183081/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
+        }
+      ]
+    },
+    {
       "t": "2026-08-23T17:58:16.813096+07:00",
       "dry_run": false,
       "summary": {
@@ -773,28 +794,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=278.93 (>50) และ ทุนซื้อ=69.73 (<75) และ ซื้อ=4 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-23T10:00:43.558038+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=252.33 (>200) และ ทุนซื้อ=84.11 (>80)",
           "status": "applied",
           "error": null
         }
