@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T17:30:33.662268+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-23T17:20:31.935637+07:00",
       "dry_run": false,
       "summary": {
@@ -799,28 +810,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-23T09:10:51.454043+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 1800 → 2700 บาท",
-          "reason": "จ่าย=157.53 (>30) และ ROAS=5.08 (>3.50) และ ทุนซื้อ=52.51 (<60) และ เวลา=9:11 (>6) และ เวลา=9:11 (<18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
