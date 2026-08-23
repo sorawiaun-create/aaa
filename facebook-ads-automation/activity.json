@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T18:10:30.732373+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-23T18:00:40.151494+07:00",
       "dry_run": false,
       "summary": {
@@ -772,28 +783,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=166.55 (>100) และ ทุนซื้อ=83.28 (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-23T10:10:28.449608+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=278.93 (>50) และ ทุนซื้อ=69.73 (<75) และ ซื้อ=4 (>0)",
           "status": "applied",
           "error": null
         }
