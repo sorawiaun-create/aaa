@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T17:10:30.385545+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-23T17:00:51.411866+07:00",
       "dry_run": false,
       "summary": {
@@ -817,28 +828,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=101.08 (>100) และ ทุนซื้อ=101.08 (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-23T08:50:27.362238+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ ข้อความ",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=116.41 (>100) และ ทุนทัก=116.41 (>80)",
           "status": "applied",
           "error": null
         }
