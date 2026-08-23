@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T07:30:33.949584+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "จ่าย 80    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=81.35 (>80) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-23T07:25:46.669803+07:00",
       "dry_run": false,
       "summary": {
@@ -711,48 +733,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-22T23:37:39.884042+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=586.65 (>50) และ ทุนซื้อ=39.11 (<80) และ ซื้อ=15 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 396 บาท",
-          "reason": "จ่าย=586.65 (>40) และ ROAS=10.61 (>3.50) และ ทุนซื้อ=39.11 (<80) และ เวลา=23:38 (>6) และ เวลา=23:38 (>=18) · จ่าย=586.65 (>40) และ ROAS=10.61 (>3) และ ทุนซื้อ=39.11 (<80) และ เวลา=23:38 (>6) และ เวลา=23:38 (>=18)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=224.69 (>50) และ ทุนซื้อ=74.90 (<75) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
