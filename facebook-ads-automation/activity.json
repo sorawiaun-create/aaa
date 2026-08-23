@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T21:30:33.013592+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-23T21:20:30.288510+07:00",
       "dry_run": false,
       "summary": {
@@ -690,17 +701,6 @@
           "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252227279790359/\n  Params:  {'daily_budget': 500000}\n\n  Status:  400\n  Response:\n    {\n      \"error\""
         }
       ]
-    },
-    {
-      "t": "2026-08-23T13:40:28.420475+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
