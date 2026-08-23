@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-23T23:00:37.325319+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 396 → 300 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 4563 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-23T22:55:42.200930+07:00",
       "dry_run": false,
       "summary": {
@@ -661,17 +693,6 @@
     },
     {
       "t": "2026-08-23T15:20:28.118265+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-23T15:10:31.607595+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
