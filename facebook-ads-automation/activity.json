@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-24T05:50:27.550703+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:50 (>5) และ เวลา=5:50 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-24T05:40:34.439520+07:00",
       "dry_run": false,
       "summary": {
@@ -824,17 +846,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-23T21:59:00.074471+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
