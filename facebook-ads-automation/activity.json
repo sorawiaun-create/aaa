@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-25T22:00:44.181811+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "ถุงปลูก ข้อความ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "เวลา=22:01 (>22) และ เวลา=22:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-25T21:50:37.555329+07:00",
       "dry_run": false,
       "summary": {
@@ -724,17 +756,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-25T13:20:34.613222+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
