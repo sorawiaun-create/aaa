@@ -271,9 +271,9 @@
     <div id="studioKeyBar" class="card" style="margin-bottom:10px;padding:10px 12px"></div>
     <div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:260px">
-        <b style="font-size:14px">1) รูปสินค้า</b>
+        <b style="font-size:14px">1) รูป/วิดีโอสินค้า</b>
         <div style="margin-top:8px">
-          <input type="file" id="stImg" accept="image/*" onchange="studioPickImg(event)">
+          <input type="file" id="stImg" accept="image/*,video/*" onchange="studioPickMedia(event)">
         </div>
         <div id="stImgPrev" style="margin-top:10px"></div>
       </div>
@@ -1101,7 +1101,8 @@ async function runAI(){
 }
 
 /* ===================== 🚀 สตูดิโอสร้างแอด (AI) ===================== */
-let STUDIO_IMG=null;
+let STUDIO_FRAME=null;   // ภาพนิ่งที่ส่งให้ AI ดู (รูป หรือ เฟรมจากวิดีโอ)
+let STUDIO_MEDIA=null;   // สื่อจริง {type:'image'|'video', file, name} — ไว้ใช้เฟส 2 (โพส/ยิง)
 function renderStudioKeyBar(){
   const bar=document.getElementById("studioKeyBar");if(!bar)return;
   const k=openaiKey();
@@ -1113,13 +1114,29 @@ function renderStudioKeyBar(){
 function studioSaveKey(){const v=document.getElementById("stKeyInput").value.trim();
   if(!v.startsWith("sk-")){toast("กุญแจต้องขึ้นต้น sk-","err");return;}
   localStorage.setItem(OPENAI_KEY_STORE,v);renderStudioKeyBar();toast("บันทึกแล้ว ✓","ok");}
-function studioPickImg(ev){
+function studioPickMedia(ev){
   const f=ev.target.files&&ev.target.files[0];if(!f)return;
-  if(f.size>18*1024*1024){toast("รูปใหญ่ไป (เกิน 18MB)","err");return;}
-  const rd=new FileReader();
-  rd.onload=()=>{STUDIO_IMG=rd.result;
-    document.getElementById("stImgPrev").innerHTML=`<img src="${STUDIO_IMG}" style="max-width:100%;border-radius:10px">`;};
-  rd.readAsDataURL(f);
+  if(f.size>200*1024*1024){toast("ไฟล์ใหญ่ไป (เกิน 200MB)","err");return;}
+  const isVid=(f.type||"").startsWith("video");
+  STUDIO_MEDIA={type:isVid?"video":"image", file:f, name:f.name};
+  STUDIO_FRAME=null;
+  const prev=document.getElementById("stImgPrev");
+  const url=URL.createObjectURL(f);
+  if(isVid){
+    prev.innerHTML=`<video src="${url}" controls playsinline style="max-width:100%;border-radius:10px"></video>
+      <div class="muted" style="font-size:11.5px;margin-top:4px">🎬 วิดีโอ — AI จะจับภาพนิ่งจากวิดีโอไปช่วยเขียนแคปชั่น</div>`;
+    const v=document.createElement("video");v.src=url;v.muted=true;v.playsInline=true;
+    v.onloadeddata=()=>{try{v.currentTime=Math.min(1.5,(v.duration||3)/3);}catch(e){}};
+    v.onseeked=()=>{try{
+      const c=document.createElement("canvas");c.width=v.videoWidth||720;c.height=v.videoHeight||720;
+      c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+      STUDIO_FRAME=c.toDataURL("image/jpeg",0.8);
+    }catch(e){STUDIO_FRAME=null;}};
+  }else{
+    const rd=new FileReader();
+    rd.onload=()=>{STUDIO_FRAME=rd.result;prev.innerHTML=`<img src="${STUDIO_FRAME}" style="max-width:100%;border-radius:10px">`;};
+    rd.readAsDataURL(f);
+  }
 }
 async function callOpenAIVision(key,model,system,userText,imgDataUrl){
   const content=[{type:"text",text:userText}];
@@ -1141,10 +1158,11 @@ async function studioGenerate(){
   if(!name&&!detail){toast("กรอกชื่อสินค้า/รายละเอียดก่อน","err");return;}
   const btn=document.getElementById("stGenBtn");btn.disabled=true;btn.textContent="⏳ AI กำลังคิด…";
   const sys="คุณเป็นนักเขียนแคปชั่นโฆษณา Facebook สายขายของออนไลน์ไทย เขียนให้ปังโดนใจคนไทย ใช้อิโมจิพอดี มี hook ตอนต้น ใส่ราคา/โปรฯ และปิดท้ายด้วย call-to-action ให้รีบทัก/สั่งซื้อ";
+  const vis=STUDIO_MEDIA&&STUDIO_MEDIA.type==="video"?"ดูภาพนิ่งจากวิดีโอประกอบด้วยแล้ว":(STUDIO_FRAME?"ดูรูปประกอบด้วยแล้ว":"");
   const user=`ข้อมูลสินค้า:\nชื่อ: ${name||'-'}\nราคา/โปรฯ: ${price||'-'}\nจุดขาย: ${detail||'-'}\nโทน: ${tone}\n`+
-    (STUDIO_IMG?"ดูรูปประกอบด้วยแล้ว":"")+"เขียนแคปชั่นโฆษณา 3 แบบให้เลือก แต่ละแบบยาวกำลังดี (3-6 บรรทัด) ตอบเป็น JSON เท่านั้น: {\"captions\":[\"แบบ1\",\"แบบ2\",\"แบบ3\"]}";
+    vis+"เขียนแคปชั่นโฆษณา 3 แบบให้เลือก แต่ละแบบยาวกำลังดี (3-6 บรรทัด) ตอบเป็น JSON เท่านั้น: {\"captions\":[\"แบบ1\",\"แบบ2\",\"แบบ3\"]}";
   try{
-    const res=await callOpenAIVision(key,aiModel(),sys,user,STUDIO_IMG);
+    const res=await callOpenAIVision(key,aiModel(),sys,user,STUDIO_FRAME);
     const caps=res.captions||[];
     document.getElementById("stResult").innerHTML=`<div class="muted" style="font-size:12.5px;margin-bottom:8px">เลือกแบบที่ชอบ แก้ข้อความในกล่องได้ แล้วกดคัดลอกไปโพสได้เลย · <i>(เฟส 2: กดโพส+ยิงแอดอัตโนมัติ กำลังต่อให้)</i></div>`+
       caps.map((c,i)=>`<div class="card" style="margin-bottom:10px">
