@@ -313,6 +313,8 @@
           <input id="stBudget" type="number" value="200" style="width:100px">
         </div>
         <textarea id="stFinalCap" rows="4" placeholder="แคปชั่นที่จะโพส — กด 'ใช้อันนี้' จากด้านบน หรือพิมพ์เอง"></textarea>
+        <button class="btn" id="stAdviseBtn" onclick="stAdvise()">🤖 ให้ AI สแกนสินค้า + แนะนำวิธียิง</button>
+        <div id="stAdvice"></div>
         <button class="btn green" id="stDraftBtn" onclick="stCreateDraft()">🧪 สร้างแบบร่าง (โพส + แอดปิดไว้)</button>
       </div>
       <div id="stSteps" style="margin-top:10px"></div>
@@ -1226,6 +1228,47 @@ function studioCopy(i){const el=document.getElementById("stCap"+i);if(!el)return
 function stUseCaption(i){const el=document.getElementById("stCap"+i),t=document.getElementById("stFinalCap");
   if(el&&t){t.value=el.value;toast("ใส่แคปชั่นแล้ว เลื่อนลงไปข้อ 3 เพื่อโพส","ok");t.scrollIntoView({behavior:"smooth",block:"center"});}}
 
+/* ---- AI สแกนสินค้า + แนะนำวิธียิง ---- */
+let stLastAdvice=null;
+async function stAdvise(){
+  const key=openaiKey();if(!key){renderStudioKeyBar();toast("ใส่กุญแจ ChatGPT ก่อน","err");return;}
+  const name=document.getElementById("stName").value.trim();
+  const price=document.getElementById("stPrice").value.trim();
+  const detail=document.getElementById("stDetail").value.trim();
+  if(!name&&!detail&&!STUDIO_FRAME){toast("ใส่รูป หรือกรอกรายละเอียดสินค้าก่อน","err");return;}
+  const acctId=document.getElementById("stAcct").value;
+  const acc=((BOARD&&BOARD.accounts)||[]).find(a=>a.account_id===acctId);
+  const camps=((acc&&acc.campaigns)||[]).slice(0,25).map(c=>({ชื่อ:(c.name||'').slice(0,48),roas:c.roas,ออร์เดอร์:c.orders,จ่าย:c.spend}));
+  const btn=document.getElementById("stAdviseBtn");btn.disabled=true;btn.textContent="⏳ AI กำลังสแกน…";
+  const sys="คุณเป็นผู้วางแผนยิงแอด Facebook มืออาชีพสายขายของออนไลน์ไทย ช่วยแนะนำวิธียิงสินค้านี้ให้คุ้มที่สุด โดยดูจากรูปสินค้า รายละเอียด และผลแคมเปญเดิมในบัญชี";
+  const user=`สินค้า: ${name||'-'} | ราคา/โปรฯ: ${price||'-'} | จุดขาย: ${detail||'-'}\n`+
+    `แคมเปญเดิมในบัญชี (ชื่อ/ROAS/ออร์เดอร์/จ่าย):\n`+JSON.stringify(camps)+`\n`+
+    (STUDIO_FRAME?"ดูรูปสินค้าประกอบด้วย ":"")+
+    `กรุณาแนะนำเป็น JSON เท่านั้น: {"template_name":"ชื่อแคมเดิมที่ควรก๊อปกลุ่มเป้าหมาย (เลือกจากรายชื่อให้ตรง)","budget_thb":งบเทสต่อวันที่เหมาะ,"angle":"มุม/จุดขายที่ควรชู","why":"เหตุผลสั้นๆ"}`;
+  try{
+    const r=await callOpenAIVision(key,aiModel(),sys,user,STUDIO_FRAME);
+    stLastAdvice=r;
+    document.getElementById("stAdvice").innerHTML=`<div class="card" style="border-color:#7ff0a6;margin:8px 0">
+      <b>🤖 คำแนะนำจาก AI</b>
+      <div style="margin-top:6px;line-height:1.7;font-size:13px">
+        📋 ก๊อปกลุ่มเป้าหมายจาก: <b>${esc(r.template_name||'-')}</b><br>
+        💰 งบเทส/วัน: <b>${esc(String(r.budget_thb||'-'))} บาท</b><br>
+        🎯 มุมที่ควรชู: ${esc(r.angle||'-')}<br>
+        <span class="muted">${esc(r.why||'')}</span></div>
+      <button class="btn green sm" style="margin-top:8px" onclick="stApplyAdvice()">✅ ใช้คำแนะนำนี้ (ใส่ค่าให้อัตโนมัติ)</button></div>`;
+    toast("AI แนะนำเสร็จ ✓","ok");
+  }catch(e){document.getElementById("stAdvice").innerHTML=`<div class="banner err" style="position:static;display:block">🤖 แนะนำไม่สำเร็จ: ${esc(e.message)}</div>`;toast("❌ "+e.message,"err");}
+  btn.disabled=false;btn.textContent="🤖 ให้ AI สแกนสินค้า + แนะนำวิธียิง";
+}
+function stApplyAdvice(){
+  const r=stLastAdvice;if(!r)return;
+  if(r.budget_thb)document.getElementById("stBudget").value=Math.round(Number(r.budget_thb))||200;
+  if(r.template_name){const sel=document.getElementById("stTemplate");const key=String(r.template_name).slice(0,14);
+    for(const o of sel.options){if(o.textContent.includes(key)){sel.value=o.value;break;}}}
+  toast("ใส่ค่าตามคำแนะนำแล้ว ✓ ตรวจแล้วกด 'สร้างแบบร่าง' ได้เลย","ok");
+  document.getElementById("stDraftBtn").scrollIntoView({behavior:"smooth",block:"center"});
+}
+
 /* ---- เฟส 2: โพสเพจ + สร้างแอด (ยิง Facebook ตรง ๆ จากเบราว์เซอร์) ---- */
 const FB_KEY_STORE="fbdash_fb_token", GRAPH="https://graph.facebook.com/v20.0";
 let STUDIO_PAGES=[], STUDIO_DRAFT=null;
@@ -1352,7 +1395,10 @@ async function stCreateDraft(){
       <a class="btn ghost sm" href="https://business.facebook.com/adsmanager/manage/campaigns?act=${acctId}" target="_blank" rel="noopener">เปิด Ads Manager</a></div></div>`;
     toast("สร้างแบบร่างเสร็จ (ปิดไว้) ✓","ok");
   }catch(e){
-    stStep(`<b style="color:#ff9a9a">❌ หยุดที่ขั้นนี้: ${esc(e.message)}</b>`);
+    let hint="";
+    if(/publish the video|#100|permission/i.test(e.message))
+      hint=`<div style="font-size:12px;margin-top:4px;line-height:1.6">👉 เพจยังไม่มีสิทธิ์โพส<b>วิดีโอ</b>ผ่านโทเคน — เช็ค: (1) คุณเป็นแอดมินเพจที่มีสิทธิ์ "จัดการเนื้อหา/โพสต์" (2) โทเคนมี <b>pages_manage_posts</b> · <b>ลองใช้ "รูปภาพ" ก่อน</b> ถ้ารูปโพสได้ = pipeline โอเค เหลือแค่ปลดสิทธิ์วิดีโอ</div>`;
+    stStep(`<b style="color:#ff9a9a">❌ หยุดที่ขั้นนี้: ${esc(e.message)}</b>${hint}`);
     toast("❌ "+e.message,"err");
   }
   btn.disabled=false;btn.textContent="🧪 สร้างแบบร่าง (โพส + แอดปิดไว้)";
