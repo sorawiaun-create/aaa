@@ -315,7 +315,10 @@
         <textarea id="stFinalCap" rows="4" placeholder="แคปชั่นที่จะโพส — กด 'ใช้อันนี้' จากด้านบน หรือพิมพ์เอง"></textarea>
         <button class="btn" id="stAdviseBtn" onclick="stAdvise()">🤖 ให้ AI สแกนสินค้า + แนะนำวิธียิง</button>
         <div id="stAdvice"></div>
-        <button class="btn green" id="stDraftBtn" onclick="stCreateDraft()">🧪 สร้างแบบร่าง (โพส + แอดปิดไว้)</button>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn" id="stPostBtn" onclick="stPostOnly()">📤 โพสลงเพจอย่างเดียว (ไม่ยิงแอด)</button>
+          <button class="btn green" id="stDraftBtn" onclick="stCreateDraft()">🧪 โพส + สร้างแอด (ปิดไว้)</button>
+        </div>
       </div>
       <div id="stSteps" style="margin-top:10px"></div>
       <div id="stLaunch" style="margin-top:8px"></div>
@@ -1329,6 +1332,47 @@ async function stLoadPages(){
   }catch(e){toast("❌ โหลดไม่ได้: "+e.message,"err");}
 }
 function stStep(html){const el=document.getElementById("stSteps");if(el)el.insertAdjacentHTML("beforeend",`<div style="font-size:12.5px;padding:2px 0;line-height:1.5">${html}</div>`);}
+async function stPostMediaToPage(pageId,pageToken,cap){
+  const fd=new FormData();
+  if(STUDIO_MEDIA.type==="image"){
+    fd.append("source",STUDIO_MEDIA.file);fd.append("caption",cap);fd.append("published","true");
+    const ph=await fbCall("/"+pageId+"/photos",{method:"POST",token:pageToken,form:fd});
+    return ph.post_id||(pageId+"_"+ph.id);
+  }
+  fd.append("source",STUDIO_MEDIA.file);fd.append("description",cap);
+  const vd=await fbCall("/"+pageId+"/videos",{method:"POST",token:pageToken,form:fd});
+  stStep("&nbsp;&nbsp;อัปโหลดวิดีโอแล้ว รอ Facebook ประมวลผล…");
+  let story=null;
+  for(let i=0;i<10&&!story;i++){await new Promise(r=>setTimeout(r,4000));
+    try{const info=await fbCall("/"+vd.id,{token:pageToken,params:{fields:"post_id"}});if(info.post_id)story=info.post_id;}catch(e){}}
+  if(!story)throw new Error("วิดีโอยังประมวลผลไม่เสร็จ — รอสักครู่แล้วลองใหม่ หรือใช้รูปแทน");
+  return story;
+}
+async function stPostOnly(){
+  const t=fbToken();if(!t){renderStFbBar();toast("ใส่โทเคน Facebook ก่อน","err");return;}
+  const pageId=document.getElementById("stPage").value;
+  const page=(STUDIO_PAGES||[]).find(p=>p.id===pageId);
+  const cap=document.getElementById("stFinalCap").value.trim();
+  if(!STUDIO_MEDIA||!STUDIO_MEDIA.file){toast("ยังไม่ได้เลือกรูป/วิดีโอ (ข้อ 1)","err");return;}
+  if(!cap){toast("ยังไม่มีแคปชั่น","err");return;}
+  if(!page||!page.access_token){toast("เลือกเพจก่อน (กด 'โหลดเพจ')","err");return;}
+  const btn=document.getElementById("stPostBtn");btn.disabled=true;btn.textContent="⏳ กำลังโพส…";
+  document.getElementById("stSteps").innerHTML="";document.getElementById("stLaunch").innerHTML="";
+  try{
+    stStep("📤 โพสลงเพจ “"+esc(page.name)+"” (ไม่ยิงแอด)…");
+    const story=await stPostMediaToPage(pageId,page.access_token,cap);
+    stStep(`<b style="color:#7ff0a6">✅ โพสลงเพจเรียบร้อย!</b>`);
+    document.getElementById("stLaunch").innerHTML=`<a class="btn ghost sm" href="https://www.facebook.com/${esc(story)}" target="_blank" rel="noopener">ดูโพสบนเพจ</a>`;
+    toast("โพสลงเพจแล้ว ✓","ok");
+  }catch(e){
+    let hint="";
+    if(/publish the video|#100|permission/i.test(e.message))
+      hint=`<div style="font-size:12px;margin-top:4px">👉 สิทธิ์โพส<b>วิดีโอ</b>ไม่พอ — ต้องเป็นแอดมินเพจ + โทเคนมี pages_manage_posts · ลองรูปก่อนได้</div>`;
+    stStep(`<b style="color:#ff9a9a">❌ โพสไม่สำเร็จ: ${esc(e.message)}</b>${hint}`);
+    toast("❌ "+e.message,"err");
+  }
+  btn.disabled=false;btn.textContent="📤 โพสลงเพจอย่างเดียว (ไม่ยิงแอด)";
+}
 async function stCreateDraft(){
   const t=fbToken();if(!t){renderStFbBar();toast("ใส่โทเคน Facebook ก่อน","err");return;}
   const acctId=document.getElementById("stAcct").value;
@@ -1357,21 +1401,8 @@ async function stCreateDraft(){
       else stStep("&nbsp;&nbsp;⚠️ แคมต้นแบบไม่มีชุดโฆษณา — ใช้ค่าเริ่มต้น: ไทย");
     }else stStep("&nbsp;&nbsp;ใช้ค่าเริ่มต้น: ยิงไทย");
     stStep("② โพสสื่อ+แคปชั่นลงเพจ “"+esc(page.name)+"”…");
-    let story=null;const fd=new FormData();
-    if(STUDIO_MEDIA.type==="image"){
-      fd.append("source",STUDIO_MEDIA.file);fd.append("caption",cap);fd.append("published","true");
-      const ph=await fbCall("/"+pageId+"/photos",{method:"POST",token:page.access_token,form:fd});
-      story=ph.post_id||(pageId+"_"+ph.id);
-      stStep("&nbsp;&nbsp;✓ โพสรูปแล้ว");
-    }else{
-      fd.append("source",STUDIO_MEDIA.file);fd.append("description",cap);
-      const vd=await fbCall("/"+pageId+"/videos",{method:"POST",token:page.access_token,form:fd});
-      stStep("&nbsp;&nbsp;อัปโหลดวิดีโอแล้ว รอ Facebook ประมวลผล…");
-      for(let i=0;i<10&&!story;i++){await new Promise(r=>setTimeout(r,4000));
-        try{const info=await fbCall("/"+vd.id,{token:page.access_token,params:{fields:"post_id"}});if(info.post_id)story=info.post_id;}catch(e){}}
-      if(!story)throw new Error("วิดีโอยังประมวลผลไม่เสร็จ — รอสักครู่แล้วลองใหม่ หรือใช้รูปแทน");
-      stStep("&nbsp;&nbsp;✓ วิดีโอพร้อม");
-    }
+    const story=await stPostMediaToPage(pageId,page.access_token,cap);
+    stStep("&nbsp;&nbsp;✓ โพสลงเพจแล้ว");
     stStep("③ สร้างแคมเปญ (ยอดขาย, ปิดไว้)…");
     const camp=await fbCall("/act_"+acctId+"/campaigns",{method:"POST",token:t,params:{
       name:"AI • "+pname+" • "+ts,objective:"OUTCOME_SALES",status:"PAUSED",special_ad_categories:[]}});
