@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-25T17:40:33.243070+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-25T17:30:37.722067+07:00",
       "dry_run": false,
       "summary": {
@@ -755,38 +766,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-25T09:20:33.008048+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 1,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=110.24 (>100) และ ทุนซื้อ=110.24 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "จ่าย 220    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=235.58 (>220) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
