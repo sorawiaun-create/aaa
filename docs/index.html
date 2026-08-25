@@ -161,6 +161,7 @@
       <button class="tab active" data-tab="overview" onclick="showTab('overview')">📊 ภาพรวม</button>
       <button class="tab" data-tab="board" onclick="showTab('board')">🧩 กระดานแอด</button>
       <button class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</button>
+      <button class="tab" data-tab="studio" onclick="showTab('studio')">🚀 สร้างแอด (AI)</button>
       <button class="tab" data-tab="check" onclick="showTab('check')">🔎 เช็คทุกแคม</button>
       <button class="tab" data-tab="ai" onclick="showTab('ai')">🤖 AI วิเคราะห์</button>
       <button class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</button>
@@ -259,6 +260,43 @@
       </label>
     </div>
     <div id="logList"></div>
+  </section>
+
+  <!-- ===== 🚀 สร้างแอด (AI) ===== -->
+  <section id="studio" class="hidden">
+    <div class="muted" style="font-size:12.5px;margin-bottom:10px">
+      โยนรูปสินค้า + กรอกราคา/โปรโมชั่น แล้วให้ AI คิดแคปชั่นให้ (AI มองเห็นรูปด้วย) ·
+      <b>เฟสแรก:</b> คิดแคปชั่น (เทสได้เลย) · <b>เฟส 2:</b> โพสเพจ + ยิงแอดอัตโนมัติ (กำลังต่อ)
+    </div>
+    <div id="studioKeyBar" class="card" style="margin-bottom:10px;padding:10px 12px"></div>
+    <div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:260px">
+        <b style="font-size:14px">1) รูปสินค้า</b>
+        <div style="margin-top:8px">
+          <input type="file" id="stImg" accept="image/*" onchange="studioPickImg(event)">
+        </div>
+        <div id="stImgPrev" style="margin-top:10px"></div>
+      </div>
+      <div class="card" style="flex:1.3;min-width:280px">
+        <b style="font-size:14px">2) รายละเอียดสินค้า/โปรโมชั่น</b>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <input id="stName" placeholder="ชื่อสินค้า เช่น ถุงปลูกต้นไม้ Premium">
+          <input id="stPrice" placeholder="ราคา / โปรโมชั่น เช่น ลด 50% เหลือ 199 ส่งฟรี">
+          <textarea id="stDetail" rows="3" placeholder="จุดขาย/รายละเอียด เช่น ทนแดด 5 ปี ระบายน้ำดี รากไม่เน่า"></textarea>
+          <div class="row" style="gap:8px;align-items:center">
+            <span class="muted" style="font-size:12.5px">โทน:</span>
+            <select id="stTone" style="min-width:150px">
+              <option value="ขายของเร้าใจ กระตุ้นให้รีบซื้อ">เร้าใจ เร่งปิดการขาย</option>
+              <option value="เป็นกันเอง อบอุ่น เล่าเรื่อง">เป็นกันเอง เล่าเรื่อง</option>
+              <option value="สุภาพ ดูพรีเมียม น่าเชื่อถือ">พรีเมียม น่าเชื่อถือ</option>
+              <option value="สนุก ตลก มีมุกขำ">สนุก มีมุก</option>
+            </select>
+          </div>
+          <button class="btn green" id="stGenBtn" onclick="studioGenerate()">✍️ ให้ AI คิดแคปชั่น 3 แบบ</button>
+        </div>
+      </div>
+    </div>
+    <div id="stResult" style="margin-top:14px"></div>
   </section>
 
   <!-- ===== 🔎 เช็คทุกแคม ===== -->
@@ -455,7 +493,8 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  ["overview","board","editor","logs","ai","check"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));}
+  ["overview","board","editor","logs","ai","check","studio"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));
+  if(t==="studio")renderStudioKeyBar();}
 
 /* ===================== OVERVIEW ===================== */
 let OV_ST=null, ovPeriod="today";
@@ -1060,6 +1099,64 @@ async function runAI(){
     renderAI({error:e.message,generated_at:new Date().toISOString(),model:aiModel()});}
   btn.disabled=false;btn.textContent="🤖 ให้ AI วิเคราะห์เดี๋ยวนี้";
 }
+
+/* ===================== 🚀 สตูดิโอสร้างแอด (AI) ===================== */
+let STUDIO_IMG=null;
+function renderStudioKeyBar(){
+  const bar=document.getElementById("studioKeyBar");if(!bar)return;
+  const k=openaiKey();
+  if(!k){bar.innerHTML=`<div style="font-size:13px;margin-bottom:7px">🔑 ใส่กุญแจ ChatGPT ก่อน (ตัวเดียวกับหน้า AI วิเคราะห์)</div>
+    <div class="row" style="gap:8px"><input id="stKeyInput" type="password" placeholder="sk-..." style="flex:1;min-width:180px" autocomplete="off">
+    <button class="btn green sm" onclick="studioSaveKey()">บันทึก</button></div>`;return;}
+  bar.innerHTML=`<span style="font-size:13px">🔑 กุญแจพร้อม: <b>${maskKey(k)}</b> · โมเดล ${esc(aiModel())}</span>`;
+}
+function studioSaveKey(){const v=document.getElementById("stKeyInput").value.trim();
+  if(!v.startsWith("sk-")){toast("กุญแจต้องขึ้นต้น sk-","err");return;}
+  localStorage.setItem(OPENAI_KEY_STORE,v);renderStudioKeyBar();toast("บันทึกแล้ว ✓","ok");}
+function studioPickImg(ev){
+  const f=ev.target.files&&ev.target.files[0];if(!f)return;
+  if(f.size>18*1024*1024){toast("รูปใหญ่ไป (เกิน 18MB)","err");return;}
+  const rd=new FileReader();
+  rd.onload=()=>{STUDIO_IMG=rd.result;
+    document.getElementById("stImgPrev").innerHTML=`<img src="${STUDIO_IMG}" style="max-width:100%;border-radius:10px">`;};
+  rd.readAsDataURL(f);
+}
+async function callOpenAIVision(key,model,system,userText,imgDataUrl){
+  const content=[{type:"text",text:userText}];
+  if(imgDataUrl) content.push({type:"image_url",image_url:{url:imgDataUrl}});
+  const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+    body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content}],response_format:{type:"json_object"}})});
+  if(!r.ok){let t="";try{t=(await r.json()).error?.message||"";}catch(e){t=await r.text();}
+    throw new Error("OpenAI "+r.status+(t?": "+t.slice(0,180):""));}
+  const j=await r.json();return _parseJsonText(j.choices[0].message.content);
+}
+async function studioGenerate(){
+  const key=openaiKey();
+  if(!key){renderStudioKeyBar();toast("ใส่กุญแจ ChatGPT ก่อน","err");return;}
+  const name=document.getElementById("stName").value.trim();
+  const price=document.getElementById("stPrice").value.trim();
+  const detail=document.getElementById("stDetail").value.trim();
+  const tone=document.getElementById("stTone").value;
+  if(!name&&!detail){toast("กรอกชื่อสินค้า/รายละเอียดก่อน","err");return;}
+  const btn=document.getElementById("stGenBtn");btn.disabled=true;btn.textContent="⏳ AI กำลังคิด…";
+  const sys="คุณเป็นนักเขียนแคปชั่นโฆษณา Facebook สายขายของออนไลน์ไทย เขียนให้ปังโดนใจคนไทย ใช้อิโมจิพอดี มี hook ตอนต้น ใส่ราคา/โปรฯ และปิดท้ายด้วย call-to-action ให้รีบทัก/สั่งซื้อ";
+  const user=`ข้อมูลสินค้า:\nชื่อ: ${name||'-'}\nราคา/โปรฯ: ${price||'-'}\nจุดขาย: ${detail||'-'}\nโทน: ${tone}\n`+
+    (STUDIO_IMG?"ดูรูปประกอบด้วยแล้ว":"")+"เขียนแคปชั่นโฆษณา 3 แบบให้เลือก แต่ละแบบยาวกำลังดี (3-6 บรรทัด) ตอบเป็น JSON เท่านั้น: {\"captions\":[\"แบบ1\",\"แบบ2\",\"แบบ3\"]}";
+  try{
+    const res=await callOpenAIVision(key,aiModel(),sys,user,STUDIO_IMG);
+    const caps=res.captions||[];
+    document.getElementById("stResult").innerHTML=`<div class="muted" style="font-size:12.5px;margin-bottom:8px">เลือกแบบที่ชอบ แก้ข้อความในกล่องได้ แล้วกดคัดลอกไปโพสได้เลย · <i>(เฟส 2: กดโพส+ยิงแอดอัตโนมัติ กำลังต่อให้)</i></div>`+
+      caps.map((c,i)=>`<div class="card" style="margin-bottom:10px">
+        <div class="row" style="align-items:center;margin-bottom:6px"><b>แคปชั่นแบบ ${i+1}</b><div class="spacer" style="flex:1"></div>
+          <button class="btn ghost sm" onclick="studioCopy(${i})">📋 คัดลอก</button></div>
+        <textarea id="stCap${i}" rows="6" style="width:100%">${esc(c)}</textarea></div>`).join("");
+    toast("คิดแคปชั่นเสร็จ ✓","ok");
+  }catch(e){toast("❌ "+e.message,"err");}
+  btn.disabled=false;btn.textContent="✍️ ให้ AI คิดแคปชั่น 3 แบบ";
+}
+function studioCopy(i){const el=document.getElementById("stCap"+i);if(!el)return;el.select();
+  (navigator.clipboard?navigator.clipboard.writeText(el.value):Promise.reject()).then(()=>toast("คัดลอกแล้ว ✓","ok"),()=>toast("เลือกข้อความแล้ว Ctrl+C ได้เลย",""));}
 
 /* ===================== boot ===================== */
 async function boot(){
