@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-25T11:21:56.829259+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=69.68 (>50) และ ทุนซื้อ=69.68 (<75) และ ซื้อ=1 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 800 → 1040 บาท",
+          "reason": "จ่าย=69.68 (>30) และ ROAS=2.87 (>2.80) และ ทุนซื้อ=69.68 (<75) และ เวลา=11:22 (>6) และ เวลา=11:22 (<18) และ ROAS=2.87 (<3.50)",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120252227279790359/\n  Params:  {'daily_budget': 104000}\n\n  Status:  400\n  Response:\n    {\n      \"error\""
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=279.69 (>250) และ ทุนซื้อ=279.69 (>220)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-25T11:20:34.532688+07:00",
       "dry_run": false,
       "summary": {
@@ -947,17 +989,6 @@
     },
     {
       "t": "2026-08-25T03:10:28.191635+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-25T03:00:42.869858+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
