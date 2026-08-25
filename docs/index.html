@@ -307,7 +307,7 @@
           <select id="stTemplate" style="min-width:220px" title="ก๊อปกลุ่มเป้าหมายจากแคมนี้"></select>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn sm" onclick="stLoadPages()">📄 โหลดเพจ</button>
+          <button class="btn sm" onclick="stLoadPages()">📄 โหลดเพจ + บัญชี</button>
           <select id="stPage" style="min-width:180px"><option value="">— กดโหลดเพจ —</option></select>
           <span class="muted" style="font-size:12.5px">งบเทส/วัน (บาท):</span>
           <input id="stBudget" type="number" value="200" style="width:100px">
@@ -1051,6 +1051,14 @@ function buildAiPromptJS(status,board){
     '"recommendations":[{"campaign":"ชื่อแคมเปญ","action":"SCALE_UP|SCALE_DOWN|KEEP|PAUSE|REVIEW","reason":"เหตุผลพร้อมตัวเลข"}]}]}\n'+
     "ตอบภาษาไทย อ้างอิงตัวเลขจริง ห้ามมีข้อความอื่นนอกจาก JSON";
 }
+function _parseJsonText(text){
+  text=(text||"").trim();
+  if(!text) throw new Error("ไม่มีข้อความตอบกลับจาก AI");
+  if(text.startsWith("```")) text=text.replace(/^```(json)?/i,"").replace(/```\s*$/,"").trim();
+  const s=text.indexOf("{"), e=text.lastIndexOf("}");
+  if(s>=0&&e>s){try{return JSON.parse(text.slice(s,e+1));}catch(err){}}
+  return JSON.parse(text);
+}
 async function callOpenAI(key,model,system,user){
   const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
     headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
@@ -1130,8 +1138,9 @@ function renderStudioKeyBar(){
   if(!k){bar.innerHTML=`<div style="font-size:13px;margin-bottom:7px">🔑 ใส่กุญแจ ChatGPT ก่อน (ตัวเดียวกับหน้า AI วิเคราะห์)</div>
     <div class="row" style="gap:8px"><input id="stKeyInput" type="password" placeholder="sk-..." style="flex:1;min-width:180px" autocomplete="off">
     <button class="btn green sm" onclick="studioSaveKey()">บันทึก</button></div>`;return;}
-  bar.innerHTML=`<span style="font-size:13px">🔑 กุญแจพร้อม: <b>${maskKey(k)}</b> · โมเดล ${esc(aiModel())}</span>`;
+  bar.innerHTML=`<div class="row" style="gap:8px;align-items:center"><span style="font-size:13px">🔑 กุญแจพร้อม: <b>${maskKey(k)}</b> · โมเดล ${esc(aiModel())}</span><div class="spacer" style="flex:1"></div><button class="btn ghost sm" onclick="studioClearKey()">เปลี่ยนกุญแจ</button></div>`;
 }
+function studioClearKey(){localStorage.removeItem(OPENAI_KEY_STORE);renderStudioKeyBar();toast("ลบกุญแจแล้ว วางอันใหม่ได้เลย","");}
 function studioSaveKey(){const v=document.getElementById("stKeyInput").value.trim();
   if(!v.startsWith("sk-")){toast("กุญแจต้องขึ้นต้น sk-","err");return;}
   localStorage.setItem(OPENAI_KEY_STORE,v);renderStudioKeyBar();toast("บันทึกแล้ว ✓","ok");}
@@ -1260,11 +1269,21 @@ async function fbCall(path,{method="GET",token,params={},form=null}={}){
 }
 async function stLoadPages(){
   const t=fbToken();if(!t){renderStFbBar();toast("ใส่โทเคน Facebook ก่อน","err");return;}
-  try{const j=await fbCall("/me/accounts",{token:t,params:{fields:"id,name,access_token",limit:200}});
-    STUDIO_PAGES=j.data||[];const sel=document.getElementById("stPage");
-    sel.innerHTML=STUDIO_PAGES.length?STUDIO_PAGES.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(""):`<option value="">— ไม่พบเพจ (เช็คสิทธิ์ pages_show_list) —</option>`;
-    toast("โหลดเพจแล้ว "+STUDIO_PAGES.length+" เพจ","ok");
-  }catch(e){toast("❌ โหลดเพจไม่ได้: "+e.message,"err");}
+  try{
+    const [pg,ac]=await Promise.all([
+      fbCall("/me/accounts",{token:t,params:{fields:"id,name,access_token",limit:200}}),
+      fbCall("/me/adaccounts",{token:t,params:{fields:"name,account_id",limit:500}}).catch(e=>({data:[],_err:e.message})),
+    ]);
+    STUDIO_PAGES=pg.data||[];
+    const psel=document.getElementById("stPage");
+    psel.innerHTML=STUDIO_PAGES.length?STUDIO_PAGES.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(""):`<option value="">— ไม่พบเพจ (เช็คสิทธิ์ pages_show_list) —</option>`;
+    const accts=ac.data||[];
+    const asel=document.getElementById("stAcct");
+    if(accts.length){asel.innerHTML=accts.map(a=>`<option value="${a.account_id}">${esc(a.name||('act_'+a.account_id))}</option>`).join("");stFillTemplates();}
+    else asel.innerHTML=`<option value="">— ไม่พบบัญชีแอด${ac._err?' ('+esc(ac._err)+')':' (เช็คสิทธิ์ ads_read)'} —</option>`;
+    toast("โหลดแล้ว: เพจ "+STUDIO_PAGES.length+" · บัญชีแอด "+accts.length,"ok");
+    if(ac._err)toast("บัญชีแอด: "+ac._err,"err");
+  }catch(e){toast("❌ โหลดไม่ได้: "+e.message,"err");}
 }
 function stStep(html){const el=document.getElementById("stSteps");if(el)el.insertAdjacentHTML("beforeend",`<div style="font-size:12.5px;padding:2px 0;line-height:1.5">${html}</div>`);}
 async function stCreateDraft(){
