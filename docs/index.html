@@ -162,6 +162,7 @@
       <button class="tab" data-tab="board" onclick="showTab('board')">🧩 กระดานแอด</button>
       <button class="tab" data-tab="editor" onclick="showTab('editor')">⚙️ ตั้งกฎ</button>
       <button class="tab" data-tab="studio" onclick="showTab('studio')">🚀 สร้างแอด (AI)</button>
+      <button class="tab" data-tab="plan" onclick="showTab('plan')">📅 แผนโพส (AI)</button>
       <button class="tab" data-tab="check" onclick="showTab('check')">🔎 เช็คทุกแคม</button>
       <button class="tab" data-tab="ai" onclick="showTab('ai')">🤖 AI วิเคราะห์</button>
       <button class="tab" data-tab="logs" onclick="showTab('logs')">📜 Log</button>
@@ -323,6 +324,35 @@
       <div id="stSteps" style="margin-top:10px"></div>
       <div id="stLaunch" style="margin-top:8px"></div>
     </div>
+  </section>
+
+  <!-- ===== 📅 แผนโพส (AI) ===== -->
+  <section id="plan" class="hidden">
+    <div class="muted" style="font-size:12.5px;margin-bottom:10px">
+      ให้ AI ร่าง <b>แผนคอนเทนต์ 1 อาทิตย์</b> (เน้นให้ความรู้ ขายนิดหน่อย) + เจนรูปโดยอ้างอิงรูปไกด์ไลน์สินค้า + เขียนแคปชั่น →
+      คุณตรวจ/แก้/เจนใหม่ → (สเต็ปหน้า) อนุมัติแล้วตั้งเวลาโพสบน Facebook อัตโนมัติ
+    </div>
+    <div id="planKeyBar" class="card" style="margin-bottom:10px;padding:10px 12px"></div>
+    <div class="card">
+      <b style="font-size:14px">ตั้งค่าแผน</b>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:9px">
+        <input id="plBiz" placeholder="ธุรกิจ/สินค้า เช่น ขายถุงปลูกต้นไม้ Premium ทนแดด">
+        <textarea id="plNotes" rows="2" placeholder="ข้อมูลเพิ่มเติม/จุดขาย/โปรที่อยากดัน (ไม่ใส่ก็ได้)"></textarea>
+        <div>
+          <div class="muted" style="font-size:12.5px;margin-bottom:4px">รูปไกด์ไลน์สินค้า (ให้ AI อ้างอิงเจนรูปให้ตรงสินค้า):</div>
+          <input type="file" id="plRef" accept="image/*" onchange="planPickRef(event)">
+          <div id="plRefPrev" style="margin-top:8px"></div>
+        </div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="muted" style="font-size:12.5px">เริ่มวันที่:</span>
+          <input id="plStart" type="date" style="width:160px">
+          <span class="muted" style="font-size:12.5px">กี่โพส/อาทิตย์:</span>
+          <select id="plCount" style="width:80px"><option>3</option><option selected>5</option><option>7</option></select>
+        </div>
+        <button class="btn green" id="plGenBtn" onclick="planGenerate()">🧠 ให้ AI ร่างแผน 1 อาทิตย์</button>
+      </div>
+    </div>
+    <div id="planList" style="margin-top:14px"></div>
   </section>
 
   <!-- ===== 🔎 เช็คทุกแคม ===== -->
@@ -520,7 +550,8 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
   ["overview","board","editor","logs","ai","check","studio"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));
-  if(t==="studio"){renderStudioKeyBar();stInitPublish();}}
+  if(t==="studio"){renderStudioKeyBar();stInitPublish();}
+  if(t==="plan")renderPlanKeyBar();}
 
 /* ===================== OVERVIEW ===================== */
 let OV_ST=null, ovPeriod="today";
@@ -1445,6 +1476,105 @@ async function stLaunch(){
     stStep(`<b style="color:#7ff0a6">🚀 เปิดแอดแล้ว — กำลังยิงจริง!</b>`);
     toast("🚀 ยิงแล้ว! แอดกำลังทำงาน","ok");
   }catch(e){toast("❌ เปิดไม่สำเร็จ: "+e.message,"err");stStep(`<b style="color:#ff9a9a">❌ เปิดไม่สำเร็จ: ${esc(e.message)}</b>`);}
+}
+
+/* ===================== 📅 แผนโพส (AI) ===================== */
+let PLAN_ITEMS=[], PLAN_REF_FILE=null, PLAN_REF_URL=null;
+function renderPlanKeyBar(){
+  const bar=document.getElementById("planKeyBar");if(!bar)return;const k=openaiKey();
+  if(!k){bar.innerHTML=`<div style="font-size:13px;margin-bottom:7px">🔑 ใส่กุญแจ ChatGPT ก่อน (ตัวเดียวกับหน้า AI วิเคราะห์) — ใช้ทั้งคิดแผนและเจนรูป</div>
+    <div class="row" style="gap:8px"><input id="plKeyInput" type="password" placeholder="sk-..." style="flex:1;min-width:180px" autocomplete="off">
+    <button class="btn green sm" onclick="planSaveKey()">บันทึก</button></div>`;return;}
+  bar.innerHTML=`<div class="row" style="gap:8px;align-items:center"><span style="font-size:13px">🔑 กุญแจพร้อม: <b>${maskKey(k)}</b></span><div class="spacer" style="flex:1"></div><button class="btn ghost sm" onclick="studioClearKey()">เปลี่ยนกุญแจ</button></div>`;
+}
+function planSaveKey(){const v=document.getElementById("plKeyInput").value.trim();if(!v.startsWith("sk-")){toast("กุญแจต้องขึ้นต้น sk-","err");return;}
+  localStorage.setItem(OPENAI_KEY_STORE,v);renderPlanKeyBar();toast("บันทึกแล้ว ✓","ok");}
+function planPickRef(ev){
+  const f=ev.target.files&&ev.target.files[0];if(!f)return;
+  if(f.size>18*1024*1024){toast("รูปใหญ่ไป (เกิน 18MB)","err");return;}
+  PLAN_REF_FILE=f;const rd=new FileReader();
+  rd.onload=()=>{PLAN_REF_URL=rd.result;document.getElementById("plRefPrev").innerHTML=`<img src="${PLAN_REF_URL}" style="max-width:180px;border-radius:10px">`;};
+  rd.readAsDataURL(f);
+}
+async function callOpenAIImage(key,prompt,refFile){
+  let r;
+  if(refFile){
+    const fd=new FormData();fd.append("model","gpt-image-1");fd.append("image",refFile);fd.append("prompt",prompt);fd.append("size","1024x1024");
+    r=await fetch("https://api.openai.com/v1/images/edits",{method:"POST",headers:{"Authorization":"Bearer "+key},body:fd});
+  }else{
+    r=await fetch("https://api.openai.com/v1/images/generations",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body:JSON.stringify({model:"gpt-image-1",prompt,size:"1024x1024",n:1})});
+  }
+  if(!r.ok){let t="";try{t=(await r.json()).error?.message||"";}catch(e){}throw new Error("เจนรูป "+r.status+(t?": "+t.slice(0,200):""));}
+  const j=await r.json();const d=(j.data&&j.data[0])||{};
+  if(d.b64_json)return "data:image/png;base64,"+d.b64_json;
+  if(d.url)return d.url;
+  throw new Error("ไม่ได้รูปกลับมา");
+}
+async function planGenerate(){
+  const key=openaiKey();if(!key){renderPlanKeyBar();toast("ใส่กุญแจ ChatGPT ก่อน","err");return;}
+  const biz=document.getElementById("plBiz").value.trim();
+  const notes=document.getElementById("plNotes").value.trim();
+  const n=Number(document.getElementById("plCount").value)||5;
+  const startStr=document.getElementById("plStart").value;
+  if(!biz){toast("กรอกธุรกิจ/สินค้าก่อน","err");return;}
+  const btn=document.getElementById("plGenBtn");btn.disabled=true;btn.textContent="⏳ AI กำลังร่างแผน…";
+  const sys="คุณเป็นนักวางแผนคอนเทนต์เพจ Facebook สายขายของออนไลน์ไทย เน้นสร้างคอนเทนต์ 'ให้ความรู้' ที่คนอยากอ่าน/แชร์ แทรกการขายแบบเนียน ๆ นาน ๆ ที";
+  const user=`ธุรกิจ/สินค้า: ${biz}\nข้อมูลเพิ่ม: ${notes||'-'}\nช่วยร่างแผนโพส ${n} โพสสำหรับ 1 อาทิตย์ เน้น 'ความรู้' เยอะ 'ขาย' น้อย\n`+
+    (PLAN_REF_URL?"ดูรูปสินค้าอ้างอิงด้วย ":"")+
+    `ตอบ JSON เท่านั้น: {"posts":[{"type":"ความรู้|โปรโมชั่น","topic":"หัวข้อสั้น","caption":"แคปชั่นไทยพร้อมอิโมจิ 3-6 บรรทัด","image_prompt":"คำอธิบายรูปเป็นภาษาอังกฤษ สำหรับ generate รูปประกอบให้ตรงกับสินค้าอ้างอิง — ห้ามมีตัวอักษรในรูป"}]}`;
+  try{
+    const res=await callOpenAIVision(key,aiModel(),sys,user,PLAN_REF_URL);
+    const posts=(res.posts||[]).slice(0,n);
+    const base=startStr?new Date(startStr+"T09:00:00"):new Date();
+    PLAN_ITEMS=posts.map((p,i)=>{
+      const d=new Date(base.getTime());d.setDate(d.getDate()+Math.round(i*7/Math.max(1,posts.length)));
+      return {type:p.type||"ความรู้",topic:p.topic||"",caption:p.caption||"",image_prompt:p.image_prompt||"",image:null,
+        date:d.toISOString(), dateLabel:d.toLocaleDateString("th-TH",{weekday:"short",day:"numeric",month:"short"})};
+    });
+    renderPlanList();
+    toast("ร่างแผนเสร็จ "+PLAN_ITEMS.length+" โพส ✓","ok");
+  }catch(e){document.getElementById("planList").innerHTML=`<div class="banner err" style="position:static;display:block">🧠 ร่างแผนไม่สำเร็จ: ${esc(e.message)}</div>`;toast("❌ "+e.message,"err");}
+  btn.disabled=false;btn.textContent="🧠 ให้ AI ร่างแผน 1 อาทิตย์";
+}
+function renderPlanList(){
+  const root=document.getElementById("planList");
+  if(!PLAN_ITEMS.length){root.innerHTML="";return;}
+  root.innerHTML=`<div class="row" style="align-items:center;margin-bottom:10px"><b>แผน ${PLAN_ITEMS.length} โพส</b>
+    <div class="spacer" style="flex:1"></div>
+    <button class="btn sm" onclick="planGenAllImages()">🎨 เจนรูปทั้งหมด</button></div>`+
+    PLAN_ITEMS.map((p,i)=>{
+      const tcls=p.type==="โปรโมชั่น"?"err":"ok";
+      return `<div class="card" style="margin-bottom:12px">
+        <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+          <span class="tag">${esc(p.dateLabel||"")}</span><span class="tag ${tcls}">${esc(p.type)}</span>
+          <b style="font-size:13.5px">${esc(p.topic)}</b></div>
+        <div class="row" style="gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div id="plImg${i}" style="width:180px;min-width:150px">${p.image?`<img src="${p.image}" style="width:100%;border-radius:10px">`:`<div class="muted" style="font-size:12px;padding:20px;text-align:center;border:1px dashed var(--muted,#889);border-radius:10px">ยังไม่มีรูป</div>`}
+            <button class="btn ghost sm wide" style="margin-top:6px" onclick="planGenImage(${i})">${p.image?"🔁 เจนรูปใหม่":"🎨 เจนรูป"}</button></div>
+          <textarea style="flex:1;min-width:220px" rows="6" onchange="PLAN_ITEMS[${i}].caption=this.value">${esc(p.caption)}</textarea>
+        </div></div>`;
+    }).join("")+
+    `<div class="muted" style="font-size:12px;margin-top:4px">ตรวจ/แก้แคปชั่นได้เลย · เจนรูปให้ครบก่อน · (สเต็ปหน้า: ปุ่ม "อนุมัติ & ตั้งเวลาโพส" จะมาเชื่อมกับ Facebook)</div>`;
+}
+async function planGenImage(i){
+  const key=openaiKey();if(!key){renderPlanKeyBar();toast("ใส่กุญแจ ChatGPT ก่อน","err");return;}
+  const p=PLAN_ITEMS[i];if(!p)return;
+  const box=document.getElementById("plImg"+i);if(box)box.innerHTML=`<div class="muted" style="font-size:12px;padding:20px;text-align:center">⏳ กำลังเจนรูป…</div>`;
+  try{
+    const prompt=(p.image_prompt||p.topic)+". Clean, high-quality social media product photo, no text, no watermark.";
+    const img=await callOpenAIImage(key,prompt,PLAN_REF_FILE);
+    p.image=img;
+    if(box)box.innerHTML=`<img src="${img}" style="width:100%;border-radius:10px"><button class="btn ghost sm wide" style="margin-top:6px" onclick="planGenImage(${i})">🔁 เจนรูปใหม่</button>`;
+    toast("เจนรูปโพสที่ "+(i+1)+" เสร็จ ✓","ok");
+  }catch(e){
+    if(box)box.innerHTML=`<div class="banner err" style="position:static;display:block;font-size:11.5px">${esc(e.message)}</div><button class="btn ghost sm wide" style="margin-top:6px" onclick="planGenImage(${i})">ลองใหม่</button>`;
+    toast("❌ "+e.message,"err");
+  }
+}
+async function planGenAllImages(){
+  for(let i=0;i<PLAN_ITEMS.length;i++){ if(!PLAN_ITEMS[i].image) await planGenImage(i); }
+  toast("เจนรูปครบแล้ว ✓","ok");
 }
 
 /* ===================== boot ===================== */
