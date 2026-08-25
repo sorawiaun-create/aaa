@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-25T16:30:44.849969+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-25T16:20:30.218766+07:00",
       "dry_run": false,
       "summary": {
@@ -837,28 +848,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=81.90 (>80) และ ทัก=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-25T08:00:40.419936+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 800 → 1200 บาท",
-          "reason": "จ่าย=83.64 (>80) และ ROAS=11.96 (>3.50) และ ทุนซื้อ=83.64 (<180) และ เวลา=8:01 (>6) และ เวลา=8:01 (<18)",
           "status": "applied",
           "error": null
         }
