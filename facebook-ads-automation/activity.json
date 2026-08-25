@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-25T23:20:34.312214+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 7,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-25T23:10:33.125891+07:00",
       "dry_run": false,
       "summary": {
@@ -796,17 +807,6 @@
           "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_6996394137081516/campaigns\n  Params:  {'effective_status': '[\"ACTIVE\",\"PAUSED\"]', 'limit': 500, 'fie"
         }
       ]
-    },
-    {
-      "t": "2026-08-25T14:40:29.428578+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
