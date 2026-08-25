@@ -1162,12 +1162,24 @@ function studioPickMedia(ev){
 async function callOpenAIVision(key,model,system,userText,imgDataUrl){
   const content=[{type:"text",text:userText}];
   if(imgDataUrl) content.push({type:"image_url",image_url:{url:imgDataUrl}});
-  const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-    body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content}],response_format:{type:"json_object"}})});
-  if(!r.ok){let t="";try{t=(await r.json()).error?.message||"";}catch(e){t=await r.text();}
-    throw new Error("OpenAI "+r.status+(t?": "+t.slice(0,180):""));}
-  const j=await r.json();return _parseJsonText(j.choices[0].message.content);
+  const messages=[{role:"system",content:system},{role:"user",content}];
+  // ลองหลายแบบเผื่อโมเดล/รูปแบบคำตอบไม่รองรับ: (1) json+รูป (2) รูปเฉย ๆ (3) ข้อความล้วน (ไม่ส่งรูป)
+  const attempts=[
+    {model,messages,response_format:{type:"json_object"},max_tokens:1600},
+    {model,messages,max_tokens:1600},
+    {model,messages:[{role:"system",content:system},{role:"user",content:userText}],max_tokens:1600},
+  ];
+  let lastErr=null;
+  for(const body of attempts){
+    try{
+      const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(body)});
+      if(!r.ok){let t="";try{t=(await r.json()).error?.message||"";}catch(e){t=await r.text();}
+        throw new Error("OpenAI "+r.status+(t?": "+t.slice(0,200):""));}
+      const j=await r.json();return _parseJsonText(j.choices[0].message.content);
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error("เรียก OpenAI ไม่สำเร็จ");
 }
 async function studioGenerate(){
   const key=openaiKey();
@@ -1192,7 +1204,12 @@ async function studioGenerate(){
           <button class="btn sm" onclick="stUseCaption(${i})">⬇️ ใช้อันนี้</button></div>
         <textarea id="stCap${i}" rows="6" style="width:100%">${esc(c)}</textarea></div>`).join("");
     toast("คิดแคปชั่นเสร็จ ✓","ok");
-  }catch(e){toast("❌ "+e.message,"err");}
+  }catch(e){
+    document.getElementById("stResult").innerHTML=`<div class="banner err" style="position:static;display:block">
+      🤖 คิดแคปชั่นไม่สำเร็จ<br><b>${esc(e.message)}</b>
+      <div style="font-size:12px;margin-top:6px">เช็ค: (1) ใส่กุญแจ sk-... ถูกไหม (2) กุญแจมีเครดิต/สิทธิ์ใช้ gpt-4o ไหม (3) ลองเปลี่ยนโมเดลเป็น gpt-4o-mini ที่หน้า 🤖 AI วิเคราะห์ · แคปข้อความนี้ส่งให้ผมได้เลย</div></div>`;
+    toast("❌ "+e.message,"err");
+  }
   btn.disabled=false;btn.textContent="✍️ ให้ AI คิดแคปชั่น 3 แบบ";
 }
 function studioCopy(i){const el=document.getElementById("stCap"+i);if(!el)return;el.select();
