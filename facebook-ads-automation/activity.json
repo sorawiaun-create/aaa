@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-26T19:00:41.728209+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 523 → 690 บาท",
+          "reason": "จ่าย=305.11 (>40) และ ROAS=8.51 (>3.50) และ ทุนซื้อ=50.85 (<80) และ เวลา=19:01 (>6) และ เวลา=19:01 (>=18) · จ่าย=305.11 (>40) และ ROAS=8.51 (>3) และ ทุนซื้อ=50.85 (<80) และ เวลา=19:01 (>6) และ เวลา=19:01 (>=18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-26T18:50:30.364428+07:00",
       "dry_run": false,
       "summary": {
@@ -659,38 +681,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-26T10:40:34.470015+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=108.23 (>50) และ ทุนซื้อ=36.08 (<80) และ ซื้อ=3 (>0)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "จ่าย 220    ซื้อ 0 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=230.78 (>220) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
