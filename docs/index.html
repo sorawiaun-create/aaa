@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Multi-Account Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0b1220; --panel:#131c2e; --panel2:#0f1728; --line:#233149;
@@ -1526,16 +1529,17 @@ async function planGenerate(){
   if(!biz){toast("กรอกธุรกิจ/สินค้าก่อน","err");return;}
   const btn=document.getElementById("plGenBtn");btn.disabled=true;btn.textContent="⏳ AI กำลังร่างแผน…";
   const sys="คุณเป็นนักวางแผนคอนเทนต์เพจ Facebook สายขายของออนไลน์ไทย เน้นสร้างคอนเทนต์ 'ให้ความรู้' ที่คนอยากอ่าน/แชร์ แทรกการขายแบบเนียน ๆ นาน ๆ ที";
-  const user=`ธุรกิจ/สินค้า: ${biz}\nข้อมูลเพิ่ม: ${notes||'-'}\nช่วยร่างแผนโพส ${n} โพสสำหรับ 1 อาทิตย์ เน้น 'ความรู้' เยอะ 'ขาย' น้อย\n`+
-    (PLAN_REF_URL?"ดูรูปสินค้าอ้างอิงด้วย ":"")+
-    `ตอบ JSON เท่านั้น: {"posts":[{"type":"ความรู้|โปรโมชั่น","topic":"หัวข้อสั้น","caption":"แคปชั่นไทยพร้อมอิโมจิ 3-6 บรรทัด","image_prompt":"คำอธิบายรูปเป็นภาษาอังกฤษ สำหรับ generate รูปประกอบให้ตรงกับสินค้าอ้างอิง — ห้ามมีตัวอักษรในรูป"}]}`;
+  const user=`ธุรกิจ/สินค้า: ${biz}\nข้อมูลเพิ่ม: ${notes||'-'}\nร่างแผนโพส ${n} โพส 1 อาทิตย์ เน้น "ความรู้" เยอะ "ขาย" น้อย · สำคัญ: แต่ละโพส "หัวข้อต่างกันชัดเจน" และ "ภาพคนละสไตล์กัน" (อย่าให้ภาพออกมาเหมือนกันหมด)\n`+
+    (PLAN_REF_URL?"มีรูปสินค้าอ้างอิงให้ดู ":"")+
+    `ตอบ JSON เท่านั้น: {"posts":[{"type":"ความรู้|โปรโมชั่น","topic":"หัวข้อสั้น","headline":"ข้อความพาดหัวบนรูป ภาษาไทย สั้นๆไม่เกิน 40 ตัวอักษร (เคล็ดลับ/ตัวเลข/ประโยคเด็ด)","caption":"แคปชั่นไทยพร้อมอิโมจิ 3-6 บรรทัด","use_product":ใส่ true ถ้าภาพควรมีตัวสินค้า (โพสขาย/รีวิว) หรือ false ถ้าเป็นภาพประกอบความรู้ทั่วไป,"image_prompt":"คำอธิบายภาพเป็นภาษาอังกฤษ เหมาะกับหัวข้อนี้โดยเฉพาะ และแต่ละโพสสไตล์ให้ต่างกัน (เช่น infographic, flat illustration, lifestyle photo, top-down flatlay, close-up) — ไม่ต้องมีตัวอักษรในภาพ"}]}`;
   try{
     const res=await callOpenAIVision(key,aiModel(),sys,user,PLAN_REF_URL);
     const posts=(res.posts||[]).slice(0,n);
     const base=startStr?new Date(startStr+"T09:00:00"):new Date();
     PLAN_ITEMS=posts.map((p,i)=>{
       const d=new Date(base.getTime());d.setDate(d.getDate()+Math.round(i*7/Math.max(1,posts.length)));
-      return {type:p.type||"ความรู้",topic:p.topic||"",caption:p.caption||"",image_prompt:p.image_prompt||"",image:null,
+      return {type:p.type||"ความรู้",topic:p.topic||"",headline:p.headline||p.topic||"",caption:p.caption||"",
+        use_product:!!p.use_product,image_prompt:p.image_prompt||"",image:null,
         date:d.toISOString(), dateLabel:d.toLocaleDateString("th-TH",{weekday:"short",day:"numeric",month:"short"})};
     });
     renderPlanList();
@@ -1578,13 +1582,51 @@ function renderPlanList(){
     }).join("")+
     `<div class="muted" style="font-size:12px;margin-top:4px">ตรวจ/แก้แคปชั่น + เจนรูปให้ครบ · ตอนนี้ <b>โหลดรูป + คัดลอกแคปชั่น</b> ไปตั้งเวลาโพสเองใน Meta Business Suite ได้เลย · (กำลังทำปุ่ม "ตั้งเวลาโพสอัตโนมัติ" ให้ — ติดสิทธิ์เพจของ Facebook อยู่)</div>`;
 }
+async function overlayHeadline(imgDataUrl, headline){
+  headline=(headline||"").trim();
+  if(!headline) return imgDataUrl;
+  try{ if(document.fonts&&document.fonts.load) await document.fonts.load("800 48px Kanit"); }catch(e){}
+  return await new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const W=img.naturalWidth||1024, H=img.naturalHeight||1024;
+        const c=document.createElement("canvas");c.width=W;c.height=H;
+        const ctx=c.getContext("2d");ctx.drawImage(img,0,0,W,H);
+        const pad=Math.round(W*0.055), fs=Math.round(W*0.062);
+        ctx.font=`800 ${fs}px Kanit, "Noto Sans Thai", sans-serif`;
+        ctx.textBaseline="top";
+        const maxW=W-pad*2;
+        // ตัดบรรทัด (ภาษาไทยไม่มีเว้นวรรค → ตัดทีละตัวอักษร)
+        const lines=[]; let cur="";
+        for(const ch of headline){ const t=cur+ch;
+          if(ctx.measureText(t).width>maxW && cur){lines.push(cur);cur=ch;} else cur=t; }
+        if(cur)lines.push(cur);
+        const lineH=fs*1.3, bandH=lines.length*lineH+pad*1.3;
+        const grad=ctx.createLinearGradient(0,H-bandH*1.4,0,H);
+        grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(0.35,"rgba(0,0,0,0.65)");grad.addColorStop(1,"rgba(0,0,0,0.82)");
+        ctx.fillStyle=grad;ctx.fillRect(0,H-bandH*1.4,W,bandH*1.4);
+        // แถบสีเน้นซ้าย
+        ctx.fillStyle="#22d3a6";ctx.fillRect(pad-Math.round(W*0.02),H-bandH+pad*0.55,Math.round(W*0.008),lines.length*lineH);
+        ctx.fillStyle="#ffffff";ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=fs*0.15;
+        lines.forEach((ln,idx)=>ctx.fillText(ln,pad,H-bandH+pad*0.6+idx*lineH));
+        resolve(c.toDataURL("image/jpeg",0.9));
+      }catch(e){resolve(imgDataUrl);}
+    };
+    img.onerror=()=>resolve(imgDataUrl);
+    img.src=imgDataUrl;
+  });
+}
 async function planGenImage(i){
   const key=openaiKey();if(!key){renderPlanKeyBar();toast("ใส่กุญแจ ChatGPT ก่อน","err");return;}
   const p=PLAN_ITEMS[i];if(!p)return;
   const box=document.getElementById("plImg"+i);if(box)box.innerHTML=`<div class="muted" style="font-size:12px;padding:20px;text-align:center">⏳ กำลังเจนรูป…</div>`;
   try{
-    const prompt=(p.image_prompt||p.topic)+". Clean, high-quality social media product photo, no text, no watermark.";
-    const img=await callOpenAIImage(key,prompt,PLAN_REF_FILE);
+    const prompt=(p.image_prompt||p.topic)+". Modern, clean, vibrant social media graphic for Facebook. No text, no letters, no words, no watermark in the image.";
+    // ใช้รูปสินค้าอ้างอิงเฉพาะโพสที่ควรโชว์สินค้า (อื่นๆเจนภาพประกอบใหม่ให้ต่างกัน)
+    const ref=(PLAN_REF_FILE && p.use_product)?PLAN_REF_FILE:null;
+    let img=await callOpenAIImage(key,prompt,ref);
+    img=await overlayHeadline(img,p.headline);   // วางข้อความพาดหัวไทยลงบนรูปเอง (ไม่เพี้ยน)
     p.image=img;
     if(box)box.innerHTML=planImgBox(i);
     toast("เจนรูปโพสที่ "+(i+1)+" เสร็จ ✓","ok");
