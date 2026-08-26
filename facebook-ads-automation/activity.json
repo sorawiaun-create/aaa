@@ -1,6 +1,48 @@
 {
   "runs": [
     {
+      "t": "2026-08-26T08:00:37.077830+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 3,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "ถุงปลูก ข้อความ - สำเนา",
+          "rule": "จ่าย 80    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=86.14 (>80) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "จ่าย 80    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=83.79 (>80) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "จ่าย 220    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=239.73 (>220) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-26T07:50:30.667038+07:00",
       "dry_run": false,
       "summary": {
@@ -778,28 +820,6 @@
           "action": "ACTIVATE",
           "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
           "reason": "จ่าย=394.38 (>50) และ ทุนซื้อ=78.88 (<80) และ ซื้อ=5 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-25T23:30:35.494582+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 5,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
-          "action": "INCREASE_BUDGET",
-          "detail": "งบ 300 → 396 บาท",
-          "reason": "จ่าย=394.33 (>40) และ ROAS=6.64 (>3.50) และ ทุนซื้อ=78.87 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18) · จ่าย=394.33 (>40) และ ROAS=6.64 (>3) และ ทุนซื้อ=78.87 (<80) และ เวลา=23:31 (>6) และ เวลา=23:31 (>=18)",
           "status": "applied",
           "error": null
         }
