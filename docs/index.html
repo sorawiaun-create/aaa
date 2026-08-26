@@ -549,7 +549,7 @@ function requireToken(cb){token()?cb():showOverlay(cb);}
 
 /* ===================== tabs ===================== */
 function showTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  ["overview","board","editor","logs","ai","check","studio"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));
+  ["overview","board","editor","logs","ai","check","studio","plan"].forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==t));
   if(t==="studio"){renderStudioKeyBar();stInitPublish();}
   if(t==="plan")renderPlanKeyBar();}
 
