@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-27T09:10:44.132243+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=102.91 (>100) และ ทุนซื้อ=∞ (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=134.34 (>100) และ ทุนทัก=∞ (>80)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-27T09:00:42.099953+07:00",
       "dry_run": false,
       "summary": {
@@ -863,28 +895,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "งบ 300 → 396 บาท",
           "reason": "จ่าย=454.35 (>40) และ ROAS=7.41 (>3.50) และ ทุนซื้อ=64.91 (<80) และ เวลา=23:49 (>6) และ เวลา=23:49 (>=18) · จ่าย=454.35 (>40) และ ROAS=7.41 (>3) และ ทุนซื้อ=64.91 (<80) และ เวลา=23:49 (>6) และ เวลา=23:49 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-08-26T23:40:38.197293+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=454.17 (>50) และ ทุนซื้อ=64.88 (<80) และ ซื้อ=7 (>0)",
           "status": "applied",
           "error": null
         }
