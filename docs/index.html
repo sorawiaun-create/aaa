@@ -668,6 +668,8 @@ function boardRow(a,c){
   const nm=document.createElement("span");nm.className="bname";nm.textContent=c.name||c.id;nm.title=c.name||"";
   if(stalled){const w=document.createElement("span");w.className="tag err";w.style.whiteSpace="nowrap";
     w.textContent="⚠️ ไม่วิ่งจริง";w.title="เปิดอยู่แต่ยังไม่ยิง ("+c.effective_status+") — ลองกด ▶️ เปิด อีกครั้ง";nm.appendChild(document.createTextNode(" "));nm.appendChild(w);}
+  if(isExcluded(c.id)){const w=document.createElement("span");w.className="tag";w.style.whiteSpace="nowrap";
+    w.textContent="🚫 ไม่คุม";w.title="ระบบไม่คุมแคมนี้อัตโนมัติ (สั่งเองได้)";nm.appendChild(document.createTextNode(" "));nm.appendChild(w);}
   const met=document.createElement("span");met.className="bmetric";
   met.textContent=`฿${Math.round(c.spend||0).toLocaleString("th-TH")} · ROAS ${(c.roas||0).toFixed(2)}x`;
   el.append(st,nm,met);
@@ -684,8 +686,29 @@ function boardRow(a,c){
   tg.textContent=active?"⏸️ ปิด":"▶️ เปิด";
   tg.onclick=()=>queueCmd(a,c,active?"PAUSE":"ACTIVATE");
   el.append(tg);
+  // คุมอัตโนมัติ เปิด/ปิด รายแคม (เช่นแคมกำลังเทส → ไม่คุม)
+  const controlled=!isExcluded(c.id);
+  const ct=document.createElement("button");ct.className="btn sm "+(controlled?"ghost":"danger");ct.style.whiteSpace="nowrap";
+  ct.textContent=controlled?"🤖 คุมอยู่":"🚫 ไม่คุม";
+  ct.title=controlled?"ระบบคุมแคมนี้อัตโนมัติ — กดเพื่อสั่ง 'ไม่คุม' (เช่นกำลังเทส)":"ระบบไม่ยุ่งแคมนี้ — กดเพื่อให้ 'คุม'";
+  ct.onclick=()=>toggleControl(c);
+  el.append(ct);
   if(hasPending(c)){const p=document.createElement("span");p.className="tag pend";p.textContent="⏳ รอส่ง";el.append(p);}
   return el;
+}
+function isExcluded(id){return (((CONFIG&&CONFIG.settings&&CONFIG.settings.excluded_campaigns)||[]).map(String)).includes(String(id));}
+function toggleControl(c){
+  requireToken(async()=>{
+    if(!CONFIG.settings)CONFIG.settings={};
+    let ex=(CONFIG.settings.excluded_campaigns||[]).map(String);
+    const id=String(c.id), willExclude=!ex.includes(id);
+    ex=willExclude?ex.concat([id]):ex.filter(x=>x!==id);
+    CONFIG.settings.excluded_campaigns=ex;
+    try{await putConfig(collect());
+      toast(willExclude?"ตั้ง 'ไม่คุม' แล้ว — ระบบจะไม่ยุ่งแคมนี้ (สั่งเองได้)":"ตั้ง 'คุม' แล้ว — ระบบดูแลอัตโนมัติ","ok");
+      renderBoard();
+    }catch(e){ex=willExclude?ex.filter(x=>x!==id):ex.concat([id]);CONFIG.settings.excluded_campaigns=ex;toast("❌ บันทึกไม่ได้: "+e.message,"err");}
+  });
 }
 function queueCmd(a,c,action,value){
   // กันซ้ำ action เดิมของแคมเปญเดิม
