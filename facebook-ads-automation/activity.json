@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-27T23:00:45.833292+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 396 → 300 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-27T22:50:37.416801+07:00",
       "dry_run": false,
       "summary": {
@@ -650,17 +682,6 @@
     },
     {
       "t": "2026-08-27T13:30:37.618548+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-27T13:20:33.458032+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
