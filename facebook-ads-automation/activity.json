@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-27T07:50:27.361918+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "ถุงปลูก ข้อความ - สำเนา",
+          "rule": "จ่าย 80    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=91.69 (>80) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-27T07:40:30.666822+07:00",
       "dry_run": false,
       "summary": {
@@ -837,17 +859,6 @@
     },
     {
       "t": "2026-08-26T21:50:35.209111+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-26T21:40:29.428253+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
