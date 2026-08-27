@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-08-27T08:30:37.656226+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 1,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-08-27T08:20:32.451168+07:00",
       "dry_run": false,
       "summary": {
@@ -867,28 +878,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-26T23:00:50.773502+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 1,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "RESET_BUDGET",
-          "detail": "งบ 2095 → 300 บาท",
-          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
