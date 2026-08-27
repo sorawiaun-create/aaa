@@ -159,6 +159,7 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
     total = RunSummary()
     dry = config.settings.dry_run
     name_filter = config.settings.campaign_name_filter
+    excluded = set(config.settings.excluded_campaigns)
     import re
     name_re = re.compile(name_filter) if name_filter else None
     events: list[dict] = []
@@ -248,6 +249,7 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             )
             account_metrics.append(metrics)
 
+            controlled = campaign["id"] not in excluded
             budget = client.to_major(campaign["daily_budget"]) if campaign.get("daily_budget") else None
             board_campaigns.append({
                 "id": campaign["id"], "name": campaign.get("name", ""),
@@ -256,12 +258,14 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
                 "budget": round(budget, 2) if budget is not None else None,
                 "spend": round(metrics["spend"], 2), "roas": round(metrics["roas"], 2),
                 "orders": int(metrics["purchases"]),
+                "controlled": controlled,
             })
 
             # สรุปการประเมินทุกแคมเปญ (สำหรับหน้า 'เช็คทุกแคม') — ทำไม่ทำเพราะกฎไหน
             ev = evaluate_campaign(account.rules, metrics, campaign.get("status"))
             ev.update({
                 "campaign": campaign.get("name", ""),
+                "controlled": controlled,
                 "spend": _finite(metrics.get("spend")),
                 "roas": _finite(metrics.get("roas")),
                 "orders": int(metrics.get("purchases", 0) or 0),
@@ -272,6 +276,9 @@ def run_once(config: Config, state: State, now_local: datetime, force: bool = Fa
             })
             eval_campaigns.append(ev)
 
+            # ข้ามแคมเปญที่ผู้ใช้สั่ง "ไม่ให้คุมอัตโนมัติ" (เช่นกำลังเทส) — สั่งเองยังทำได้
+            if not controlled:
+                continue
             planned = plan_campaign(account.rules, metrics)
             if planned:
                 execute_campaign(

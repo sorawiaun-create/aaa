@@ -49,6 +49,8 @@ class Settings:
     interval_mins: int = 10   # ให้ประเมินกฎทุกกี่นาที (10/20/30/60) — cron จะ tick ทุก 10 นาที
     # กรอง campaign ตามชื่อ (regex) ถ้าต้องการ — ค่าว่าง = ทุกแคมเปญ
     campaign_name_filter: str | None = None
+    # รายชื่อ campaign id ที่ "ไม่ให้ระบบคุมอัตโนมัติ" (เช่นแคมกำลังเทส) — สั่งเองยังได้
+    excluded_campaigns: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -180,6 +182,7 @@ def load_config(path: str, *, dry_run_override: bool | None = None) -> Config:
         dry_run=bool(settings_raw.get("dry_run", False)),
         interval_mins=max(10, interval),
         campaign_name_filter=settings_raw.get("campaign_name_filter") or None,
+        excluded_campaigns=[str(x) for x in (settings_raw.get("excluded_campaigns") or [])],
     )
     if dry_run_override is not None:
         settings.dry_run = dry_run_override
