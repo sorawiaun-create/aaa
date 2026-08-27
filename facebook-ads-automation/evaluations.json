@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-27T23:30:38.609433+07:00",
+  "updated_at": "2026-08-27T23:40:30.009549+07:00",
   "dry_run": false,
   "accounts": [
     {
@@ -17,9 +17,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -27,11 +25,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -39,30 +37,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -144,11 +142,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -171,11 +169,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -215,9 +213,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -225,11 +221,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -237,30 +233,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -342,11 +338,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -369,11 +365,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -413,9 +409,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -423,11 +417,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -435,30 +429,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -540,11 +534,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -567,11 +561,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (>=18)",
+                  "text": "เวลา=23:41 (>=18)",
                   "ok": true
                 }
               ]
@@ -2456,12 +2450,10 @@
       "campaigns": [
         {
           "status": "ACTIVE",
-          "decision": "TO_PAUSE",
-          "status_rule": "กฎใหม่",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -2469,11 +2461,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -2481,30 +2473,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -2586,11 +2578,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -2613,11 +2605,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -2661,9 +2653,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150 ทุนทัก < 40 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -2671,11 +2661,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -2683,30 +2673,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -2788,11 +2778,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -2815,11 +2805,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -2863,9 +2853,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 80    ซื้อ 0 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -2873,11 +2861,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -2885,30 +2873,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -2990,11 +2978,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -3017,11 +3005,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -3973,9 +3961,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -3983,11 +3969,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -3995,30 +3981,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -4100,11 +4086,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -4127,11 +4113,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -4190,9 +4176,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -4200,11 +4184,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -4212,30 +4196,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -4317,11 +4301,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -4344,11 +4328,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -4407,9 +4391,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150 ทุนทัก < 40 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -4417,11 +4399,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -4429,30 +4411,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -4534,11 +4516,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -4561,11 +4543,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
@@ -4624,9 +4606,7 @@
           "decision": "KEEP_PAUSED",
           "status_rule": "จ่าย 150 ทุนทัก < 40 ปิด",
           "blocked_activate": false,
-          "budget_rules": [
-            "กฎใหม่"
-          ],
+          "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
@@ -4634,11 +4614,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>5)",
+                  "text": "เวลา=23:41 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<7)",
+                  "text": "เวลา=23:41 (<7)",
                   "ok": false
                 }
               ]
@@ -4646,30 +4626,30 @@
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>22)",
+                  "text": "เวลา=23:41 (>22)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "RESET_BUDGET",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=23:31 (>23)",
+                  "text": "เวลา=23:41 (>23)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<23.59)",
-                  "ok": true
+                  "text": "เวลา=23:41 (<23.59)",
+                  "ok": false
                 }
               ]
             },
@@ -4751,11 +4731,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 }
               ]
@@ -4778,11 +4758,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=23:31 (>6)",
+                  "text": "เวลา=23:41 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=23:31 (<18)",
+                  "text": "เวลา=23:41 (<18)",
                   "ok": false
                 },
                 {
