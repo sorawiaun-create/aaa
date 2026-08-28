@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-28T18:10:30.751847+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "จ่าย=157.62 (>50) และ ทุนซื้อ=78.81 (<80) และ ซื้อ=2 (>0)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "ADS ดี เพิ่มงบ 20%, ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 300 → 396 บาท",
+          "reason": "จ่าย=157.62 (>40) และ ROAS=8.63 (>3.50) และ ทุนซื้อ=78.81 (<80) และ เวลา=18:11 (>6) และ เวลา=18:11 (>=18) · จ่าย=157.62 (>40) และ ROAS=8.63 (>3) และ ทุนซื้อ=78.81 (<80) และ เวลา=18:11 (>6) และ เวลา=18:11 (>=18)",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120241048244710371/\n  Params:  {'daily_budget': 39600}\n\n  Status:  400\n  Response:\n    {\n      \"error\":"
+        }
+      ]
+    },
+    {
       "t": "2026-08-28T18:00:43.547443+07:00",
       "dry_run": false,
       "summary": {
@@ -817,17 +849,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-28T08:20:29.057472+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 1,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
