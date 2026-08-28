@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-08-28T23:00:43.062594+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 4,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 396 → 300 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "ถุงปลูกหลัก",
+          "campaign": "แคมเปญยอดขายใหม่",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 3280 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-28T22:50:32.152526+07:00",
       "dry_run": false,
       "summary": {
@@ -693,17 +745,6 @@
     },
     {
       "t": "2026-08-28T13:10:34.476664+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-28T13:00:45.165435+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
