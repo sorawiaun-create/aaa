@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-08-28T09:10:28.965573+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=103.65 (>100) และ ทุนทัก=103.65 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 800 → 1200 บาท",
+          "reason": "จ่าย=144.59 (>80) และ ROAS=6.92 (>3.50) และ ทุนซื้อ=144.59 (<180) และ เวลา=9:10 (>6) และ เวลา=9:10 (<18)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=170.96 (>100) และ ทุนทัก=170.96 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 800 → 1200 บาท",
+          "reason": "จ่าย=170.96 (>80) และ ROAS=5.85 (>3.50) และ ทุนซื้อ=170.96 (<180) และ เวลา=9:10 (>6) และ เวลา=9:10 (<18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-28T09:00:41.907166+07:00",
       "dry_run": false,
       "summary": {
@@ -796,17 +848,6 @@
     },
     {
       "t": "2026-08-27T23:20:35.746249+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 2,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-27T23:10:32.498587+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
