@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-29T22:00:40.699145+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "ขุยมะพร้าว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_744793814183081/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
+        }
+      ]
+    },
+    {
       "t": "2026-08-29T21:50:34.491817+07:00",
       "dry_run": false,
       "summary": {
@@ -640,17 +661,6 @@
     },
     {
       "t": "2026-08-29T12:20:27.320973+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-29T12:10:32.973021+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
