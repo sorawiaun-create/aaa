@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-29T10:10:30.326562+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=250.87 (>250) และ ทุนซื้อ=250.87 (>220)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-29T10:00:42.304405+07:00",
       "dry_run": false,
       "summary": {
@@ -869,17 +891,6 @@
     },
     {
       "t": "2026-08-29T00:30:45.053101+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-29T00:29:17.531865+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
