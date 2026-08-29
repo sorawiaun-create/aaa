@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-29T09:00:48.469351+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 2,
+        "budget_changes": 0,
+        "skipped_cooldown": 1,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=173.46 (>100) และ ทุนซื้อ=∞ (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=115.14 (>100) และ ทุนทัก=115.14 (>80)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-29T08:50:29.122336+07:00",
       "dry_run": false,
       "summary": {
@@ -805,17 +837,6 @@
     },
     {
       "t": "2026-08-28T23:30:38.377458+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 4,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-28T23:20:34.145681+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
