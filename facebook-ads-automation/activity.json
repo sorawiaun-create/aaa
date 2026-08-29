@@ -1,6 +1,36 @@
 {
   "runs": [
     {
+      "t": "2026-08-30T03:00:42.556136+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 2
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_917846690184511/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
+        },
+        {
+          "account": "ขุยมะพร้าว",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_744793814183081/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
+        }
+      ]
+    },
+    {
       "t": "2026-08-30T02:55:19.464694+07:00",
       "dry_run": false,
       "summary": {
@@ -661,17 +691,6 @@
     },
     {
       "t": "2026-08-29T17:30:38.875210+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-29T17:20:31.833931+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
