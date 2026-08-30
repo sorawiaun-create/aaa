@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-08-30T12:30:38.898918+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 1,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "ADS ดี เพิ่มงบ 10%",
+          "action": "INCREASE_BUDGET",
+          "detail": "งบ 4050 → 5000 บาท",
+          "reason": "จ่าย=175.92 (>80) และ ROAS=5.68 (>3.50) และ ทุนซื้อ=175.92 (<180) และ เวลา=12:31 (>6) และ เวลา=12:31 (<18)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-30T12:20:32.367865+07:00",
       "dry_run": false,
       "summary": {
@@ -927,17 +949,6 @@
           "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_744793814183081/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fie"
         }
       ]
-    },
-    {
-      "t": "2026-08-30T02:55:19.464694+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
