@@ -1,6 +1,38 @@
 {
   "runs": [
     {
+      "t": "2026-08-30T23:00:42.616515+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 2,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 5000 → 800 บาท",
+          "reason": "เวลา=23:01 (>23) และ เวลา=23:01 (<23.59)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-08-30T22:50:33.418310+07:00",
       "dry_run": false,
       "summary": {
@@ -662,17 +694,6 @@
     },
     {
       "t": "2026-08-30T13:30:37.154614+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-30T13:20:33.523092+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
