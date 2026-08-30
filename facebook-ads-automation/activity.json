@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "t": "2026-08-31T00:00:56.930337+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "กระบะหลัก",
+          "campaign": "-",
+          "rule": "-",
+          "action": "CONNECT",
+          "detail": "เชื่อมต่อบัญชีไม่สำเร็จ",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  GET\n  Path:    https://graph.facebook.com/v20.0/act_1071363213703790/insights\n  Params:  {'level': 'campaign', 'date_preset': 'today', 'limit': 500, 'fi"
+        }
+      ]
+    },
+    {
       "t": "2026-08-30T23:50:31.192455+07:00",
       "dry_run": false,
       "summary": {
@@ -680,28 +701,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-30T14:20:38.260479+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "จ่าย=185.09 (>50) และ ทุนซื้อ=92.55 (<220) และ ซื้อ=2 (>0)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
