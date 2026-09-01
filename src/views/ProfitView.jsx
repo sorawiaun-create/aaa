@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Wallet, Users, Banknote, TrendingUp, Plus, Trash2, PiggyBank } from 'lucide-react';
+import { Wallet, Users, Banknote, TrendingUp, Plus, Trash2, PiggyBank, Megaphone } from 'lucide-react';
 import { SectionCard, KpiCard, Button, EmptyState, Modal, Field, Input, Select } from '../components/ui.jsx';
 import { computePayroll } from '../lib/payroll.js';
 import { computeProfit, expensesByCategory } from '../lib/finance.js';
 import { formatCurrency, formatCurrency0, formatBahtCompact, formatPercent, monthLabel, monthKeyOf, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
+
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 const CATEGORIES = ['ค่าโฆษณา/ยิงแอด', 'ค่าสินค้า/ตัวอย่าง', 'ค่าเช่าสตูดิโอ', 'อุปกรณ์ไลฟ์', 'ค่าน้ำ-ไฟ-เน็ต', 'ค่าขนส่ง', 'ค่าการตลาด', 'อื่น ๆ'];
 
@@ -17,7 +19,12 @@ export default function ProfitView({ store, month }) {
     return rows.reduce((a, r) => a + r.total, 0);
   }, [store.employees, store.sales, store.workLogs, store.settings, month]);
 
-  const pnl = useMemo(() => computeProfit({ imports: store.imports, expenses: store.expenses, wages, month }), [store.imports, store.expenses, wages, month]);
+  // ค่าแอด ที่กรอกในบันทึกยอดขายรายวัน (ดึงมารวมเป็นต้นทุนอัตโนมัติ)
+  const adSpend = useMemo(() => store.sales
+    .filter((s) => !month || monthKeyOf(s.date) === month)
+    .reduce((a, s) => a + num(s.adCost), 0), [store.sales, month]);
+
+  const pnl = useMemo(() => computeProfit({ imports: store.imports, expenses: store.expenses, wages, adSpend, month }), [store.imports, store.expenses, wages, adSpend, month]);
   const byCat = useMemo(() => expensesByCategory(store.expenses, month), [store.expenses, month]);
 
   const expenseRows = useMemo(() => {
@@ -37,9 +44,10 @@ export default function ProfitView({ store, month }) {
   return (
     <div className="space-y-6">
       {/* P&L KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard title="รายรับ (ค่าคอมจริง)" value={formatBahtCompact(pnl.revenue)} valueTitle={formatCurrency(pnl.revenue)} icon={Wallet} accent="emerald" subtext="จากไฟล์ TikTok ที่บันทึก" />
         <KpiCard title="ค่าจ้างพนักงาน" value={formatBahtCompact(pnl.wages)} valueTitle={formatCurrency(pnl.wages)} icon={Users} accent="blue" subtext="จากระบบคิดเงิน" />
+        <KpiCard title="ค่าแอด (รายวัน)" value={formatBahtCompact(pnl.adSpend)} valueTitle={formatCurrency(pnl.adSpend)} icon={Megaphone} accent="purple" subtext="จากบันทึกยอดขาย" />
         <KpiCard title="รายจ่ายอื่น" value={formatBahtCompact(pnl.expenses)} valueTitle={formatCurrency(pnl.expenses)} icon={Banknote} accent="orange" />
         <KpiCard title="กำไรสุทธิ" value={formatBahtCompact(pnl.profit)} valueTitle={formatCurrency(pnl.profit)} icon={pnl.profit >= 0 ? TrendingUp : PiggyBank} accent={pnl.profit >= 0 ? 'green' : 'red'} subtext={`มาร์จิ้น ${formatPercent(pnl.marginPct, 1)}`} />
       </div>
@@ -49,6 +57,7 @@ export default function ProfitView({ store, month }) {
         <div className="p-5 space-y-3 max-w-2xl">
           <PnlRow label="รายรับ (ค่าคอมจริงจาก TikTok)" value={pnl.revenue} tone="pos" />
           <PnlRow label="หัก ค่าจ้างพนักงาน" value={-pnl.wages} tone="neg" />
+          <PnlRow label="หัก ค่าแอด (จากบันทึกยอดขายรายวัน)" value={-pnl.adSpend} tone="neg" />
           <PnlRow label="หัก รายจ่ายอื่น" value={-pnl.expenses} tone="neg" />
           <div className="border-t border-slate-200 pt-3">
             <PnlRow label="กำไรสุทธิ" value={pnl.profit} tone={pnl.profit >= 0 ? 'total' : 'negtotal'} big />

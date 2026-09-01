@@ -27,15 +27,17 @@ test('channelCompare aggregates imports per channel', () => {
   assert.equal(jul.find((r) => r.channelId === 'c1').act, 8);
 });
 
-test('computeProfit = revenue − wages − expenses', () => {
+test('computeProfit = revenue − wages − adSpend − expenses', () => {
   const imports = [{ month: '2026-07', actTotal: 100000 }, { month: '2026-08', actTotal: 5 }];
   const expenses = [{ month: '2026-07', amount: 20000 }, { month: '2026-07', amount: 5000 }];
-  const p = computeProfit({ imports, expenses, wages: 30000, month: '2026-07' });
+  const p = computeProfit({ imports, expenses, wages: 30000, adSpend: 10000, month: '2026-07' });
   assert.equal(p.revenue, 100000);
   assert.equal(p.expenses, 25000);
   assert.equal(p.wages, 30000);
-  assert.equal(p.profit, 45000);
-  assert.equal(p.marginPct, 45);
+  assert.equal(p.adSpend, 10000);
+  assert.equal(p.cost, 65000);
+  assert.equal(p.profit, 35000); // 100000 - 30000 - 10000 - 25000
+  assert.equal(p.marginPct, 35);
 });
 
 // --- TikTok affiliate reconciliation ---

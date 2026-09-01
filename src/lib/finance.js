@@ -34,16 +34,20 @@ export function financeMonths(imports = [], expenses = []) {
   return [...set].filter(Boolean).sort().reverse();
 }
 
-// P&L: revenue (actual TikTok commission) − expenses − employee wages.
-export function computeProfit({ imports = [], expenses = [], wages = 0, month = '' }) {
+// P&L: revenue (actual TikTok commission) − wages − ad spend − other expenses.
+// adSpend is the daily ค่าแอด logged in Sales, passed in by the view.
+export function computeProfit({ imports = [], expenses = [], wages = 0, adSpend = 0, month = '' }) {
   const revenue = (month ? imports.filter((i) => i.month === month) : imports).reduce((a, i) => a + n(i.actTotal), 0);
   const expenseTotal = (month ? expenses.filter((e) => e.month === month) : expenses).reduce((a, e) => a + n(e.amount), 0);
   const w = n(wages);
-  const profit = revenue - expenseTotal - w;
+  const ad = n(adSpend);
+  const profit = revenue - w - ad - expenseTotal;
   return {
     revenue,
-    expenses: expenseTotal,
     wages: w,
+    adSpend: ad,
+    expenses: expenseTotal,
+    cost: w + ad + expenseTotal,
     profit,
     marginPct: revenue ? (profit / revenue) * 100 : 0,
   };
