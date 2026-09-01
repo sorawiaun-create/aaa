@@ -5,6 +5,25 @@ import {
   computePayroll, computeChannelStats, computeOverview, computeTeamStats,
 } from '../src/lib/payroll.js';
 import { hoursBetween } from '../src/lib/format.js';
+import { reconcileTikTok } from '../src/lib/tiktokReconcile.js';
+
+// --- TikTok affiliate reconciliation ---
+test('reconcileTikTok: GMV, return rate, estimated vs actual (clawback)', () => {
+  const rows = [
+    { 'หมายเลขคำสั่งซื้อ': 'A', 'ชื่อสินค้า': 'P1', 'สินค้าที่ขายได้': 1, 'สินค้าที่มีการคืนเงิน': 0, 'สถานะการชำระคำสั่งซื้อ': 'ชำระแล้ว', 'GMV': '100', 'ค่าคอมมิชชั่นมาตรฐานโดยประมาณ': '10', 'ยอดรายได้รวมสุดท้าย': '10' },
+    { 'หมายเลขคำสั่งซื้อ': 'B', 'ชื่อสินค้า': 'P2', 'สินค้าที่ขายได้': 1, 'สินค้าที่มีการคืนเงิน': 1, 'สถานะการชำระคำสั่งซื้อ': 'ไม่มีสิทธิ์', 'GMV': '50', 'ค่าคอมมิชชั่นมาตรฐานโดยประมาณ': '5', 'ยอดรายได้รวมสุดท้าย': '' },
+    { 'หมายเลขคำสั่งซื้อ': 'C', 'ชื่อสินค้า': 'P1', 'สินค้าที่ขายได้': 2, 'สินค้าที่มีการคืนเงิน': 0, 'สถานะการชำระคำสั่งซื้อ': 'รอดำเนินการ', 'GMV': '30', 'ค่าคอมมิชชั่นมาตรฐานโดยประมาณ': '3', 'ยอดรายได้รวมสุดท้าย': '' },
+  ];
+  const R = reconcileTikTok(rows);
+  assert.equal(R.orderCount, 3);
+  assert.equal(R.gmv, 180);
+  assert.equal(R.returnRatePct, 25);
+  assert.equal(R.estTotal, 18);
+  assert.equal(R.actTotal, 10);
+  assert.equal(R.clawback, 8);
+  assert.equal(R.clawbackPct, 44.44);
+  assert.equal(R.byGroup.find((g) => g.key === 'rejected').act, 0);
+});
 
 // --- hoursBetween (live duration) ---
 test('hoursBetween: same-day duration', () => {

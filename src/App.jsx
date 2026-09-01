@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   BarChart3, Radio, Video, ClipboardList, Trophy, Target,
-  CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart,
+  CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart, FileSpreadsheet,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { isConfigured, cloudInitError, needsSetup } from './lib/supabase.js';
@@ -18,6 +18,7 @@ import EmployeesView from './views/EmployeesView.jsx';
 import TeamsView from './views/TeamsView.jsx';
 import WorkLogView from './views/WorkLogView.jsx';
 import ReportsView from './views/ReportsView.jsx';
+import ReconcileView from './views/ReconcileView.jsx';
 import SettingsView from './views/SettingsView.jsx';
 
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
   { id: 'realtime', label: 'Realtime Live', icon: Radio },
   { id: 'channels', label: 'ช่อง TikTok', icon: Video },
   { id: 'sales', label: 'บันทึกยอดขาย', icon: ClipboardList },
+  { id: 'reconcile', label: 'กระทบยอด TikTok', icon: FileSpreadsheet },
   { id: 'employees', label: 'พนักงาน & KPI', icon: Trophy },
   { id: 'teams', label: 'ทีม & เป้าหมาย', icon: Target },
   { id: 'worklog', label: 'บันทึกงานรายวัน', icon: CalendarCheck },
@@ -139,6 +141,7 @@ export default function App() {
           {view === 'realtime' && <RealtimeView store={store} />}
           {view === 'channels' && <ChannelsView store={store} />}
           {view === 'sales' && <SalesView store={store} />}
+          {view === 'reconcile' && <ReconcileView />}
           {view === 'employees' && <EmployeesView store={store} month={month} />}
           {view === 'teams' && <TeamsView store={store} month={month} />}
           {view === 'worklog' && <WorkLogView store={store} month={month} />}
