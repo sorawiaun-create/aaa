@@ -73,6 +73,8 @@ export const TABLES = {
   teams: 'teams',
   sales: 'sales',
   workLogs: 'work_logs',
+  imports: 'imports',
+  expenses: 'expenses',
 };
 
 export const SETTINGS_TABLE = 'settings';

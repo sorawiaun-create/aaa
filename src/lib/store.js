@@ -8,6 +8,8 @@ const KEYS = {
   teams: 'tla_teams_v1',
   sales: 'tla_sales_v1',
   workLogs: 'tla_worklogs_v1',
+  imports: 'tla_imports_v1',
+  expenses: 'tla_expenses_v1',
   settings: 'tla_settings_v1',
 };
 
@@ -74,18 +76,16 @@ async function cloudSaveSettings(s) {
 }
 
 // Central data store. Same API in both modes so views never branch.
-//  - local mode: state persisted to localStorage (offline, single device).
-//  - cloud mode: state loaded from / written through to Supabase, with
-//    realtime updates so every signed-in device shares one dataset.
 export function useStore() {
   const [channels, setChannels] = useState(() => (isCloud ? [] : load(KEYS.channels, [])));
   const [employees, setEmployees] = useState(() => (isCloud ? [] : load(KEYS.employees, [])));
   const [teams, setTeams] = useState(() => (isCloud ? [] : load(KEYS.teams, [])));
   const [sales, setSales] = useState(() => (isCloud ? [] : load(KEYS.sales, [])));
   const [workLogs, setWorkLogs] = useState(() => (isCloud ? [] : load(KEYS.workLogs, [])));
+  const [imports, setImports] = useState(() => (isCloud ? [] : load(KEYS.imports, [])));
+  const [expenses, setExpenses] = useState(() => (isCloud ? [] : load(KEYS.expenses, [])));
   const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, ...(isCloud ? {} : load(KEYS.settings, {})) }));
 
-  // Auth (cloud only). Local mode is always "ready" with no user.
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(!isCloud);
   const [loading, setLoading] = useState(isCloud);
@@ -96,9 +96,10 @@ export function useStore() {
   useEffect(() => { if (!isCloud) save(KEYS.teams, teams); }, [teams]);
   useEffect(() => { if (!isCloud) save(KEYS.sales, sales); }, [sales]);
   useEffect(() => { if (!isCloud) save(KEYS.workLogs, workLogs); }, [workLogs]);
+  useEffect(() => { if (!isCloud) save(KEYS.imports, imports); }, [imports]);
+  useEffect(() => { if (!isCloud) save(KEYS.expenses, expenses); }, [expenses]);
   useEffect(() => { if (!isCloud) save(KEYS.settings, settings); }, [settings]);
 
-  // Track the auth session.
   useEffect(() => {
     if (!isCloud) return;
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
@@ -106,11 +107,10 @@ export function useStore() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Load all data + subscribe to realtime when signed in.
   useEffect(() => {
     if (!isCloud) return;
     if (!session) {
-      setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]);
+      setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]); setImports([]); setExpenses([]);
       setSettings({ ...DEFAULT_SETTINGS });
       setLoading(false);
       return;
@@ -118,9 +118,9 @@ export function useStore() {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [ch, emp, tm, sl, wl] = await Promise.all([
+      const [ch, emp, tm, sl, wl, im, ex] = await Promise.all([
         fetchTable(TABLES.channels), fetchTable(TABLES.employees), fetchTable(TABLES.teams),
-        fetchTable(TABLES.sales), fetchTable(TABLES.workLogs),
+        fetchTable(TABLES.sales), fetchTable(TABLES.workLogs), fetchTable(TABLES.imports), fetchTable(TABLES.expenses),
       ]);
       const st = await supabase.from(SETTINGS_TABLE).select('data').eq('id', SETTINGS_ROW_ID).maybeSingle();
       if (cancelled) return;
@@ -129,15 +129,16 @@ export function useStore() {
       if (tm) setTeams(tm);
       if (sl) setSales(sl);
       if (wl) setWorkLogs(wl);
+      if (im) setImports(im);
+      if (ex) setExpenses(ex);
       if (st?.data?.data) setSettings({ ...DEFAULT_SETTINGS, ...st.data.data });
       setLoading(false);
     })();
 
-    // Realtime: on any change to a table, reload just that table.
     const reload = (table, setter) => async () => { const rows = await fetchTable(table); if (rows) setter(rows); };
     const subs = [
       [TABLES.channels, setChannels], [TABLES.employees, setEmployees], [TABLES.teams, setTeams],
-      [TABLES.sales, setSales], [TABLES.workLogs, setWorkLogs],
+      [TABLES.sales, setSales], [TABLES.workLogs, setWorkLogs], [TABLES.imports, setImports], [TABLES.expenses, setExpenses],
     ].map(([table, setter]) =>
       supabase.channel(`rt-${table}`).on('postgres_changes', { event: '*', schema: 'public', table }, reload(table, setter)).subscribe()
     );
@@ -151,96 +152,41 @@ export function useStore() {
     return () => { cancelled = true; subs.forEach((s) => supabase.removeChannel(s)); };
   }, [session]);
 
-  // --- Channels ---
-  const addChannel = (channel) => {
-    const rec = { id: uid(), status: 'active', createdAt: nowISO(), ...channel };
-    setChannels((prev) => [...prev, rec]);
-    cloudUpsert(TABLES.channels, rec);
-  };
-  const updateChannel = (id, patch) => {
-    const cur = channels.find((c) => c.id === id);
-    setChannels((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-    if (cur) cloudUpsert(TABLES.channels, { ...cur, ...patch });
-  };
-  const removeChannel = (id) => {
-    setChannels((prev) => prev.filter((c) => c.id !== id));
-    cloudDelete(TABLES.channels, id);
-  };
+  // Generic CRUD factory to cut repetition.
+  const crud = (table, state, setState, defaults = () => ({})) => ({
+    add: (obj) => {
+      const rec = { id: uid(), ...defaults(), ...obj };
+      setState((prev) => [rec, ...prev]);
+      cloudUpsert(table, rec);
+      return rec;
+    },
+    update: (id, patch) => {
+      const cur = state.find((x) => x.id === id);
+      setState((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+      if (cur) cloudUpsert(table, { ...cur, ...patch });
+    },
+    remove: (id) => {
+      setState((prev) => prev.filter((x) => x.id !== id));
+      cloudDelete(table, id);
+    },
+  });
 
-  // --- Employees ---
-  const addEmployee = (emp) => {
-    const rec = { id: uid(), active: true, ...emp };
-    setEmployees((prev) => [...prev, rec]);
-    cloudUpsert(TABLES.employees, rec);
-  };
-  const updateEmployee = (id, patch) => {
-    const cur = employees.find((e) => e.id === id);
-    setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-    if (cur) cloudUpsert(TABLES.employees, { ...cur, ...patch });
-  };
-  const removeEmployee = (id) => {
-    setEmployees((prev) => prev.filter((e) => e.id !== id));
-    cloudDelete(TABLES.employees, id);
-  };
+  const chC = crud(TABLES.channels, channels, setChannels, () => ({ status: 'active', createdAt: nowISO() }));
+  const empC = crud(TABLES.employees, employees, setEmployees, () => ({ active: true }));
+  const tmC = crud(TABLES.teams, teams, setTeams);
+  const slC = crud(TABLES.sales, sales, setSales);
+  const wlC = crud(TABLES.workLogs, workLogs, setWorkLogs);
+  const imC = crud(TABLES.imports, imports, setImports, () => ({ uploadedAt: nowISO() }));
+  const exC = crud(TABLES.expenses, expenses, setExpenses);
 
-  // --- Teams ---
-  const addTeam = (team) => {
-    const rec = { id: uid(), ...team };
-    setTeams((prev) => [...prev, rec]);
-    cloudUpsert(TABLES.teams, rec);
-  };
-  const updateTeam = (id, patch) => {
-    const cur = teams.find((t) => t.id === id);
-    setTeams((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    if (cur) cloudUpsert(TABLES.teams, { ...cur, ...patch });
-  };
-  const removeTeam = (id) => {
-    setTeams((prev) => prev.filter((t) => t.id !== id));
-    cloudDelete(TABLES.teams, id);
-  };
-
-  // --- Sales ---
-  const addSale = (sale) => {
-    const rec = { id: uid(), ...sale };
-    setSales((prev) => [rec, ...prev]);
-    cloudUpsert(TABLES.sales, rec);
-  };
-  const updateSale = (id, patch) => {
-    const cur = sales.find((s) => s.id === id);
-    setSales((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-    if (cur) cloudUpsert(TABLES.sales, { ...cur, ...patch });
-  };
-  const removeSale = (id) => {
-    setSales((prev) => prev.filter((s) => s.id !== id));
-    cloudDelete(TABLES.sales, id);
-  };
-
-  // --- Work logs ---
-  const addWorkLog = (log) => {
-    const rec = { id: uid(), ...log };
-    setWorkLogs((prev) => [rec, ...prev]);
-    cloudUpsert(TABLES.workLogs, rec);
-  };
-  const updateWorkLog = (id, patch) => {
-    const cur = workLogs.find((w) => w.id === id);
-    setWorkLogs((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch } : w)));
-    if (cur) cloudUpsert(TABLES.workLogs, { ...cur, ...patch });
-  };
-  const removeWorkLog = (id) => {
-    setWorkLogs((prev) => prev.filter((w) => w.id !== id));
-    cloudDelete(TABLES.workLogs, id);
-  };
-
-  // --- Settings ---
   const updateSettings = (patch) => {
     const next = { ...settings, ...patch };
     setSettings(next);
     cloudSaveSettings(next);
   };
 
-  // --- Data management ---
   const clearAll = () => {
-    setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]);
+    setChannels([]); setEmployees([]); setTeams([]); setSales([]); setWorkLogs([]); setImports([]); setExpenses([]);
     setSettings({ ...DEFAULT_SETTINGS });
     if (isCloud) {
       Object.values(TABLES).forEach((t) => cloudClear(t));
@@ -251,17 +197,19 @@ export function useStore() {
   const replaceAll = async (data) => {
     const next = {
       channels: data.channels || [], employees: data.employees || [], teams: data.teams || [],
-      sales: data.sales || [], workLogs: data.workLogs || [],
+      sales: data.sales || [], workLogs: data.workLogs || [], imports: data.imports || [], expenses: data.expenses || [],
       settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
     };
     setChannels(next.channels); setEmployees(next.employees); setTeams(next.teams);
-    setSales(next.sales); setWorkLogs(next.workLogs); setSettings(next.settings);
+    setSales(next.sales); setWorkLogs(next.workLogs); setImports(next.imports); setExpenses(next.expenses);
+    setSettings(next.settings);
     if (isCloud) {
       await Promise.all(Object.values(TABLES).map((t) => cloudClear(t)));
       await Promise.all([
         cloudUpsertMany(TABLES.channels, next.channels), cloudUpsertMany(TABLES.employees, next.employees),
         cloudUpsertMany(TABLES.teams, next.teams), cloudUpsertMany(TABLES.sales, next.sales),
-        cloudUpsertMany(TABLES.workLogs, next.workLogs),
+        cloudUpsertMany(TABLES.workLogs, next.workLogs), cloudUpsertMany(TABLES.imports, next.imports),
+        cloudUpsertMany(TABLES.expenses, next.expenses),
       ]);
       await cloudSaveSettings(next.settings);
     }
@@ -269,7 +217,6 @@ export function useStore() {
   const importAll = (snapshot) => replaceAll(snapshot);
   const loadSample = (sample) => replaceAll(sample);
 
-  // --- Auth (cloud) ---
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const signUp = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => supabase.auth.signOut();
@@ -278,12 +225,14 @@ export function useStore() {
     mode: isCloud ? 'cloud' : 'local',
     authReady, loading, user: session?.user || null,
     signIn, signUp, signOut,
-    channels, employees, teams, sales, workLogs, settings,
-    addChannel, updateChannel, removeChannel,
-    addEmployee, updateEmployee, removeEmployee,
-    addTeam, updateTeam, removeTeam,
-    addSale, updateSale, removeSale,
-    addWorkLog, updateWorkLog, removeWorkLog,
+    channels, employees, teams, sales, workLogs, imports, expenses, settings,
+    addChannel: chC.add, updateChannel: chC.update, removeChannel: chC.remove,
+    addEmployee: empC.add, updateEmployee: empC.update, removeEmployee: empC.remove,
+    addTeam: tmC.add, updateTeam: tmC.update, removeTeam: tmC.remove,
+    addSale: slC.add, updateSale: slC.update, removeSale: slC.remove,
+    addWorkLog: wlC.add, updateWorkLog: wlC.update, removeWorkLog: wlC.remove,
+    addImport: imC.add, removeImport: imC.remove,
+    addExpense: exC.add, updateExpense: exC.update, removeExpense: exC.remove,
     updateSettings, clearAll, importAll, loadSample,
   };
 }

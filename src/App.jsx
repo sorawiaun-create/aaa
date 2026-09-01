@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   BarChart3, Radio, Video, ClipboardList, Trophy, Target,
   CalendarCheck, Settings, LogOut, Menu, X, Loader2, LineChart, FileSpreadsheet,
+  GitCompareArrows, PiggyBank,
 } from 'lucide-react';
 import { useStore } from './lib/store.js';
 import { isConfigured, cloudInitError, needsSetup } from './lib/supabase.js';
@@ -19,6 +20,8 @@ import TeamsView from './views/TeamsView.jsx';
 import WorkLogView from './views/WorkLogView.jsx';
 import ReportsView from './views/ReportsView.jsx';
 import ReconcileView from './views/ReconcileView.jsx';
+import CompareView from './views/CompareView.jsx';
+import ProfitView from './views/ProfitView.jsx';
 import SettingsView from './views/SettingsView.jsx';
 
 const NAV = [
@@ -28,6 +31,8 @@ const NAV = [
   { id: 'channels', label: 'ช่อง TikTok', icon: Video },
   { id: 'sales', label: 'บันทึกยอดขาย', icon: ClipboardList },
   { id: 'reconcile', label: 'กระทบยอด TikTok', icon: FileSpreadsheet },
+  { id: 'compare', label: 'เปรียบเทียบช่อง', icon: GitCompareArrows },
+  { id: 'profit', label: 'กำไร-ขาดทุน', icon: PiggyBank },
   { id: 'employees', label: 'พนักงาน & KPI', icon: Trophy },
   { id: 'teams', label: 'ทีม & เป้าหมาย', icon: Target },
   { id: 'worklog', label: 'บันทึกงานรายวัน', icon: CalendarCheck },
@@ -35,7 +40,7 @@ const NAV = [
 ];
 
 // Views that show the month selector in the top bar.
-const MONTH_VIEWS = new Set(['overview', 'reports', 'employees', 'teams', 'worklog']);
+const MONTH_VIEWS = new Set(['overview', 'reports', 'compare', 'profit', 'employees', 'teams', 'worklog']);
 
 export default function App() {
   const store = useStore();
@@ -141,7 +146,9 @@ export default function App() {
           {view === 'realtime' && <RealtimeView store={store} />}
           {view === 'channels' && <ChannelsView store={store} />}
           {view === 'sales' && <SalesView store={store} />}
-          {view === 'reconcile' && <ReconcileView />}
+          {view === 'reconcile' && <ReconcileView store={store} />}
+          {view === 'compare' && <CompareView store={store} month={month} />}
+          {view === 'profit' && <ProfitView store={store} month={month} />}
           {view === 'employees' && <EmployeesView store={store} month={month} />}
           {view === 'teams' && <TeamsView store={store} month={month} />}
           {view === 'worklog' && <WorkLogView store={store} month={month} />}

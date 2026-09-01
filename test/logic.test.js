@@ -6,6 +6,37 @@ import {
 } from '../src/lib/payroll.js';
 import { hoursBetween } from '../src/lib/format.js';
 import { reconcileTikTok } from '../src/lib/tiktokReconcile.js';
+import { channelCompare, computeProfit } from '../src/lib/finance.js';
+
+// --- finance: channel compare + P&L ---
+test('channelCompare aggregates imports per channel', () => {
+  const channels = [{ id: 'c1', name: 'C1' }, { id: 'c2', name: 'C2' }];
+  const imports = [
+    { channelId: 'c1', month: '2026-07', gmv: 100, estTotal: 10, actTotal: 8, clawback: 2, orderCount: 5, sold: 5, refund: 0 },
+    { channelId: 'c1', month: '2026-08', gmv: 50, estTotal: 5, actTotal: 5, clawback: 0, orderCount: 2, sold: 2, refund: 0 },
+    { channelId: 'c2', month: '2026-07', gmv: 200, estTotal: 20, actTotal: 10, clawback: 10, orderCount: 8, sold: 8, refund: 2 },
+  ];
+  const all = channelCompare(imports, channels);
+  assert.equal(all.length, 2);
+  assert.equal(all[0].name, 'C1'); // sorted by act desc: c1=13 > c2=10
+  const c1 = all.find((r) => r.channelId === 'c1');
+  assert.equal(c1.act, 13);
+  assert.equal(c1.gmv, 150);
+  // month filter
+  const jul = channelCompare(imports, channels, '2026-07');
+  assert.equal(jul.find((r) => r.channelId === 'c1').act, 8);
+});
+
+test('computeProfit = revenue − wages − expenses', () => {
+  const imports = [{ month: '2026-07', actTotal: 100000 }, { month: '2026-08', actTotal: 5 }];
+  const expenses = [{ month: '2026-07', amount: 20000 }, { month: '2026-07', amount: 5000 }];
+  const p = computeProfit({ imports, expenses, wages: 30000, month: '2026-07' });
+  assert.equal(p.revenue, 100000);
+  assert.equal(p.expenses, 25000);
+  assert.equal(p.wages, 30000);
+  assert.equal(p.profit, 45000);
+  assert.equal(p.marginPct, 45);
+});
 
 // --- TikTok affiliate reconciliation ---
 test('reconcileTikTok: GMV, return rate, estimated vs actual (clawback)', () => {

@@ -9,6 +9,8 @@ create table if not exists public.employees (id text primary key, data jsonb not
 create table if not exists public.teams     (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.sales     (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.work_logs (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
+create table if not exists public.imports   (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
+create table if not exists public.expenses  (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.settings  (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 
 -- ------------------------------------------------------------
@@ -18,7 +20,7 @@ create table if not exists public.settings  (id text primary key, data jsonb not
 do $$
 declare t text;
 begin
-  foreach t in array array['channels','employees','teams','sales','work_logs','settings']
+  foreach t in array array['channels','employees','teams','sales','work_logs','imports','expenses','settings']
   loop
     execute format('alter table public.%I enable row level security;', t);
     execute format('drop policy if exists "auth_all" on public.%I;', t);
@@ -39,7 +41,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['channels','employees','teams','sales','work_logs','settings']
+  foreach t in array array['channels','employees','teams','sales','work_logs','imports','expenses','settings']
   loop
     begin
       execute format('alter publication supabase_realtime add table public.%I;', t);

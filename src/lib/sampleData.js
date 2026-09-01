@@ -95,5 +95,30 @@ export function buildSampleData() {
     });
   });
 
-  return { teams, employees, channels, sales, workLogs, settings: {} };
+  // Saved TikTok reconciliation imports (per channel) for July 2026.
+  const imp = [
+    ['ch-1', 3598500, 3200, 285000, 225000, 22.4, 0.6],
+    ['ch-2', 2155400, 1850, 172000, 128000, 25.6, 0.9],
+    ['ch-3', 2083600, 1700, 150000, 118000, 21.3, 0.4],
+    ['ch-4', 689885, 720, 55000, 38000, 30.9, 1.2],
+  ];
+  const imports = imp.map(([channelId, gmv, orderCount, estTotal, actTotal, clawPct, retPct], i) => ({
+    id: `imp-${i + 1}`, channelId, month: '2026-07', fileName: `affiliate_orders_${channelId}.xlsx`, uploadedAt: new Date().toISOString(),
+    gmv, orderCount, sold: orderCount, refund: Math.round((retPct / 100) * orderCount),
+    estTotal, actTotal, clawback: estTotal - actTotal, clawbackPct: clawPct, returnRatePct: retPct,
+    byGroup: [{ key: 'paid', count: Math.round(orderCount * 0.75), gmv: gmv * 0.75, est: actTotal, act: actTotal }],
+  }));
+
+  const exp = [
+    ['05/07/2026', 'ค่าโฆษณา/ยิงแอด', 48000, 'ch-1', 'ยิงแอดช่องหลัก'],
+    ['10/07/2026', 'ค่าเช่าสตูดิโอ', 15000, '', ''],
+    ['12/07/2026', 'อุปกรณ์ไลฟ์', 8500, '', 'ไฟ + ขาตั้ง'],
+    ['20/07/2026', 'ค่าสินค้า/ตัวอย่าง', 12000, '', ''],
+    ['25/07/2026', 'ค่าน้ำ-ไฟ-เน็ต', 4200, '', ''],
+  ];
+  const expenses = exp.map(([date, category, amount, channelId, note], i) => ({
+    id: `exp-${i + 1}`, date, month: '2026-07', category, amount, channelId, note,
+  }));
+
+  return { teams, employees, channels, sales, workLogs, imports, expenses, settings: {} };
 }
