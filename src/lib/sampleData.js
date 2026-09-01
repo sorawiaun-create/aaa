@@ -120,5 +120,15 @@ export function buildSampleData() {
     id: `exp-${i + 1}`, date, month: '2026-07', category, amount, channelId, note,
   }));
 
+  // A prior month (June) so the monthly-trend chart has more than one point.
+  imports.push(
+    { id: 'imp-jun-1', channelId: 'ch-1', month: '2026-06', fileName: 'affiliate_orders_ch-1_jun.xlsx', uploadedAt: new Date().toISOString(), gmv: 2800000, orderCount: 2600, sold: 2600, refund: 20, estTotal: 232000, actTotal: 178000, clawback: 54000, clawbackPct: 23.3, returnRatePct: 0.8, byGroup: [] },
+    { id: 'imp-jun-2', channelId: 'ch-2', month: '2026-06', fileName: 'affiliate_orders_ch-2_jun.xlsx', uploadedAt: new Date().toISOString(), gmv: 1700000, orderCount: 1500, sold: 1500, refund: 15, estTotal: 140000, actTotal: 101000, clawback: 39000, clawbackPct: 27.9, returnRatePct: 1.0, byGroup: [] },
+  );
+  expenses.push(
+    { id: 'exp-jun-1', date: '08/06/2026', month: '2026-06', category: 'ค่าโฆษณา/ยิงแอด', amount: 52000, channelId: 'ch-1', note: '' },
+    { id: 'exp-jun-2', date: '15/06/2026', month: '2026-06', category: 'ค่าเช่าสตูดิโอ', amount: 15000, channelId: '', note: '' },
+  );
+
   return { teams, employees, channels, sales, workLogs, imports, expenses, settings: {} };
 }

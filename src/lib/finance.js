@@ -1,4 +1,6 @@
 // Cross-channel comparison + P&L helpers (framework-agnostic, testable).
+import { monthKeyOf, monthLabel } from './format.js';
+
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 // Aggregate saved TikTok imports per channel (optionally for one month).
@@ -51,6 +53,44 @@ export function computeProfit({ imports = [], expenses = [], wages = 0, adSpend 
     profit,
     marginPct: revenue ? (profit / revenue) * 100 : 0,
   };
+}
+
+// Monthly P&L trend: one row per month with revenue/cost/profit.
+// wagesFor(month) is supplied by the caller (payroll lives in payroll.js).
+export function monthlyPnl({ sales = [], imports = [], expenses = [], wagesFor = () => 0 }) {
+  const months = new Set();
+  imports.forEach((i) => i.month && months.add(i.month));
+  expenses.forEach((e) => e.month && months.add(e.month));
+  sales.forEach((s) => { const m = monthKeyOf(s.date); if (m) months.add(m); });
+  return [...months].sort().map((month) => {
+    const revenue = imports.filter((i) => i.month === month).reduce((a, i) => a + n(i.actTotal), 0);
+    const adSpend = sales.filter((s) => monthKeyOf(s.date) === month).reduce((a, s) => a + n(s.adCost), 0);
+    const expenseTotal = expenses.filter((e) => e.month === month).reduce((a, e) => a + n(e.amount), 0);
+    const wages = n(wagesFor(month));
+    const cost = wages + adSpend + expenseTotal;
+    return { month, label: monthLabel(month), revenue, wages, adSpend, expenses: expenseTotal, cost, profit: revenue - cost };
+  });
+}
+
+// Per-channel contribution: revenue (actual commission) − ad spend − channel-tagged
+// expenses. (Company-wide wages are not split per channel.)
+export function channelPnl({ imports = [], sales = [], expenses = [], channels = [], month = '' }) {
+  const add = (map, key, v) => map.set(key, (map.get(key) || 0) + v);
+  const rev = new Map(), ad = new Map(), exp = new Map();
+  (month ? imports.filter((i) => i.month === month) : imports).forEach((i) => add(rev, i.channelId, n(i.actTotal)));
+  sales.filter((s) => !month || monthKeyOf(s.date) === month).forEach((s) => s.channelId && add(ad, s.channelId, n(s.adCost)));
+  (month ? expenses.filter((e) => e.month === month) : expenses).forEach((e) => e.channelId && add(exp, e.channelId, n(e.amount)));
+  const ids = [...new Set([...rev.keys(), ...ad.keys(), ...exp.keys()].filter(Boolean))];
+  return ids.map((id) => {
+    const revenue = rev.get(id) || 0, adSpend = ad.get(id) || 0, expense = exp.get(id) || 0;
+    const contribution = revenue - adSpend - expense;
+    return {
+      channelId: id,
+      name: channels.find((c) => c.id === id)?.name || 'ไม่ระบุช่อง',
+      revenue, adSpend, expense, contribution,
+      roi: adSpend > 0 ? (revenue / adSpend) : null,
+    };
+  }).sort((a, b) => b.contribution - a.contribution);
 }
 
 // Expenses grouped by category (for the P&L breakdown).

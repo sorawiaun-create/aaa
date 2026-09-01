@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Wallet, Users, Banknote, TrendingUp, Plus, Trash2, PiggyBank, Megaphone } from 'lucide-react';
+import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts';
+import { Wallet, Users, Banknote, TrendingUp, Plus, Trash2, PiggyBank, Megaphone, LineChart as LineIcon, GitCompareArrows } from 'lucide-react';
 import { SectionCard, KpiCard, Button, EmptyState, Modal, Field, Input, Select } from '../components/ui.jsx';
 import { computePayroll } from '../lib/payroll.js';
-import { computeProfit, expensesByCategory } from '../lib/finance.js';
-import { formatCurrency, formatCurrency0, formatBahtCompact, formatPercent, monthLabel, monthKeyOf, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
+import { computeProfit, expensesByCategory, monthlyPnl, channelPnl } from '../lib/finance.js';
+import { formatCurrency, formatCurrency0, formatBahtCompact, formatPercent, compactCurrency, monthLabel, monthKeyOf, todayDMY, dmyToISO, isoToDMY } from '../lib/format.js';
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const INK = { grid: '#e1e0d9', axis: '#898781' };
+const tipStyle = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,.08)' };
 
 const CATEGORIES = ['ค่าโฆษณา/ยิงแอด', 'ค่าสินค้า/ตัวอย่าง', 'ค่าเช่าสตูดิโอ', 'อุปกรณ์ไลฟ์', 'ค่าน้ำ-ไฟ-เน็ต', 'ค่าขนส่ง', 'ค่าการตลาด', 'อื่น ๆ'];
 
@@ -26,6 +29,14 @@ export default function ProfitView({ store, month }) {
 
   const pnl = useMemo(() => computeProfit({ imports: store.imports, expenses: store.expenses, wages, adSpend, month }), [store.imports, store.expenses, wages, adSpend, month]);
   const byCat = useMemo(() => expensesByCategory(store.expenses, month), [store.expenses, month]);
+
+  // Monthly P&L trend (all months) — wages recomputed per month from payroll.
+  const monthly = useMemo(() => monthlyPnl({
+    sales: store.sales, imports: store.imports, expenses: store.expenses,
+    wagesFor: (m) => computePayroll({ employees: store.employees, sales: store.sales, workLogs: store.workLogs, settings: store.settings, monthKey: m }).reduce((a, r) => a + r.total, 0),
+  }), [store.sales, store.imports, store.expenses, store.employees, store.workLogs, store.settings]);
+
+  const channelRows = useMemo(() => channelPnl({ imports: store.imports, sales: store.sales, expenses: store.expenses, channels: store.channels, month }), [store.imports, store.sales, store.expenses, store.channels, month]);
 
   const expenseRows = useMemo(() => {
     const list = month ? store.expenses.filter((e) => e.month === month) : store.expenses;
@@ -63,6 +74,61 @@ export default function ProfitView({ store, month }) {
             <PnlRow label="กำไรสุทธิ" value={pnl.profit} tone={pnl.profit >= 0 ? 'total' : 'negtotal'} big />
           </div>
         </div>
+      </SectionCard>
+
+      {/* Monthly P&L trend */}
+      {monthly.length > 0 && (
+        <SectionCard title="แนวโน้มกำไรรายเดือน" icon={LineIcon}>
+          <div className="p-4 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={monthly} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={INK.grid} vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: INK.axis }} tickLine={false} axisLine={{ stroke: INK.grid }} />
+                <YAxis tickFormatter={compactCurrency} tick={{ fontSize: 11, fill: INK.axis }} width={52} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tipStyle} formatter={(v, k) => [formatCurrency0(v), k === 'revenue' ? 'รายรับ' : k === 'cost' ? 'ต้นทุนรวม' : 'กำไรสุทธิ']} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={9} formatter={(k) => (k === 'revenue' ? 'รายรับ' : k === 'cost' ? 'ต้นทุนรวม' : 'กำไรสุทธิ')} />
+                <Bar dataKey="revenue" fill="#a7f3d0" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="cost" fill="#fed7aa" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Line type="monotone" dataKey="profit" stroke="#059669" strokeWidth={2.5} dot={{ r: 3, fill: '#059669' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Profit by channel (contribution) */}
+      <SectionCard title="กำไรแยกรายช่อง (รายรับ − ค่าแอด − รายจ่ายของช่อง)" icon={GitCompareArrows}>
+        {channelRows.length === 0 ? (
+          <EmptyState icon={GitCompareArrows} title="ยังไม่มีข้อมูลรายช่อง" hint="ต้องมีไฟล์ที่บันทึกใน “กระทบยอด TikTok” และ/หรือค่าแอดในบันทึกยอดขาย" />
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="px-5 py-3 font-medium">ช่อง</th>
+                  <th className="px-4 py-3 font-medium text-right">รายรับ (ค่าคอมจริง)</th>
+                  <th className="px-4 py-3 font-medium text-right">ค่าแอด</th>
+                  <th className="px-4 py-3 font-medium text-right">รายจ่ายช่อง</th>
+                  <th className="px-4 py-3 font-medium text-right">ROAS</th>
+                  <th className="px-5 py-3 font-medium text-right">กำไรช่อง</th>
+                </tr>
+              </thead>
+              <tbody>
+                {channelRows.map((r) => (
+                  <tr key={r.channelId} className="border-b border-slate-50 hover:bg-slate-50/60">
+                    <td className="px-5 py-3 font-medium text-slate-800">{r.name}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600">{formatCurrency0(r.revenue)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-purple-600">{formatCurrency0(r.adSpend)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-500">{r.expense ? formatCurrency0(r.expense) : '—'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-500">{r.roi != null ? r.roi.toFixed(1) : '—'}</td>
+                    <td className={`px-5 py-3 text-right tabular-nums font-bold ${r.contribution >= 0 ? 'text-slate-800' : 'text-red-500'}`}>{r.contribution < 0 ? `−${formatCurrency0(Math.abs(r.contribution))}` : formatCurrency0(r.contribution)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="px-5 py-3 text-[11px] text-slate-400">* “กำไรช่อง” ยังไม่หักค่าจ้างพนักงานส่วนกลาง (เป็นกำไรเฉพาะช่องก่อนค่าใช้จ่ายรวม)</p>
       </SectionCard>
 
       {/* Expenses management */}
