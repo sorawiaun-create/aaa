@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-09-03T05:26:26.279452+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 4,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:26 (>5) และ เวลา=5:26 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:26 (>5) และ เวลา=5:26 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:26 (>5) และ เวลา=5:26 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:26 (>5) และ เวลา=5:26 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-09-03T02:53:58.229677+07:00",
       "dry_run": false,
       "summary": {
@@ -1135,17 +1187,6 @@
     },
     {
       "t": "2026-08-31T04:50:32.497855+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-31T04:40:32.222651+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
