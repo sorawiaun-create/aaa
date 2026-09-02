@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-02T05:00:07.511367+07:00",
+  "updated_at": "2026-09-02T07:00:33.792565+07:00",
   "dry_run": false,
   "accounts": [
     {
@@ -13,24 +13,24 @@
       "account_id": "917846690184511",
       "campaigns": [
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -40,11 +40,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -55,11 +55,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -142,11 +142,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -169,11 +169,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -209,24 +209,24 @@
           "budget": 300.0
         },
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -236,11 +236,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -251,11 +251,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -338,11 +338,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -365,11 +365,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -405,24 +405,24 @@
           "budget": 300.0
         },
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -432,11 +432,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -447,11 +447,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -534,11 +534,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -561,11 +561,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (>=18)",
+                  "text": "เวลา=7:01 (>=18)",
                   "ok": false
                 }
               ]
@@ -2450,23 +2450,23 @@
       "campaigns": [
         {
           "status": "ACTIVE",
-          "decision": "KEEP_ACTIVE",
-          "status_rule": "กฎใหม่",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -2476,11 +2476,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -2491,11 +2491,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -2506,11 +2506,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>50)",
+                  "text": "จ่าย=182.32 (>50)",
                   "ok": true
                 },
                 {
-                  "text": "ทัก=2 (<1)",
+                  "text": "ทัก=9 (<1)",
                   "ok": false
                 }
               ]
@@ -2521,11 +2521,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>80)",
-                  "ok": false
+                  "text": "จ่าย=182.32 (>80)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนทัก=25.75 (>50)",
+                  "text": "ทุนทัก=20.26 (>50)",
                   "ok": false
                 }
               ]
@@ -2536,12 +2536,12 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>80)",
-                  "ok": false
+                  "text": "จ่าย=182.32 (>80)",
+                  "ok": true
                 },
                 {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
+                  "text": "ซื้อ=2 (<1)",
+                  "ok": false
                 }
               ]
             },
@@ -2551,11 +2551,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>200)",
+                  "text": "จ่าย=182.32 (>200)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (>80)",
+                  "text": "ทุนซื้อ=91.16 (>80)",
                   "ok": true
                 }
               ]
@@ -2566,23 +2566,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>30)",
+                  "text": "จ่าย=182.32 (>30)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0 (>3.50)",
+                  "text": "ROAS=2.19 (>3.50)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<60)",
+                  "text": "ทุนซื้อ=91.16 (<60)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 }
               ]
@@ -2593,27 +2593,27 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>30)",
+                  "text": "จ่าย=182.32 (>30)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0 (>2.80)",
+                  "text": "ROAS=2.19 (>2.80)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<75)",
+                  "text": "ทุนซื้อ=91.16 (<75)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0 (<3.50)",
+                  "text": "เวลา=7:01 (<18)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=2.19 (<3.50)",
                   "ok": true
                 }
               ]
@@ -2624,28 +2624,28 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=51.49 (>50)",
+                  "text": "จ่าย=182.32 (>50)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<75)",
+                  "text": "ทุนซื้อ=91.16 (<75)",
                   "ok": false
                 },
                 {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
+                  "text": "ซื้อ=2 (>0)",
+                  "ok": true
                 }
               ]
             }
           ],
           "campaign": "แคมเปญยอดขายใหม่",
           "controlled": false,
-          "spend": 51.49,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 2,
-          "cost_per_result": 25.75,
+          "spend": 182.32,
+          "roas": 2.19,
+          "orders": 2,
+          "cost_per_purchase": 91.16,
+          "results": 9,
+          "cost_per_result": 20.26,
           "budget": 3000.0
         }
       ]
@@ -3557,24 +3557,24 @@
       "account_id": "1071363213703790",
       "campaigns": [
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -3584,11 +3584,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3599,11 +3599,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3686,11 +3686,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 }
               ]
@@ -3713,11 +3713,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 },
                 {
@@ -3772,24 +3772,24 @@
           "budget": 800.0
         },
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -3799,11 +3799,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3814,11 +3814,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3901,11 +3901,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 }
               ]
@@ -3928,11 +3928,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 },
                 {
@@ -3987,24 +3987,24 @@
           "budget": 2952.45
         },
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -4014,11 +4014,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4029,11 +4029,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4116,11 +4116,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 }
               ]
@@ -4143,11 +4143,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 },
                 {
@@ -4202,24 +4202,24 @@
           "budget": null
         },
         {
-          "status": "PAUSED",
-          "decision": "TO_ACTIVATE",
-          "status_rule": "กฎใหม่",
+          "status": "ACTIVE",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>5)",
+                  "text": "เวลา=7:01 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<7)",
-                  "ok": true
+                  "text": "เวลา=7:01 (<7)",
+                  "ok": false
                 }
               ]
             },
@@ -4229,11 +4229,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>22)",
+                  "text": "เวลา=7:01 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4244,11 +4244,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=5:00 (>23)",
+                  "text": "เวลา=7:01 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (<23.59)",
+                  "text": "เวลา=7:01 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4331,11 +4331,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 }
               ]
@@ -4358,11 +4358,11 @@
                   "ok": false
                 },
                 {
-                  "text": "เวลา=5:00 (>6)",
-                  "ok": false
+                  "text": "เวลา=7:01 (>6)",
+                  "ok": true
                 },
                 {
-                  "text": "เวลา=5:00 (<18)",
+                  "text": "เวลา=7:01 (<18)",
                   "ok": true
                 },
                 {
