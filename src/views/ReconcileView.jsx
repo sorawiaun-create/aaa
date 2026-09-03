@@ -118,9 +118,9 @@ export default function ReconcileView({ recon, store }) {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((r) => (
-                  <tr key={r.sku} className={`hover:bg-slate-50 ${!r.hasCost ? 'bg-amber-50/50' : ''}`}>
+                  <tr key={r.key || r.sku} className={`hover:bg-slate-50 ${!r.hasCost ? 'bg-amber-50/50' : ''}`}>
                     <td className="px-4 py-2.5 font-mono text-xs text-slate-700">
-                      {r.sku} {!r.hasCost && <Badge color="amber">ไม่มีต้นทุน</Badge>}
+                      {r.sku || <span className="text-slate-400 not-italic">(ไม่มี SKU)</span>} {!r.hasCost && <Badge color="amber">ไม่มีต้นทุน</Badge>}
                     </td>
                     <td className="px-4 py-2.5 text-slate-600 truncate max-w-[200px]" title={r.name}>{r.name}</td>
                     <td className="px-4 py-2.5 text-right">{formatNumber(r.qty)}</td>

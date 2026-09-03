@@ -3,6 +3,16 @@ import { monthKeyOf } from './format.js';
 const skuKey = (sku) => String(sku ?? '').trim().toLowerCase();
 const mapPlatform = (p) => (p === 'shopee' ? 'shopee' : 'tiktok');
 
+// Identity used to match a cost to a sales line. Normally the SKU, but items
+// sold WITHOUT an SKU fall back to their product name so the user can still
+// give them a unit cost (keyed by name) and have it stick.
+const identityKey = (sku, name) => {
+  const k = skuKey(sku);
+  if (k) return k;
+  const n = String(name ?? '').trim().toLowerCase();
+  return n ? `name:${n}` : '';
+};
+
 const emptyFees = () => ({
   total: 0, ads: 0, affiliate: 0, logistics: 0, commission: 0,
   transaction: 0, service: 0, growth: 0, ams: 0, infra: 0, vat: 0, wht: 0,
@@ -35,7 +45,7 @@ function addFee(acc, f) {
 export function computeReconciliation({ sales = [], products = [], fees = [], orderFees = [], expenses = [], filters = {} }) {
   const costBySku = {};
   products.forEach((p) => {
-    const k = skuKey(p.sku);
+    const k = identityKey(p.sku, p.name);
     if (k) costBySku[k] = p;
   });
 
@@ -106,7 +116,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
   const unmatched = new Set();
 
   filteredSales.forEach((s) => {
-    const k = skuKey(s.sku);
+    const k = identityKey(s.sku, s.productName);
     const prod = costBySku[k];
     const unitCost = prod ? prod.unitCost || 0 : 0;
     const lineCogs = unitCost * s.qty;
@@ -116,10 +126,11 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
     cogs += lineCogs;
     unitsSold += s.qty;
     if (s.orderId) orderIds.add(`${s.platform}:${s.orderId}`);
-    if (k && !prod) unmatched.add(s.sku);
+    if (skuKey(s.sku) && !prod) unmatched.add(s.sku); // only real SKUs count as "unmatched"
 
     if (!skuMap[k]) {
       skuMap[k] = {
+        key: k,
         sku: s.sku,
         name: prod?.name || s.productName || s.sku,
         platform: s.platform,
@@ -201,7 +212,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
     const pSales = filteredSales.filter((s) => mapPlatform(s.platform) === p);
     const pRevenue = pSales.reduce((a, s) => a + s.revenue, 0);
     const pCogs = pSales.reduce((a, s) => {
-      const prod = costBySku[skuKey(s.sku)];
+      const prod = costBySku[identityKey(s.sku, s.productName)];
       return a + (prod ? (prod.unitCost || 0) * s.qty : 0);
     }, 0);
     let pFees = effFeeByPlatform[p] || 0;
@@ -233,7 +244,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
   filteredSales.forEach((s) => {
     const m = ensureMonth(s.monthKey);
     m.revenue += s.revenue;
-    const prod = costBySku[skuKey(s.sku)];
+    const prod = costBySku[identityKey(s.sku, s.productName)];
     m.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
     m.fees += lineEffFee(s);
   });
@@ -325,7 +336,7 @@ export function computeReconciliation({ sales = [], products = [], fees = [], or
 export function computeProductMonthly({ sales = [], products = [], filters = {} }) {
   const costBySku = {};
   products.forEach((p) => {
-    const k = skuKey(p.sku);
+    const k = identityKey(p.sku, p.name);
     if (k) costBySku[k] = p;
   });
 
@@ -347,7 +358,7 @@ export function computeProductMonthly({ sales = [], products = [], filters = {} 
   sales.filter(pass).forEach((s) => {
     const mk = s.monthKey || 'ไม่ระบุ';
     monthsSet.add(mk);
-    const k = skuKey(s.sku);
+    const k = identityKey(s.sku, s.productName);
     const prod = costBySku[k];
     if (!skuMap[k]) {
       skuMap[k] = {
@@ -422,7 +433,7 @@ export function computeOrderReconciliation({ sales = [], products = [], orderFee
     o.revenue += s.revenue;
     // Inline fees are order-level (repeated per line) — take once, don't sum.
     o.inlineFee = Math.max(o.inlineFee, s.fee || 0);
-    const prod = costBySku[skuKey(s.sku)];
+    const prod = costBySku[identityKey(s.sku, s.productName)];
     o.cogs += prod ? (prod.unitCost || 0) * s.qty : 0;
     if (!prod && skuKey(s.sku)) o.hasAllCost = false;
   });

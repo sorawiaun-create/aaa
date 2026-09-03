@@ -106,6 +106,28 @@ test('computeReconciliation core math', () => {
   assert.equal(r.missingCostCount, 0);
 });
 
+test('no-SKU sales lines take a cost matched by product name', () => {
+  // Reproduces the reported bug: an item sold without an SKU could not be given
+  // a unit cost because cost was keyed only by SKU. Now it falls back to name.
+  const sales = [
+    { id: '1', platform: 'shopee', orderId: 'O1', monthKey: '2026-05', date: '10/05/2026', sku: '', productName: 'กระถางชวนชม 18"', qty: 3, revenue: 300, status: 'ok', fee: 30 },
+    { id: '2', platform: 'shopee', orderId: 'O2', monthKey: '2026-05', date: '11/05/2026', sku: '', productName: 'กระถางชวนชม 18"', qty: 1, revenue: 100, status: 'ok', fee: 10 },
+    { id: '3', platform: 'shopee', orderId: 'O3', monthKey: '2026-05', date: '12/05/2026', sku: '', productName: 'อ่างบัว', qty: 2, revenue: 200, status: 'ok', fee: 20 },
+  ];
+  const products = [{ sku: '', name: 'กระถางชวนชม 18"', unitCost: 20 }]; // cost typed by the user
+  const r = computeReconciliation({ sales, products, fees: [], filters: { platform: 'all' } });
+  const pot = r.bySku.find((x) => x.name === 'กระถางชวนชม 18"');
+  const bowl = r.bySku.find((x) => x.name === 'อ่างบัว');
+  assert.equal(pot.hasCost, true);      // cost now sticks to the no-SKU row
+  assert.equal(pot.unitCost, 20);
+  assert.equal(pot.qty, 4);             // both lines of the same no-SKU product grouped
+  assert.equal(pot.cogs, 80);           // 4 * 20
+  assert.equal(bowl.hasCost, false);    // a different no-SKU product stays separate
+  assert.equal(bowl.qty, 2);
+  assert.equal(r.cogs, 80);
+  assert.equal(r.missingCostCount, 0);  // blank SKUs are not counted as unmatched SKUs
+});
+
 test('computeReconciliation flags unmatched SKUs and filters platform', () => {
   const sales = [
     { id: '1', platform: 'shopee', orderId: 'O1', date: '01/01/2025', monthKey: '2025-01', sku: 'A', qty: 1, unitPrice: 100, revenue: 100, status: 'สำเร็จ' },

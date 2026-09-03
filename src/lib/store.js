@@ -15,6 +15,15 @@ const uid = () =>
     ? crypto.randomUUID()
     : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// Product identity: the SKU, or (for items sold without an SKU) the product
+// name. Must match reconcile.js identityKey so no-SKU costs round-trip.
+const productId = (p) => {
+  const k = String(p.sku ?? '').trim().toLowerCase();
+  if (k) return k;
+  const n = String(p.name ?? '').trim().toLowerCase();
+  return n ? `name:${n}` : '';
+};
+
 const load = (key, fallback) => {
   try {
     const raw = localStorage.getItem(key);
@@ -53,8 +62,8 @@ export function useStore() {
   // --- Products (SKU cost master) ---
   const upsertProduct = useCallback((product) => {
     setProducts((prev) => {
-      const key = String(product.sku).trim().toLowerCase();
-      const idx = prev.findIndex((p) => String(p.sku).trim().toLowerCase() === key);
+      const key = productId(product);
+      const idx = key ? prev.findIndex((p) => productId(p) === key) : -1;
       if (idx === -1) return [...prev, product];
       const next = [...prev];
       next[idx] = { ...next[idx], ...product };
