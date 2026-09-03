@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-03T07:32:16.400765+07:00",
+  "updated_at": "2026-09-03T12:01:52.975673+07:00",
   "dry_run": false,
   "accounts": [
     {
@@ -14,8 +14,8 @@
       "campaigns": [
         {
           "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
+          "decision": "TO_PAUSE",
+          "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
@@ -25,11 +25,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>5)",
+                  "text": "เวลา=12:02 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<7)",
+                  "text": "เวลา=12:02 (<7)",
                   "ok": false
                 }
               ]
@@ -40,11 +40,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>22)",
+                  "text": "เวลา=12:02 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -55,11 +55,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>23)",
+                  "text": "เวลา=12:02 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -70,26 +70,26 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
+                  "text": "จ่าย=240.75 (>100)",
+                  "ok": true
                 },
                 {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
+                  "text": "ทัก=2 (<1)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "จ่าย 150 ทุนทัก < 40 ปิด",
               "action": "PAUSE",
-              "matched": false,
+              "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
+                  "text": "จ่าย=240.75 (>100)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนทัก=∞ (>80)",
+                  "text": "ทุนทัก=120.38 (>80)",
                   "ok": true
                 }
               ]
@@ -100,26 +100,26 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>99)",
-                  "ok": false
+                  "text": "จ่าย=240.75 (>99)",
+                  "ok": true
                 },
                 {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
+                  "text": "ซื้อ=3 (<1)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
               "action": "PAUSE",
-              "matched": false,
+              "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
+                  "text": "จ่าย=240.75 (>100)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (>80)",
+                  "text": "ทุนซื้อ=80.25 (>80)",
                   "ok": true
                 }
               ]
@@ -130,23 +130,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=240.75 (>40)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (>=18)",
+                  "text": "ROAS=4.98 (>3.50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=80.25 (<80)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
                   "ok": false
                 }
               ]
@@ -157,23 +157,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=240.75 (>40)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (>=18)",
+                  "text": "ROAS=4.98 (>3)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=80.25 (<80)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
                   "ok": false
                 }
               ]
@@ -184,420 +184,420 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
-                }
-              ]
-            }
-          ],
-          "campaign": "อ่างบัว - สำเนา",
-          "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
-          "budget": 300.0
-        },
-        {
-          "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
-          "blocked_activate": false,
-          "budget_rules": [],
-          "rules": [
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>5)",
+                  "text": "จ่าย=240.75 (>50)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<7)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>22)",
+                  "text": "ทุนซื้อ=80.25 (<80)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "ซื้อ=3 (>0)",
                   "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "RESET_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>23)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 100 ไม่ทัก   ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนทัก=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150    ซื้อ 0 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>99)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 20%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (>=18)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 10%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (>=18)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
-                }
-              ]
-            }
-          ],
-          "campaign": "อ่างบัว - สำเนา",
-          "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
-          "budget": 300.0
-        },
-        {
-          "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
-          "blocked_activate": false,
-          "budget_rules": [],
-          "rules": [
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>5)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<7)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>22)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "RESET_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>23)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 100 ไม่ทัก   ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนทัก=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150    ซื้อ 0 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>99)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 20%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (>=18)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 10%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>40)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (>=18)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<80)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
                 }
               ]
             }
           ],
           "campaign": "อ่างบัว",
           "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
+          "spend": 240.75,
+          "roas": 4.98,
+          "orders": 3,
+          "cost_per_purchase": 80.25,
+          "results": 2,
+          "cost_per_result": 120.38,
+          "budget": 300.0
+        },
+        {
+          "status": "ACTIVE",
+          "decision": "KEEP_ACTIVE",
+          "status_rule": "กฎใหม่",
+          "blocked_activate": false,
+          "budget_rules": [],
+          "rules": [
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>5)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<7)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>22)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "RESET_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>23)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 100 ไม่ทัก   ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทัก=13 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนทัก=15.96 (>80)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150    ซื้อ 0 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>99)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=6 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=34.58 (>80)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 20%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>40)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=10.95 (>3.50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=34.58 (<80)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 10%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>40)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=10.95 (>3)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=34.58 (<80)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=207.47 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=34.58 (<80)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=6 (>0)",
+                  "ok": true
+                }
+              ]
+            }
+          ],
+          "campaign": "อ่างบัว - สำเนา",
+          "controlled": true,
+          "spend": 207.47,
+          "roas": 10.95,
+          "orders": 6,
+          "cost_per_purchase": 34.58,
+          "results": 13,
+          "cost_per_result": 15.96,
+          "budget": 300.0
+        },
+        {
+          "status": "ACTIVE",
+          "decision": "TO_PAUSE",
+          "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "blocked_activate": false,
+          "budget_rules": [],
+          "rules": [
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>5)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<7)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>22)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "RESET_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>23)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 100 ไม่ทัก   ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทัก=6 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนทัก=29.17 (>80)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150    ซื้อ 0 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>99)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=1 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+              "action": "PAUSE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=175 (>80)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 20%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>40)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.31 (>3.50)",
+                  "ok": false
+                },
+                {
+                  "text": "ทุนซื้อ=175 (<80)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 10%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>40)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.31 (>3)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=175 (<80)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>=18)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=175 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=175 (<80)",
+                  "ok": false
+                },
+                {
+                  "text": "ซื้อ=1 (>0)",
+                  "ok": true
+                }
+              ]
+            }
+          ],
+          "campaign": "อ่างบัว - สำเนา",
+          "controlled": true,
+          "spend": 175.0,
+          "roas": 3.31,
+          "orders": 1,
+          "cost_per_purchase": 175.0,
+          "results": 6,
+          "cost_per_result": 29.17,
           "budget": 300.0
         }
       ]
@@ -2450,8 +2450,8 @@
       "campaigns": [
         {
           "status": "ACTIVE",
-          "decision": "TO_PAUSE",
-          "status_rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "decision": "NONE",
+          "status_rule": null,
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
@@ -2461,11 +2461,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>5)",
+                  "text": "เวลา=12:02 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<7)",
+                  "text": "เวลา=12:02 (<7)",
                   "ok": false
                 }
               ]
@@ -2476,11 +2476,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>22)",
+                  "text": "เวลา=12:02 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -2491,11 +2491,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>23)",
+                  "text": "เวลา=12:02 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -2506,11 +2506,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>50)",
+                  "text": "จ่าย=1448.08 (>50)",
                   "ok": true
                 },
                 {
-                  "text": "ทัก=11 (<1)",
+                  "text": "ทัก=34 (<1)",
                   "ok": false
                 }
               ]
@@ -2521,11 +2521,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>80)",
+                  "text": "จ่าย=1448.08 (>80)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนทัก=32.53 (>50)",
+                  "text": "ทุนทัก=42.59 (>50)",
                   "ok": false
                 }
               ]
@@ -2536,11 +2536,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>80)",
+                  "text": "จ่าย=1448.08 (>80)",
                   "ok": true
                 },
                 {
-                  "text": "ซื้อ=1 (<1)",
+                  "text": "ซื้อ=19 (<1)",
                   "ok": false
                 }
               ]
@@ -2548,15 +2548,15 @@
             {
               "name": "จ่าย 150  ทุนซื้อ > 70 ปิด",
               "action": "PAUSE",
-              "matched": true,
+              "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>200)",
+                  "text": "จ่าย=1448.08 (>200)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=357.86 (>80)",
-                  "ok": true
+                  "text": "ทุนซื้อ=76.21 (>80)",
+                  "ok": false
                 }
               ]
             },
@@ -2566,23 +2566,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>30)",
+                  "text": "จ่าย=1448.08 (>30)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0.56 (>3.50)",
+                  "text": "ROAS=3.38 (>3.50)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=357.86 (<60)",
+                  "text": "ทุนซื้อ=76.21 (<60)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "เวลา=12:02 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "เวลา=12:02 (<18)",
                   "ok": true
                 }
               ]
@@ -2593,27 +2593,27 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>30)",
+                  "text": "จ่าย=1448.08 (>30)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0.56 (>2.80)",
+                  "text": "ROAS=3.38 (>2.80)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=76.21 (<75)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=357.86 (<75)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "เวลา=12:02 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "เวลา=12:02 (<18)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0.56 (<3.50)",
+                  "text": "ROAS=3.38 (<3.50)",
                   "ok": true
                 }
               ]
@@ -2624,15 +2624,15 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=357.86 (>50)",
+                  "text": "จ่าย=1448.08 (>50)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=357.86 (<75)",
+                  "text": "ทุนซื้อ=76.21 (<75)",
                   "ok": false
                 },
                 {
-                  "text": "ซื้อ=1 (>0)",
+                  "text": "ซื้อ=19 (>0)",
                   "ok": true
                 }
               ]
@@ -2640,12 +2640,12 @@
           ],
           "campaign": "แคมเปญยอดขายใหม่",
           "controlled": false,
-          "spend": 357.86,
-          "roas": 0.56,
-          "orders": 1,
-          "cost_per_purchase": 357.86,
-          "results": 11,
-          "cost_per_result": 32.53,
+          "spend": 1448.08,
+          "roas": 3.38,
+          "orders": 19,
+          "cost_per_purchase": 76.21,
+          "results": 34,
+          "cost_per_result": 42.59,
           "budget": 3000.0
         }
       ]
@@ -3291,8 +3291,8 @@
           "roas": 0.0,
           "orders": 0,
           "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
+          "results": 1,
+          "cost_per_result": 0.0,
           "budget": 300.0
         },
         {
@@ -3559,7 +3559,7 @@
         {
           "status": "ACTIVE",
           "decision": "TO_PAUSE",
-          "status_rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+          "status_rule": "กฎใหม่",
           "blocked_activate": false,
           "budget_rules": [],
           "rules": [
@@ -3569,11 +3569,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>5)",
+                  "text": "เวลา=12:02 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<7)",
+                  "text": "เวลา=12:02 (<7)",
                   "ok": false
                 }
               ]
@@ -3584,11 +3584,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>22)",
+                  "text": "เวลา=12:02 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3599,11 +3599,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>23)",
+                  "text": "เวลา=12:02 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -3614,11 +3614,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=310.67 (>80)",
+                  "text": "จ่าย=1035.47 (>80)",
                   "ok": true
                 },
                 {
-                  "text": "ทัก=11 (<1)",
+                  "text": "ทัก=6 (<1)",
                   "ok": false
                 }
               ]
@@ -3626,15 +3626,15 @@
             {
               "name": "จ่าย 150 ทุนทัก < 40 ปิด",
               "action": "PAUSE",
-              "matched": false,
+              "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=310.67 (>100)",
+                  "text": "จ่าย=1035.47 (>100)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนทัก=28.24 (>80)",
-                  "ok": false
+                  "text": "ทุนทัก=172.58 (>80)",
+                  "ok": true
                 }
               ]
             },
@@ -3644,11 +3644,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=310.67 (>220)",
+                  "text": "จ่าย=1035.47 (>220)",
                   "ok": true
                 },
                 {
-                  "text": "ซื้อ=1 (<1)",
+                  "text": "ซื้อ=2 (<1)",
                   "ok": false
                 }
               ]
@@ -3659,226 +3659,11 @@
               "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=310.67 (>250)",
+                  "text": "จ่าย=1035.47 (>250)",
                   "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=310.67 (>220)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 10%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=310.67 (>80)",
-                  "ok": true
-                },
-                {
-                  "text": "ROAS=3.15 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=310.67 (<180)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<18)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 5%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=310.67 (>100)",
-                  "ok": true
-                },
-                {
-                  "text": "ROAS=3.15 (>2.80)",
-                  "ok": true
-                },
-                {
-                  "text": "ทุนซื้อ=310.67 (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<18)",
-                  "ok": true
-                },
-                {
-                  "text": "ROAS=3.15 (<3.50)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=310.67 (>50)",
-                  "ok": true
-                },
-                {
-                  "text": "ทุนซื้อ=310.67 (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=1 (>0)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=310.67 (>300)",
-                  "ok": true
-                },
-                {
-                  "text": "ROAS=3.15 (<2.80)",
-                  "ok": false
-                }
-              ]
-            }
-          ],
-          "campaign": "กระบะ Ai โคตรถูก",
-          "controlled": true,
-          "spend": 310.67,
-          "roas": 3.15,
-          "orders": 1,
-          "cost_per_purchase": 310.67,
-          "results": 11,
-          "cost_per_result": 28.24,
-          "budget": null
-        },
-        {
-          "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
-          "blocked_activate": false,
-          "budget_rules": [],
-          "rules": [
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>5)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<7)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>22)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "RESET_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>23)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 100 ไม่ทัก   ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
-                },
-                {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนทัก=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 220    ซื้อ 0 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>250)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (>220)",
+                  "text": "ทุนซื้อ=517.74 (>220)",
                   "ok": true
                 }
               ]
@@ -3889,238 +3674,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<180)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=1035.47 (>80)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 5%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
+                  "text": "ROAS=1.26 (>3.50)",
                   "ok": false
                 },
                 {
-                  "text": "ROAS=0 (>2.80)",
+                  "text": "ทุนซื้อ=517.74 (<180)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "เวลา=12:02 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
-                  "ok": true
-                },
-                {
-                  "text": "ROAS=0 (<3.50)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>300)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (<2.80)",
-                  "ok": true
-                }
-              ]
-            }
-          ],
-          "campaign": "กระบะ ข้อความ",
-          "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
-          "budget": 800.0
-        },
-        {
-          "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
-          "blocked_activate": false,
-          "budget_rules": [],
-          "rules": [
-            {
-              "name": "กฎใหม่",
-              "action": "ACTIVATE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>5)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<7)",
-                  "ok": false
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>22)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "กฎใหม่",
-              "action": "RESET_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "เวลา=7:32 (>23)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (<23.59)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 100 ไม่ทัก   ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
-                },
-                {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนทัก=∞ (>80)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 220    ซื้อ 0 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-              "action": "PAUSE",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>250)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (>220)",
-                  "ok": true
-                }
-              ]
-            },
-            {
-              "name": "ADS ดี เพิ่มงบ 10%",
-              "action": "INCREASE_BUDGET",
-              "matched": false,
-              "checks": [
-                {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<180)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
-                  "ok": true
-                },
-                {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "เวลา=12:02 (<18)",
                   "ok": true
                 }
               ]
@@ -4131,27 +3701,27 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>2.80)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=1035.47 (>100)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "ROAS=1.26 (>2.80)",
+                  "ok": false
+                },
+                {
+                  "text": "ทุนซื้อ=517.74 (<220)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0 (<3.50)",
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=1.26 (<3.50)",
                   "ok": true
                 }
               ]
@@ -4162,30 +3732,30 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>50)",
+                  "text": "จ่าย=1035.47 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=517.74 (<220)",
                   "ok": false
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
-                  "ok": false
+                  "text": "ซื้อ=2 (>0)",
+                  "ok": true
                 }
               ]
             },
             {
               "name": "กฎใหม่",
               "action": "PAUSE",
-              "matched": false,
+              "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>300)",
-                  "ok": false
+                  "text": "จ่าย=1035.47 (>300)",
+                  "ok": true
                 },
                 {
-                  "text": "ROAS=0 (<2.80)",
+                  "text": "ROAS=1.26 (<2.80)",
                   "ok": true
                 }
               ]
@@ -4193,19 +3763,19 @@
           ],
           "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
           "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
+          "spend": 1035.47,
+          "roas": 1.26,
+          "orders": 2,
+          "cost_per_purchase": 517.74,
+          "results": 6,
+          "cost_per_result": 172.58,
           "budget": 2952.45
         },
         {
           "status": "ACTIVE",
-          "decision": "NONE",
-          "status_rule": null,
-          "blocked_activate": false,
+          "decision": "TO_PAUSE",
+          "status_rule": "กฎใหม่",
+          "blocked_activate": true,
           "budget_rules": [],
           "rules": [
             {
@@ -4214,11 +3784,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>5)",
+                  "text": "เวลา=12:02 (>5)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<7)",
+                  "text": "เวลา=12:02 (<7)",
                   "ok": false
                 }
               ]
@@ -4229,11 +3799,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>22)",
+                  "text": "เวลา=12:02 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4244,11 +3814,11 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "เวลา=7:32 (>23)",
+                  "text": "เวลา=12:02 (>23)",
                   "ok": false
                 },
                 {
-                  "text": "เวลา=7:32 (<23.59)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
                 }
               ]
@@ -4259,26 +3829,26 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
+                  "text": "จ่าย=439.63 (>80)",
+                  "ok": true
                 },
                 {
-                  "text": "ทัก=0 (<1)",
-                  "ok": true
+                  "text": "ทัก=2 (<1)",
+                  "ok": false
                 }
               ]
             },
             {
               "name": "จ่าย 150 ทุนทัก < 40 ปิด",
               "action": "PAUSE",
-              "matched": false,
+              "matched": true,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
+                  "text": "จ่าย=439.63 (>100)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนทัก=∞ (>80)",
+                  "text": "ทุนทัก=219.81 (>80)",
                   "ok": true
                 }
               ]
@@ -4289,12 +3859,12 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>220)",
-                  "ok": false
+                  "text": "จ่าย=439.63 (>220)",
+                  "ok": true
                 },
                 {
-                  "text": "ซื้อ=0 (<1)",
-                  "ok": true
+                  "text": "ซื้อ=2 (<1)",
+                  "ok": false
                 }
               ]
             },
@@ -4304,12 +3874,12 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>250)",
-                  "ok": false
+                  "text": "จ่าย=439.63 (>250)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (>220)",
-                  "ok": true
+                  "text": "ทุนซื้อ=219.81 (>220)",
+                  "ok": false
                 }
               ]
             },
@@ -4319,23 +3889,23 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>80)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>3.50)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<180)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=439.63 (>80)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "ROAS=2.59 (>3.50)",
+                  "ok": false
+                },
+                {
+                  "text": "ทุนซื้อ=219.81 (<180)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
                   "ok": true
                 }
               ]
@@ -4346,27 +3916,27 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>100)",
-                  "ok": false
-                },
-                {
-                  "text": "ROAS=0 (>2.80)",
-                  "ok": false
-                },
-                {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "เวลา=7:32 (>6)",
+                  "text": "จ่าย=439.63 (>100)",
                   "ok": true
                 },
                 {
-                  "text": "เวลา=7:32 (<18)",
+                  "text": "ROAS=2.59 (>2.80)",
+                  "ok": false
+                },
+                {
+                  "text": "ทุนซื้อ=219.81 (<220)",
                   "ok": true
                 },
                 {
-                  "text": "ROAS=0 (<3.50)",
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=2.59 (<3.50)",
                   "ok": true
                 }
               ]
@@ -4374,18 +3944,66 @@
             {
               "name": "กฎใหม่",
               "action": "ACTIVATE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=439.63 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=219.81 (<220)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=2 (>0)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=439.63 (>300)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=2.59 (<2.80)",
+                  "ok": true
+                }
+              ]
+            }
+          ],
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "controlled": true,
+          "spend": 439.63,
+          "roas": 2.59,
+          "orders": 2,
+          "cost_per_purchase": 219.81,
+          "results": 2,
+          "cost_per_result": 219.81,
+          "budget": 800.0
+        },
+        {
+          "status": "ACTIVE",
+          "decision": "KEEP_ACTIVE",
+          "status_rule": "กฎใหม่",
+          "blocked_activate": false,
+          "budget_rules": [],
+          "rules": [
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>50)",
-                  "ok": false
+                  "text": "เวลา=12:02 (>5)",
+                  "ok": true
                 },
                 {
-                  "text": "ทุนซื้อ=∞ (<220)",
-                  "ok": false
-                },
-                {
-                  "text": "ซื้อ=0 (>0)",
+                  "text": "เวลา=12:02 (<7)",
                   "ok": false
                 }
               ]
@@ -4396,25 +4014,409 @@
               "matched": false,
               "checks": [
                 {
-                  "text": "จ่าย=0 (>300)",
+                  "text": "เวลา=12:02 (>22)",
                   "ok": false
                 },
                 {
-                  "text": "ROAS=0 (<2.80)",
+                  "text": "เวลา=12:02 (<23.59)",
                   "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "RESET_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>23)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 100 ไม่ทัก   ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>80)",
+                  "ok": true
+                },
+                {
+                  "text": "ทัก=9 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนทัก=48.12 (>80)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 220    ซื้อ 0 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>220)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=2 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>250)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=216.53 (>220)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 10%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>80)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.65 (>3.50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=216.53 (<180)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 5%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.65 (>2.80)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=216.53 (<220)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.65 (<3.50)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=216.53 (<220)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=2 (>0)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=433.05 (>300)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=3.65 (<2.80)",
+                  "ok": false
                 }
               ]
             }
           ],
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
+          "campaign": "กระบะ ข้อความ",
           "controlled": true,
-          "spend": 0.0,
-          "roas": 0.0,
-          "orders": 0,
-          "cost_per_purchase": null,
-          "results": 0,
-          "cost_per_result": null,
+          "spend": 433.05,
+          "roas": 3.65,
+          "orders": 2,
+          "cost_per_purchase": 216.53,
+          "results": 9,
+          "cost_per_result": 48.12,
           "budget": 800.0
+        },
+        {
+          "status": "PAUSED",
+          "decision": "TO_ACTIVATE",
+          "status_rule": "กฎใหม่",
+          "blocked_activate": false,
+          "budget_rules": [
+            "ADS ดี เพิ่มงบ 10%"
+          ],
+          "rules": [
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>5)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<7)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>22)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "RESET_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "เวลา=12:02 (>23)",
+                  "ok": false
+                },
+                {
+                  "text": "เวลา=12:02 (<23.59)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 100 ไม่ทัก   ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>80)",
+                  "ok": true
+                },
+                {
+                  "text": "ทัก=13 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 150 ทุนทัก < 40 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนทัก=25.95 (>80)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 220    ซื้อ 0 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>220)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=2 (<1)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "จ่าย 250  ทุนซื้อ > 220 ปิด",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>250)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=168.69 (>220)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 10%",
+              "action": "INCREASE_BUDGET",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>80)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=5.13 (>3.50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=168.69 (<180)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "ADS ดี เพิ่มงบ 5%",
+              "action": "INCREASE_BUDGET",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>100)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=5.13 (>2.80)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=168.69 (<220)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (>6)",
+                  "ok": true
+                },
+                {
+                  "text": "เวลา=12:02 (<18)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=5.13 (<3.50)",
+                  "ok": false
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "ACTIVATE",
+              "matched": true,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>50)",
+                  "ok": true
+                },
+                {
+                  "text": "ทุนซื้อ=168.69 (<220)",
+                  "ok": true
+                },
+                {
+                  "text": "ซื้อ=2 (>0)",
+                  "ok": true
+                }
+              ]
+            },
+            {
+              "name": "กฎใหม่",
+              "action": "PAUSE",
+              "matched": false,
+              "checks": [
+                {
+                  "text": "จ่าย=337.39 (>300)",
+                  "ok": true
+                },
+                {
+                  "text": "ROAS=5.13 (<2.80)",
+                  "ok": false
+                }
+              ]
+            }
+          ],
+          "campaign": "กระบะ Ai โคตรถูก",
+          "controlled": true,
+          "spend": 337.39,
+          "roas": 5.13,
+          "orders": 2,
+          "cost_per_purchase": 168.69,
+          "results": 13,
+          "cost_per_result": 25.95,
+          "budget": null
         }
       ]
     },
