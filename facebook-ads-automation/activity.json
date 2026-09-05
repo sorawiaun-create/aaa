@@ -1,6 +1,68 @@
 {
   "runs": [
     {
+      "t": "2026-09-06T05:16:53.743546+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 5,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:17 (>5) และ เวลา=5:17 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:17 (>5) และ เวลา=5:17 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:17 (>5) และ เวลา=5:17 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:17 (>5) และ เวลา=5:17 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=5:17 (>5) และ เวลา=5:17 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-09-06T03:36:17.474996+07:00",
       "dry_run": false,
       "summary": {
@@ -1505,28 +1567,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-08-31T08:30:37.155427+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=124.76 (>100) และ ทุนซื้อ=∞ (>80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
