@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-09-05T23:12:25.964834+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 3,
+        "skipped_cooldown": 0,
+        "errors": 1
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 523 → 300 บาท",
+          "reason": "เวลา=23:12 (>23) และ เวลา=23:12 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:12 (>23) และ เวลา=23:12 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "งบ 2952 → 800 บาท",
+          "reason": "เวลา=23:12 (>23) และ เวลา=23:12 (<23.59)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "RESET_BUDGET",
+          "detail": "[ชุดโฆษณาการมีส่วนร่วมใหม่] งบ 1200 → 800 บาท",
+          "reason": "เวลา=23:12 (>23) และ เวลา=23:12 (<23.59)",
+          "status": "error",
+          "error": "\n\n  Message: Call was not successful\n  Method:  POST\n  Path:    https://graph.facebook.com/v20.0/120244295909810122/\n  Params:  {'daily_budget': 80000}\n\n  Status:  400\n  Response:\n    {\n      \"error\":"
+        }
+      ]
+    },
+    {
       "t": "2026-09-05T20:27:20.075816+07:00",
       "dry_run": false,
       "summary": {
@@ -1467,17 +1519,6 @@
     },
     {
       "t": "2026-08-31T08:10:33.040149+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-31T08:00:43.273370+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
