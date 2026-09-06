@@ -1,6 +1,68 @@
 {
   "runs": [
     {
+      "t": "2026-09-07T06:15:31.058348+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 5,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=6:16 (>5) และ เวลา=6:16 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=6:16 (>5) และ เวลา=6:16 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=6:16 (>5) และ เวลา=6:16 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ ข้อความ",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=6:16 (>5) และ เวลา=6:16 (<7)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "ACTIVATE",
+          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
+          "reason": "เวลา=6:16 (>5) และ เวลา=6:16 (<7)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-09-07T04:42:33.576786+07:00",
       "dry_run": false,
       "summary": {
@@ -1516,17 +1578,6 @@
     },
     {
       "t": "2026-08-31T10:10:30.596745+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 1,
-        "errors": 0
-      },
-      "events": []
-    },
-    {
-      "t": "2026-08-31T10:00:39.915451+07:00",
       "dry_run": false,
       "summary": {
         "status_changes": 0,
