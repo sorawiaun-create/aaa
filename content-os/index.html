@@ -234,6 +234,12 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
 .modal .ok{display:block;width:calc(100% - 48px);margin:0 24px 24px;padding:13px;border-radius:12px;
   background:var(--ink);color:#fff;font-weight:700;font-size:14.5px;text-align:center}
 .modal .ok:hover{background:#000}
+/* ---------- data-source banner ---------- */
+.srcbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 18px;padding:10px 14px;
+  border-radius:12px;font-size:13px;border:1px solid var(--ads-line);background:var(--ads);color:#8a6220}
+.srcbar.live{border-color:#d3e8db;background:#eef6f0;color:var(--up)}
+.srcbar b{font-weight:700}
+.srcbar .mono{font-size:11.5px;opacity:.85}
 </style>
 </head>
 <body>
@@ -242,17 +248,17 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
   <button class="burger" id="burger" aria-label="เมนู">☰</button>
   <div class="brand">
     <b>✦ Content OS</b>
-    <span class="pill">แผนผังระบบ</span>
+    <span class="pill" id="topPill">แผนผังระบบ</span>
   </div>
-  <div class="stamp"><span class="dot"></span><span class="hide">อัปเดตล่าสุดโดย Claude · วันนี้ 6:00 น.</span></div>
+  <div class="stamp"><span class="dot"></span><span class="hide" id="topStamp"></span></div>
   <button class="newbtn">✦ สร้างคอนเทนต์</button>
 </div>
 
 <div class="scrim" id="scrim"></div>
 <nav class="side" id="side">
   <div class="who">
-    <div class="av">M</div>
-    <div><b>@malimakes</b><small>142.8K · 30D</small></div>
+    <div class="av" id="whoAv">M</div>
+    <div><b id="whoName">@malimakes</b><small id="whoSub">142.8K · 30D</small></div>
   </div>
   <button class="navb on" data-go="map"><span class="ic">✦</span>แผนผังระบบ</button>
   <button class="navb" data-go="overview"><span class="ic">▤</span>ภาพรวม</button>
@@ -266,18 +272,18 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
   <button class="navb" data-go="calendar"><span class="ic">▦</span>ปฏิทิน <span class="mono">CONTENT</span></button>
   <div class="navsec">โฆษณา</div>
   <button class="navb" data-go="ads"><span class="ic">◆</span><span class="mono">ADS · FB/IG</span></button>
-  <div class="sidefoot">TINA TAYLOR<br />DEMO · ตัวอย่างข้อมูล</div>
+  <div class="sidefoot" id="sideFoot"></div>
 </nav>
 
 <main class="wrap">
 
-<!-- ============ MAP ============ -->
 <section class="page on" id="p-map">
   <div class="hero">
     <div class="eyebrow">✦ Content OS · by Claude COWORK</div>
     <h1>Marketing System</h1>
-    <p>กดกล่องไหนก็ได้เพื่อเข้าไปดูข้างใน — เป็นตัวอย่างระบบ ใช้ข้อมูลตัวอย่าง</p>
+    <p>กดกล่องไหนก็ได้เพื่อเข้าไปดูข้างใน</p>
   </div>
+  <div id="mapSrc"></div>
 
   <div class="group">
     <span class="glabel">CORE · สมองของระบบ</span>
@@ -327,305 +333,14 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
   </div>
 </section>
 
-<!-- ============ OVERVIEW ============ -->
-<section class="page" id="p-overview">
-  <div class="phead">
-    <div class="eyebrow">Output · รายงานเช้านี้</div>
-    <h1>ภาพรวม + รายงานสรุปทุกเช้า</h1>
-    <p>ทุกอย่างที่เกิดขึ้นเมื่อวาน สรุปมาให้แล้วตอน 6:00 น. — คุณแค่เปิดมาอ่านตอนกินกาแฟ</p>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="k">ยอดวิว · 7D</div><div class="v">287.4K</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,26 14,24 28,25 42,20 56,17 70,11 85,7 100,3" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+162%</span></div></div>
-    <div class="stat"><div class="k">รายได้ · 7D</div><div class="v">฿184,500</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,22 14,23 28,19 42,20 56,15 70,13 85,10 100,6" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+31%</span></div></div>
-    <div class="stat"><div class="k">คนทัก DM · 7D</div><div class="v">342</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,20 14,17 28,21 42,14 56,16 70,10 85,9 100,5" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+58%</span></div></div>
-    <div class="stat"><div class="k">ตั้งเวลาไว้แล้ว</div><div class="v">9</div>
-      <div class="f"><span class="mono" style="font-size:12px;color:var(--muted)">3 แพลตฟอร์ม · มิ.ย.</span></div></div>
-  </div>
-
-  <div class="claude">
-    <b>✦ สรุปเช้านี้โดย Claude</b>
-    <ul>
-      <li>รีลเรื่อง <b>"คุณต้องมี content dashboard…"</b> ทะลุ 187K วิว (+312%) — เป็นตัวชนะที่สุดของสัปดาห์ ควรทำภาคต่อภายใน 48 ชม.</li>
-      <li>คู่แข่ง <b>@evagrows</b> เพิ่มความถี่โพสต์ 2 เท่า และเริ่มจับ hook สาย "สิ่งที่อยากรู้ก่อนเริ่ม" — ยังไม่มีใครในสายเราจับ</li>
-      <li>Campaign <b>"กลุ่มความสนใจใหม่ (Broad)"</b> ROAS ตก 2.2x ต่ำกว่าเกณฑ์ 3.0x — แนะนำหยุดแล้วย้ายงบไป "โปรเปิดตัว · สินค้า"</li>
-      <li>คนทัก DM 342 ราย แต่ตอบภายใน 1 ชม. แค่ 41% — ตั้งข้อความอัตโนมัติเพิ่มได้อีก</li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <header><h2>สิ่งที่ควรทำวันนี้</h2><span class="tag">4 รายการ</span></header>
-    <div class="note">Claude เรียงให้แล้วตามผลกระทบต่อยอด — ทำจากบนลงล่าง</div>
-    <div class="rows">
-      <div class="row"><div class="main"><b>ถ่ายภาคต่อของรีล 187K วิว</b><small>ผลกระทบสูง · ใช้เวลา ~40 นาที</small></div><button class="ghost" data-go="hooks">เปิดคลัง HOOK</button></div>
-      <div class="row"><div class="main"><b>หยุด Campaign "กลุ่มความสนใจใหม่ (Broad)"</b><small>ประหยัดได้ ~฿5,400/สัปดาห์</small></div><button class="ghost" data-go="ads">ดูตัวเลข</button></div>
-      <div class="row"><div class="main"><b>เขียนสคริปต์คิวพรุ่งนี้ (7:30a REEL · IG)</b><small>Claude ร่างไว้ให้แล้ว รออนุมัติ</small></div><button class="ghost" data-go="calendar">เปิดปฏิทิน</button></div>
-      <div class="row"><div class="main"><b>แกะ hook ใหม่ของ @evagrows</b><small>เทรนด์กำลังขึ้น · หน้าต่างเวลา ~5 วัน</small></div><button class="ghost" data-go="rivals">ดูคู่แข่ง</button></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ ANALYTICS ============ -->
-<section class="page" id="p-analytics">
-  <div class="phead">
-    <div class="eyebrow">Data วิเคราะห์ผล</div>
-    <h1>ANALYTICS</h1>
-    <p>ดูว่าคอนเทนต์ไหนเวิร์ค ไม่เวิร์ค แล้วรู้ว่าควรทำอะไรต่อ</p>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="k">Views · 7D</div><div class="v">287.4K</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,27 14,25 28,26 42,21 56,16 70,11 85,7 100,2" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+162%</span></div></div>
-    <div class="stat"><div class="k">Saves · 7D</div><div class="v">4,812</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,24 14,22 28,23 42,19 56,17 70,14 85,9 100,6" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+88%</span></div></div>
-    <div class="stat"><div class="k">เข้าชม Profile</div><div class="v">12.6K</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,21 14,20 28,22 42,18 56,15 70,14 85,11 100,8" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+47%</span></div></div>
-  </div>
-
-  <div class="card">
-    <header><h2>Top 5 คอนเทนต์มาแรง · 7 วันล่าสุด</h2><span class="tag good">ชนะค่าเฉลี่ย 2 เท่า</span></header>
-    <div class="note">Claude หา reel ที่ทะลุค่ามัธยฐาน 30 วันเกิน 2 เท่า แล้วบอกว่าอะไรทำให้มันปัง</div>
-    <div class="rows">
-      <div class="row"><div class="main"><b>"คุณต้องมี content dashboard…"</b><small>187K วิว · +312%</small></div><button class="ghost" data-go="hooks">ทำแนวนี้อีก</button></div>
-      <div class="row"><div class="main"><b>"เลิกใช้แอป Notes ทำ content ได้แล้ว"</b><small>94K วิว · +201%</small></div><button class="ghost" data-go="hooks">ทำแนวนี้อีก</button></div>
-      <div class="row"><div class="main"><b>"สร้างคำสั่ง /script ใน 10 นาที"</b><small>52K วิว · +148%</small></div><button class="ghost" data-go="hooks">ทำแนวนี้อีก</button></div>
-      <div class="row"><div class="main"><b>"cron job คือเพื่อนที่ดีที่สุดของคนทำคอนเทนต์"</b><small>38K วิว · +92%</small></div><button class="ghost" data-go="hooks">ทำแนวนี้อีก</button></div>
-      <div class="row"><div class="main"><b>"ระบบดึงข้อมูล 6 โมงเช้าที่เขียน content ทั้งสัปดาห์"</b><small>31K วิว · +67%</small></div><button class="ghost" data-go="hooks">ทำแนวนี้อีก</button></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <header><h2>ที่ยังไม่เวิร์ค</h2><span class="tag pink">ต่ำกว่าค่าเฉลี่ย</span></header>
-    <div class="note">ไม่ใช่ของเสีย — Claude บอกว่าควรแก้ตรงไหนก่อนทิ้ง</div>
-    <div class="rows">
-      <div class="row"><div class="main"><b>"อัปเดตฟีเจอร์ประจำสัปดาห์"</b><small>2.1K วิว · −64% · hook ยาวเกิน 3 วินาที</small></div><span class="tag">แก้ hook</span></div>
-      <div class="row"><div class="main"><b>"เบื้องหลังการทำงานของทีม"</b><small>3.4K วิว · −41% · ไม่มีสิ่งที่ผู้ชมได้</small></div><span class="tag">เพิ่ม payoff</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ RIVALS ============ -->
-<section class="page" id="p-rivals">
-  <div class="phead">
-    <div class="eyebrow">Data วิเคราะห์ผล</div>
-    <h1>ติดตามคู่แข่ง</h1>
-    <p>ดูว่าคู่แข่งกำลังใช้ hook อะไรอยู่ตอนนี้ แล้วหยิบมาปรับใช้กับคุณ</p>
-  </div>
-
-  <div class="card">
-    <header><h2 class="mono" style="font-size:15px">กำลังติดตาม · 8 CREATORS</h2><span class="tag" style="margin-left:auto">อัปเดต 06:00</span></header>
-    <div class="grid4">
-      <div class="cre"><div class="av">D</div><div><b>@dan_makes</b><small>418K <span class="delta up">▲ +2.7%</span></small></div></div>
-      <div class="cre"><div class="av">B</div><div><b>@buildwithlevi</b><small>378K <span class="delta up">▲ +3.4%</span></small></div></div>
-      <div class="cre"><div class="av">G</div><div><b>@germainstudio</b><small>355K <span class="delta up">▲ +0.9%</span></small></div></div>
-      <div class="cre"><div class="av">E</div><div><b>@evagrows</b><small>214K <span class="delta up">▲ +8.6%</span></small></div></div>
-      <div class="cre"><div class="av">A</div><div><b>@thealexbanks</b><small>188K <span class="delta up">▲ +1.1%</span></small></div></div>
-      <div class="cre"><div class="av">M</div><div><b>@aimarketth</b><small>134K <span class="delta up">▲ +3.8%</span></small></div></div>
-      <div class="cre"><div class="av">M</div><div><b>@malicreates</b><small>92K <span class="delta down">▼ −0.4%</span></small></div></div>
-      <div class="cre"><div class="av">G</div><div><b>@growthdrip</b><small>76K <span class="delta up">▲ +5.2%</span></small></div></div>
-    </div>
-  </div>
-
-  <div class="spot">
-    <div class="av">E</div>
-    <div style="flex:1;min-width:220px">
-      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.6">ความเคลื่อนไหวสูงสุดสัปดาห์นี้</div>
-      <b style="font-size:17px">@evagrows</b>
-      <p>โพสต์ถี่ขึ้น <b style="color:#f3efe9">2 เท่า</b> สัปดาห์นี้ · reel เรื่อง "5 อย่างที่อยากรู้ก่อนเริ่มทำคอนเทนต์" ทะลุ 388K วิว</p>
-      <button class="ghost" data-go="hooks">ดูสถิติเชิงลึก</button>
-    </div>
-    <div class="big"><b>+12.4K</b><div class="mono" style="font-size:11px;opacity:.6">followers · 7d</div></div>
-  </div>
-
-  <div class="card">
-    <header><h2>HOOK ที่แกะมาได้</h2><span class="tag good">พร้อมใช้</span></header>
-    <div class="note">Claude ดึง reel ที่ปังที่สุดของแต่ละเจ้า มาถอดเป็น hook ให้ใช้ต่อได้เลย</div>
-    <div class="rows">
-      <div class="row"><div class="main"><b>"สร้าง [PRODUCT] เสร็จใน 1 สุดสัปดาห์"</b><small>@dan_makes · 842K วิว</small></div><span class="tag">BUILD</span><button class="ghost" data-go="hooks">เก็บเข้าคลัง</button></div>
-      <div class="row"><div class="main"><b>"5 อย่างที่อยากรู้ก่อนเริ่มทำ [X]"</b><small>@evagrows · 388K วิว</small></div><span class="tag">LIST</span><button class="ghost" data-go="hooks">เก็บเข้าคลัง</button></div>
-      <div class="row"><div class="main"><b>"เลิกจ่ายค่า [TOOL] ตั้งแต่เดือนนี้"</b><small>@buildwithlevi · 265K วิว</small></div><span class="tag">SWAP</span><button class="ghost" data-go="hooks">เก็บเข้าคลัง</button></div>
-      <div class="row"><div class="main"><b>"ยังไม่มีใครพูดถึง [TREND] เลย"</b><small>@growthdrip · 141K วิว</small></div><span class="tag">CONTRARIAN</span><button class="ghost" data-go="hooks">เก็บเข้าคลัง</button></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ TRENDS ============ -->
-<section class="page" id="p-trends">
-  <div class="phead">
-    <div class="eyebrow">Data วิเคราะห์ผล</div>
-    <h1>เทรนด์วันนี้</h1>
-    <p>ข่าว AI ล่าสุดทุกเช้า คัดเฉพาะอันที่เอามาทำคอนเทนต์ได้</p>
-  </div>
-
-  <div class="card">
-    <header><h2>เทรนด์วันนี้ · 12 sources</h2><span class="tag warn" style="margin-left:auto">5 อันทำ HOOK ได้</span></header>
-    <div class="note">Claude ดึงข่าวจาก 12 แหล่งทุกเช้า ติด tag ให้ แล้วส่งสรุปมาตอน 7 โมง</div>
-    <div class="rows">
-      <div class="row"><div class="main"><b class="mono">Anthropic ปล่อย Claude 4.7 — context window 1M</b></div><span class="tag pink">HOOK</span><button class="ghost" data-go="hooks">→ ทำเป็น hook</button></div>
-      <div class="row"><div class="main"><b class="mono">เจ้าของธุรกิจไทยแห่ใช้ AI ทำการตลาดเพิ่มขึ้น</b></div><span class="tag pink">HOOK</span><button class="ghost" data-go="hooks">→ ทำเป็น hook</button></div>
-      <div class="row"><div class="main"><b class="mono">OpenAI ออก image API tier ใหม่</b></div><span class="tag good">EXPLAIN</span><button class="ghost" data-go="hooks">→ ทำเป็น hook</button></div>
-      <div class="row"><div class="main"><b class="mono">Vercel ลดราคา AI gateway</b></div><span class="tag good">EXPLAIN</span><button class="ghost" data-go="hooks">→ ทำเป็น hook</button></div>
-      <div class="row"><div class="main"><b class="mono">สตาร์ทอัพอีกเจ้าเปิดตัว wrapper ซ้ำ ๆ</b></div><span class="tag">SKIP</span><span class="mono" style="font-size:11.5px;color:var(--muted)">อิ่มตัวแล้ว</span></div>
-    </div>
-  </div>
-
-  <div class="claude">
-    <b>✦ Claude แนะนำ</b>
-    <p>วันนี้หัวข้อ <b>"Claude 4.7 context 1M"</b> มาแรงสุด — ลองทำ hook เทียบ <b>"เมื่อก่อน vs ตอนนี้"</b> น่าจะปังกับสายธุรกิจ ถ่ายก่อนบ่ายวันนี้ยังทันหน้าต่างเทรนด์</p>
-  </div>
-</section>
-
-<!-- ============ HOOKS ============ -->
-<section class="page" id="p-hooks">
-  <div class="phead">
-    <div class="eyebrow">ทำคอนเทนต์</div>
-    <h1>คลัง HOOK</h1>
-    <p>hook ทั้งหมดของคุณ — รวมที่เก็บจากคู่แข่งด้วย พร้อมหยิบไปเขียนสคริปต์</p>
-  </div>
-
-  <div class="card">
-    <header><h2><span id="hookCount">482</span> hooks · ค้นหาได้</h2></header>
-    <div class="note">Claude transcribe + templatize hook ที่คุณเซฟให้อัตโนมัติ</div>
-    <div style="padding:0 18px 14px"><input class="search mono" id="hookSearch" placeholder="ค้นหา hooks…" /></div>
-    <div class="rows" id="hookRows">
-      <div class="row"><div class="main"><b>"เลิกทำ [X] แล้วเริ่มทำ [Y]"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">38×</span><span class="tag good">SWAP</span></div>
-      <div class="row"><div class="main"><b>"สร้าง [PRODUCT] เสร็จใน [TIMEFRAME]"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">24×</span><span class="tag pink">BUILD</span></div>
-      <div class="row"><div class="main"><b>"คุณต้องมี [TOOL] นี่คือเหตุผล"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">19×</span><span class="tag pink">CLAIM</span></div>
-      <div class="row"><div class="main"><b>"[NUMBER] เรื่องที่อยากรู้ก่อน [X]"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">15×</span><span class="tag">LIST</span></div>
-      <div class="row"><div class="main"><b>"ยังไม่มีใครพูดถึง [TREND]"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">12×</span><span class="tag warn">CONTRARIAN</span></div>
-      <div class="row"><div class="main"><b>"playbook ของวงการ [INDUSTRY] ที่ไม่มีใครยอมบอก"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">9×</span><span class="tag pink">BUILD</span></div>
-      <div class="row"><div class="main"><b>"ผมเสียเงิน [AMOUNT] ไปกับ [X] เพื่อให้คุณไม่ต้องเสีย"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">7×</span><span class="tag">STORY</span></div>
-      <div class="row"><div class="main"><b>"ถ้าย้อนเวลาได้ ผมจะเริ่ม [X] แบบนี้"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">6×</span><span class="tag">STORY</span></div>
-      <div class="row"><div class="main"><b>"เมื่อก่อน [OLD] · ตอนนี้ [NEW]"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">5×</span><span class="tag good">SWAP</span></div>
-      <div class="row"><div class="main"><b>"[X] ตายแล้ว — นี่คือสิ่งที่มาแทน"</b></div><span class="mono" style="color:var(--muted);font-size:12.5px">4×</span><span class="tag warn">CONTRARIAN</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ SCHEDULE ============ -->
-<section class="page" id="p-schedule">
-  <div class="phead">
-    <div class="eyebrow">ทำคอนเทนต์</div>
-    <h1>ตั้งเวลาโพสต์</h1>
-    <p>ตั้งเวลาให้ Claude โพสต์คอนเทนต์ให้อัตโนมัติ ครบทุกแพลตฟอร์ม</p>
-  </div>
-
-  <div class="card">
-    <div class="prev">
-      <div class="thumb">▶</div>
-      <div>
-        <div class="mono" style="font-size:11px;color:var(--muted)">กำลังตั้งเวลาโพสต์</div>
-        <b style="font-size:17px">"คุณต้องมี content dashboard…"</b>
-        <div class="mono" style="font-size:11.5px;color:var(--muted)">REEL · 0:42 · สร้างโดย Claude</div>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="num">1</div>
-      <div style="flex:1">
-        <h3>เลือกแพลตฟอร์ม</h3>
-        <div class="chips" id="platChips">
-          <button class="chip on" data-plat="Instagram">Instagram</button>
-          <button class="chip on" data-plat="TikTok">TikTok</button>
-          <button class="chip on" data-plat="YT Shorts">YT Shorts</button>
-          <button class="chip" data-plat="LinkedIn">LinkedIn</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="num">2</div>
-      <div style="flex:1">
-        <h3>เวลาโพสต์ (แต่ละแพลตฟอร์ม)</h3>
-        <div class="note" style="padding:0 0 10px">Claude เลือกเวลาที่คนดูเยอะที่สุดให้แต่ละแพลตฟอร์ม</div>
-        <div id="slots">
-          <div class="slot" data-plat="Instagram"><span class="nm">Instagram</span><span>จ. 22 มิ.ย. · 7:30 น.</span><span class="why">เวลาที่คนดูสูงสุด</span></div>
-          <div class="slot" data-plat="TikTok"><span class="nm">TikTok</span><span>จ. 22 มิ.ย. · 19:00 น.</span><span class="why">ช่วงเย็นแรงกว่า 2.3×</span></div>
-          <div class="slot" data-plat="YT Shorts"><span class="nm">YT Shorts</span><span>อ. 23 มิ.ย. · 17:00 น.</span><span class="why">เลี่ยงชนคิว IG</span></div>
-          <div class="slot" data-plat="LinkedIn" hidden><span class="nm">LinkedIn</span><span>อ. 23 มิ.ย. · 8:00 น.</span><span class="why">ก่อนเข้างาน</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="num">3</div>
-      <div style="flex:1">
-        <h3>Caption (ปรับให้แต่ละแพลตฟอร์ม)</h3>
-        <div class="note" style="padding:0 0 10px">Claude ปรับ caption + แฮชแท็กให้เหมาะกับแต่ละแพลตฟอร์ม</div>
-        <div id="caps">
-          <div class="cap" data-plat="Instagram"><div class="nm">INSTAGRAM</div>เลิกจดคอนเทนต์ในแอป Notes ได้แล้ว 👇 ระบบเดียวที่สรุปยอด เขียนสคริปต์ และตั้งเวลาโพสต์ให้ทุกเช้า<br /><span class="mono" style="font-size:11.5px;color:var(--muted)">#contentcreator #ai #ระบบการตลาด</span></div>
-          <div class="cap" data-plat="TikTok"><div class="nm">TIKTOK</div>ถ้าคุณยังเปิด 5 แอปเพื่อทำคอนเทนต์อยู่ คลิปนี้เพื่อคุณ 🫵<br /><span class="mono" style="font-size:11.5px;color:var(--muted)">#สายคอนเทนต์ #ai #fyp</span></div>
-          <div class="cap" data-plat="YT Shorts"><div class="nm">YT SHORTS</div>ระบบ content dashboard ที่ทำงานเองทุกเช้า 6 โมง — สรุปยอด หา hook เขียนสคริปต์ ตั้งเวลาโพสต์</div>
-          <div class="cap" data-plat="LinkedIn" hidden><div class="nm">LINKEDIN</div>เราลดเวลาทำคอนเทนต์จาก 12 ชม./สัปดาห์ เหลือ 90 นาที ด้วยระบบเดียว — นี่คือวิธี</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <button class="newbtn" style="width:100%;padding:14px;border-radius:12px;font-size:15px" id="confirmBtn">✦ ยืนยันตั้งเวลาโพสต์ (<span id="platCount">3</span> แพลตฟอร์ม)</button>
-</section>
-
-<!-- ============ CALENDAR ============ -->
-<section class="page" id="p-calendar">
-  <div class="phead">
-    <div class="eyebrow">ทำคอนเทนต์</div>
-    <h1>ปฏิทิน CONTENT</h1>
-    <p>ทุกคอนเทนต์ที่ตั้งเวลาไว้ในที่เดียว กดที่ช่องเพื่อดู script เต็ม</p>
-  </div>
-
-  <div class="card">
-    <header><h2>มิถุนายน 2026 · ตั้งเวลาครบแล้ว</h2><span class="tag good" style="margin-left:auto">9 รายการ · 3 PLATFORMS</span></header>
-    <div class="note">Claude เติมปฏิทินอัตโนมัติด้วยคำสั่ง /script · กดที่ช่องเพื่อดู script เต็ม</div>
-    <div class="cal">
-      <div class="calhead"><div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div></div>
-      <div class="calgrid" id="calGrid"></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ ADS ============ -->
-<section class="page" id="p-ads">
-  <div class="phead">
-    <div class="eyebrow">โฆษณา</div>
-    <h1>ADS · FB/IG</h1>
-    <p>Campaign ไหนคุ้ม ไหนไม่คุ้ม ทำเงินได้เท่าไหร่ ROAS เป็นเท่าไหร่ — รู้ทุกเช้า</p>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="k">งบที่ใช้ · 7D</div><div class="v">฿38,200</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,23 14,21 28,22 42,18 56,16 70,13 85,11 100,8" fill="none" stroke="#a8752a" stroke-width="1.6"/></svg><span class="delta up">+31%</span></div></div>
-    <div class="stat"><div class="k">ลูกค้าใหม่ · 7D</div><div class="v">450</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,25 14,22 28,24 42,19 56,17 70,12 85,9 100,5" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+44%</span></div></div>
-    <div class="stat"><div class="k">ROAS รวม</div><div class="v">4.8×</div>
-      <div class="f"><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,18 14,16 28,19 42,15 56,14 70,12 85,10 100,9" fill="none" stroke="#2f7d52" stroke-width="1.6"/></svg><span class="delta up">+0.6×</span></div></div>
-  </div>
-
-  <div class="card">
-    <header><h2>ผลงานแต่ละ Campaign · 7 วันล่าสุด</h2><span class="tag" style="margin-left:auto">FB + IG</span></header>
-    <div class="note">Claude ดึงข้อมูลจาก Meta Ads ทุกเช้า สรุปว่า Campaign ไหนคุ้มที่สุด Campaign ไหนควรหยุด</div>
-    <div class="tw">
-      <table>
-        <thead><tr><th>Campaign</th><th>งบที่ใช้</th><th>ลูกค้า</th><th>ต้นทุน/ราย</th><th>ROAS</th></tr></thead>
-        <tbody>
-          <tr><td>โปรเปิดตัว · สินค้า</td><td>฿12,400</td><td>168</td><td>฿74</td><td class="roas" style="color:var(--up)">6.8×</td></tr>
-          <tr><td>รีมาร์เก็ตติ้ง · คนเข้าเพจ</td><td>฿8,600</td><td>124</td><td>฿69</td><td class="roas" style="color:var(--up)">5.5×</td></tr>
-          <tr><td>วิดีโอรีวิวลูกค้า</td><td>฿9,200</td><td>96</td><td>฿96</td><td class="roas" style="color:var(--up)">4.2×</td></tr>
-          <tr><td>กลุ่มความสนใจใหม่ (Broad)</td><td>฿5,400</td><td>38</td><td>฿142</td><td class="roas" style="color:var(--down)">2.2×</td></tr>
-          <tr><td>คอนเทนต์สายให้ความรู้</td><td>฿2,600</td><td>24</td><td>฿108</td><td class="roas" style="color:var(--up)">4.0×</td></tr>
-        </tbody>
-        <tfoot><tr><td>รวมทั้งหมด</td><td>฿38,200</td><td>450</td><td>฿85</td><td class="roas">4.8×</td></tr></tfoot>
-      </table>
-    </div>
-  </div>
-
-  <div class="claude">
-    <b>✦ Claude แนะนำ</b>
-    <p>Campaign <b>"โปรเปิดตัว · สินค้า"</b> ROAS 6.8× — คุ้มที่สุด แนะนำเพิ่มงบอีก 20% ส่วน Campaign <b>"กลุ่มความสนใจใหม่ (Broad)"</b> ROAS 2.2× ต่ำกว่าเกณฑ์ ควรหยุดหรือปรับกลุ่มเป้าหมายใหม่ — ย้ายงบ ฿5,400 ไปตัวแรกจะได้ลูกค้าเพิ่มอีกราว 73 ราย/สัปดาห์</p>
-  </div>
-</section>
+<section class="page" id="p-overview"></section>
+<section class="page" id="p-analytics"></section>
+<section class="page" id="p-rivals"></section>
+<section class="page" id="p-trends"></section>
+<section class="page" id="p-hooks"></section>
+<section class="page" id="p-schedule"></section>
+<section class="page" id="p-calendar"></section>
+<section class="page" id="p-ads"></section>
 
 </main>
 
@@ -633,83 +348,476 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
   <div class="modal">
     <div class="body">
       <span class="gl" id="mIcon">✦</span>
-      <div class="k" id="mKind">ORCHESTRATION</div>
-      <h3 id="mTitle">Claude</h3>
+      <div class="k" id="mKind"></div>
+      <h3 id="mTitle"></h3>
       <p id="mText"></p>
       <pre id="mPre" hidden></pre>
     </div>
     <button class="ok" id="mOk">เข้าใจแล้ว</button>
   </div>
 </div>
-
 <script>
-(function () {
-  var side = document.getElementById('side');
-  var scrim = document.getElementById('scrim');
-
-  function openSide(v) {
-    side.classList.toggle('on', v);
-    scrim.classList.toggle('on', v);
+/* ============================================================
+   Content OS — ข้อมูลตัวอย่าง (fallback)
+   ถ้ามีไฟล์ data.json อยู่ข้าง ๆ และเปิดผ่าน http(s) หน้าเว็บจะใช้ข้อมูลจากไฟล์นั้นแทน
+   ไฟล์ data.json สร้างโดย scripts/build_data.py (ดึงจาก Meta Ads + Instagram)
+   ============================================================ */
+var DEMO = {
+  meta: {
+    source: "demo",
+    brand: "@malimakes",
+    followers: "142.8K",
+    window: "30D",
+    updatedLabel: "วันนี้ 6:00 น.",
+    footer: "TINA TAYLOR\nDEMO · ตัวอย่างข้อมูล"
+  },
+  core: {
+    claude:  { icon: "✦", kind: "Orchestration", title: "Claude",
+      text: "สมองของระบบ ทุกอย่างในหน้านี้สั่งงานผ่าน Claude ตัวเดียว — วิเคราะห์ผล เขียนสคริปต์ ตั้งเวลาโพสต์ สรุปโฆษณา ไม่ต้องสลับแอปอีกต่อไป" },
+    memory:  { icon: "▦", kind: "Context Memory", title: "Context Memory",
+      text: "จำธุรกิจของคุณได้ — โทนการพูด กลุ่มลูกค้า สินค้า สิ่งที่เคยเวิร์คและไม่เวิร์ค ไม่ต้องอธิบายใหม่ทุกครั้งที่สั่งงาน ยิ่งใช้ยิ่งตรงกับแบรนด์คุณ" },
+    always:  { icon: "◔", kind: "Always-On", title: "ตื่นทำงานเองทุกเช้า 6:00",
+      text: "ระบบตื่นเองทุกเช้า ไปดู IG/FB โพสต์ใหม่ของคู่แข่ง เทรนด์ และโฆษณา มาสรุปรอไว้ให้เรียบร้อย คุณแค่เปิดมาอ่านตอนกินกาแฟ" },
+    connect: { icon: "⇄", kind: "Connectors", title: "ต่อกับเครื่องมือที่ใช้อยู่",
+      text: "Instagram · Facebook · TikTok · YouTube · Meta Ads · Google Sheets · Drive — ดึงข้อมูลเข้า สั่งงานออก จบในที่เดียว ไม่ต้องก๊อปวางข้ามแอป" }
+  },
+  overview: {
+    kpis: [
+      { k: "ยอดวิว · 7D",  v: "287.4K",   delta: "+162%", dir: "up", spark: [11,14,13,19,24,31,38,46] },
+      { k: "รายได้ · 7D",  v: "฿184,500", delta: "+31%",  dir: "up", spark: [18,17,22,21,27,30,34,40] },
+      { k: "คนทัก DM · 7D", v: "342",     delta: "+58%",  dir: "up", spark: [20,24,19,29,26,34,36,42] },
+      { k: "ตั้งเวลาไว้แล้ว", v: "9",      note: "3 แพลตฟอร์ม · มิ.ย." }
+    ],
+    summary: [
+      "รีลเรื่อง <b>\"คุณต้องมี content dashboard…\"</b> ทะลุ 187K วิว (+312%) — เป็นตัวชนะที่สุดของสัปดาห์ ควรทำภาคต่อภายใน 48 ชม.",
+      "คู่แข่ง <b>@evagrows</b> เพิ่มความถี่โพสต์ 2 เท่า และเริ่มจับ hook สาย \"สิ่งที่อยากรู้ก่อนเริ่ม\" — ยังไม่มีใครในสายเราจับ",
+      "Campaign <b>\"กลุ่มความสนใจใหม่ (Broad)\"</b> ROAS ตก 2.2x ต่ำกว่าเกณฑ์ 3.0x — แนะนำหยุดแล้วย้ายงบไป \"โปรเปิดตัว · สินค้า\"",
+      "คนทัก DM 342 ราย แต่ตอบภายใน 1 ชม. แค่ 41% — ตั้งข้อความอัตโนมัติเพิ่มได้อีก"
+    ],
+    todo: [
+      { title: "ถ่ายภาคต่อของรีล 187K วิว", note: "ผลกระทบสูง · ใช้เวลา ~40 นาที", cta: "เปิดคลัง HOOK", go: "hooks" },
+      { title: "หยุด Campaign \"กลุ่มความสนใจใหม่ (Broad)\"", note: "ประหยัดได้ ~฿5,400/สัปดาห์", cta: "ดูตัวเลข", go: "ads" },
+      { title: "เขียนสคริปต์คิวพรุ่งนี้ (7:30a REEL · IG)", note: "Claude ร่างไว้ให้แล้ว รออนุมัติ", cta: "เปิดปฏิทิน", go: "calendar" },
+      { title: "แกะ hook ใหม่ของ @evagrows", note: "เทรนด์กำลังขึ้น · หน้าต่างเวลา ~5 วัน", cta: "ดูคู่แข่ง", go: "rivals" }
+    ]
+  },
+  analytics: {
+    kpis: [
+      { k: "Views · 7D",     v: "287.4K", delta: "+162%", dir: "up", spark: [10,13,12,18,24,32,39,48] },
+      { k: "Saves · 7D",     v: "4,812",  delta: "+88%",  dir: "up", spark: [16,18,17,22,25,28,34,39] },
+      { k: "เข้าชม Profile", v: "12.6K",  delta: "+47%",  dir: "up", spark: [21,22,20,24,27,28,32,35] }
+    ],
+    topNote: "Claude หา reel ที่ทะลุค่ามัธยฐาน 30 วันเกิน 2 เท่า แล้วบอกว่าอะไรทำให้มันปัง",
+    top: [
+      { title: "\"คุณต้องมี content dashboard…\"", note: "187K วิว · +312%" },
+      { title: "\"เลิกใช้แอป Notes ทำ content ได้แล้ว\"", note: "94K วิว · +201%" },
+      { title: "\"สร้างคำสั่ง /script ใน 10 นาที\"", note: "52K วิว · +148%" },
+      { title: "\"cron job คือเพื่อนที่ดีที่สุดของคนทำคอนเทนต์\"", note: "38K วิว · +92%" },
+      { title: "\"ระบบดึงข้อมูล 6 โมงเช้าที่เขียน content ทั้งสัปดาห์\"", note: "31K วิว · +67%" }
+    ],
+    weak: [
+      { title: "\"อัปเดตฟีเจอร์ประจำสัปดาห์\"", note: "2.1K วิว · −64% · hook ยาวเกิน 3 วินาที", tag: "แก้ hook" },
+      { title: "\"เบื้องหลังการทำงานของทีม\"", note: "3.4K วิว · −41% · ไม่มีสิ่งที่ผู้ชมได้", tag: "เพิ่ม payoff" }
+    ]
+  },
+  rivals: {
+    creators: [
+      { handle: "@dan_makes",     followers: "418K", delta: "+2.7%", dir: "up" },
+      { handle: "@buildwithlevi", followers: "378K", delta: "+3.4%", dir: "up" },
+      { handle: "@germainstudio", followers: "355K", delta: "+0.9%", dir: "up" },
+      { handle: "@evagrows",      followers: "214K", delta: "+8.6%", dir: "up" },
+      { handle: "@thealexbanks",  followers: "188K", delta: "+1.1%", dir: "up" },
+      { handle: "@aimarketth",    followers: "134K", delta: "+3.8%", dir: "up" },
+      { handle: "@malicreates",   followers: "92K",  delta: "−0.4%", dir: "down" },
+      { handle: "@growthdrip",    followers: "76K",  delta: "+5.2%", dir: "up" }
+    ],
+    spotlight: {
+      handle: "@evagrows",
+      text: "โพสต์ถี่ขึ้น <b>2 เท่า</b> สัปดาห์นี้ · reel เรื่อง \"5 อย่างที่อยากรู้ก่อนเริ่มทำคอนเทนต์\" ทะลุ 388K วิว",
+      big: "+12.4K", bigNote: "followers · 7d"
+    },
+    hooks: [
+      { title: "\"สร้าง [PRODUCT] เสร็จใน 1 สุดสัปดาห์\"", note: "@dan_makes · 842K วิว", tag: "BUILD" },
+      { title: "\"5 อย่างที่อยากรู้ก่อนเริ่มทำ [X]\"", note: "@evagrows · 388K วิว", tag: "LIST" },
+      { title: "\"เลิกจ่ายค่า [TOOL] ตั้งแต่เดือนนี้\"", note: "@buildwithlevi · 265K วิว", tag: "SWAP" },
+      { title: "\"ยังไม่มีใครพูดถึง [TREND] เลย\"", note: "@growthdrip · 141K วิว", tag: "CONTRARIAN" }
+    ]
+  },
+  trends: {
+    sources: 12,
+    badge: "5 อันทำ HOOK ได้",
+    items: [
+      { title: "Anthropic ปล่อย Claude 4.7 — context window 1M", tag: "HOOK", kind: "pink" },
+      { title: "เจ้าของธุรกิจไทยแห่ใช้ AI ทำการตลาดเพิ่มขึ้น", tag: "HOOK", kind: "pink" },
+      { title: "OpenAI ออก image API tier ใหม่", tag: "EXPLAIN", kind: "good" },
+      { title: "Vercel ลดราคา AI gateway", tag: "EXPLAIN", kind: "good" },
+      { title: "สตาร์ทอัพอีกเจ้าเปิดตัว wrapper ซ้ำ ๆ", tag: "SKIP", kind: "", skip: "อิ่มตัวแล้ว" }
+    ],
+    advice: "วันนี้หัวข้อ <b>\"Claude 4.7 context 1M\"</b> มาแรงสุด — ลองทำ hook เทียบ <b>\"เมื่อก่อน vs ตอนนี้\"</b> น่าจะปังกับสายธุรกิจ ถ่ายก่อนบ่ายวันนี้ยังทันหน้าต่างเทรนด์"
+  },
+  hooks: {
+    total: 482,
+    items: [
+      { text: "\"เลิกทำ [X] แล้วเริ่มทำ [Y]\"", uses: "38×", tag: "SWAP", kind: "good" },
+      { text: "\"สร้าง [PRODUCT] เสร็จใน [TIMEFRAME]\"", uses: "24×", tag: "BUILD", kind: "pink" },
+      { text: "\"คุณต้องมี [TOOL] นี่คือเหตุผล\"", uses: "19×", tag: "CLAIM", kind: "pink" },
+      { text: "\"[NUMBER] เรื่องที่อยากรู้ก่อน [X]\"", uses: "15×", tag: "LIST", kind: "" },
+      { text: "\"ยังไม่มีใครพูดถึง [TREND]\"", uses: "12×", tag: "CONTRARIAN", kind: "warn" },
+      { text: "\"playbook ของวงการ [INDUSTRY] ที่ไม่มีใครยอมบอก\"", uses: "9×", tag: "BUILD", kind: "pink" },
+      { text: "\"ผมเสียเงิน [AMOUNT] ไปกับ [X] เพื่อให้คุณไม่ต้องเสีย\"", uses: "7×", tag: "STORY", kind: "" },
+      { text: "\"ถ้าย้อนเวลาได้ ผมจะเริ่ม [X] แบบนี้\"", uses: "6×", tag: "STORY", kind: "" },
+      { text: "\"เมื่อก่อน [OLD] · ตอนนี้ [NEW]\"", uses: "5×", tag: "SWAP", kind: "good" },
+      { text: "\"[X] ตายแล้ว — นี่คือสิ่งที่มาแทน\"", uses: "4×", tag: "CONTRARIAN", kind: "warn" }
+    ]
+  },
+  schedule: {
+    video: { title: "\"คุณต้องมี content dashboard…\"", meta: "REEL · 0:42 · สร้างโดย Claude" },
+    platforms: [
+      { name: "Instagram", on: true,  time: "จ. 22 มิ.ย. · 7:30 น.",  why: "เวลาที่คนดูสูงสุด",
+        caption: "เลิกจดคอนเทนต์ในแอป Notes ได้แล้ว 👇 ระบบเดียวที่สรุปยอด เขียนสคริปต์ และตั้งเวลาโพสต์ให้ทุกเช้า", tags: "#contentcreator #ai #ระบบการตลาด" },
+      { name: "TikTok", on: true,  time: "จ. 22 มิ.ย. · 19:00 น.", why: "ช่วงเย็นแรงกว่า 2.3×",
+        caption: "ถ้าคุณยังเปิด 5 แอปเพื่อทำคอนเทนต์อยู่ คลิปนี้เพื่อคุณ 🫵", tags: "#สายคอนเทนต์ #ai #fyp" },
+      { name: "YT Shorts", on: true, time: "อ. 23 มิ.ย. · 17:00 น.", why: "เลี่ยงชนคิว IG",
+        caption: "ระบบ content dashboard ที่ทำงานเองทุกเช้า 6 โมง — สรุปยอด หา hook เขียนสคริปต์ ตั้งเวลาโพสต์", tags: "" },
+      { name: "LinkedIn", on: false, time: "อ. 23 มิ.ย. · 8:00 น.",  why: "ก่อนเข้างาน",
+        caption: "เราลดเวลาทำคอนเทนต์จาก 12 ชม./สัปดาห์ เหลือ 90 นาที ด้วยระบบเดียว — นี่คือวิธี", tags: "" }
+    ]
+  },
+  calendar: {
+    year: 2026, month: 6, label: "มิถุนายน 2026 · ตั้งเวลาครบแล้ว", platforms: 3,
+    days: {
+      "2":  { events: [{ t: "7:30a", k: "REEL · IG" }],
+              script: "HOOK (0:00–0:03)\n\"คุณต้องมี content dashboard…\"\n\nBODY (0:03–0:32)\n· ปัญหา: เปิด 5 แอปกว่าจะรู้ว่าคลิปไหนเวิร์ค\n· ทางออก: หน้าเดียวที่สรุปให้ทุกเช้า 6 โมง\n· โชว์หน้าจอจริง 3 วินาที\n\nCTA (0:32–0:42)\n\"คอมเมนต์คำว่า SYSTEM เดี๋ยวส่งให้\"" },
+      "4":  { events: [{ t: "7:30a", k: "CAROUSEL · IG" }],
+              script: "CAROUSEL · 7 สไลด์\n1) 5 อย่างที่อยากรู้ก่อนเริ่มทำคอนเทนต์\n2–6) ทีละข้อ พร้อมตัวเลขจริง\n7) CTA: เซฟไว้อ่านตอนเริ่มทำ" },
+      "8":  { events: [{ t: "7:30a", k: "REEL · IG+TT" }],
+              script: "HOOK\n\"เลิกใช้แอป Notes ทำ content ได้แล้ว\"\n\nBODY\n· เทียบ เมื่อก่อน vs ตอนนี้\n· โชว์ปฏิทินที่ Claude เติมให้เอง\n\nCTA\n\"ถ้าอยากได้ระบบนี้ ทักมาได้เลย\"" },
+      "10": { events: [{ t: "5:00p", k: "REEL · YT" }],
+              script: "HOOK\n\"cron job คือเพื่อนที่ดีที่สุดของคนทำคอนเทนต์\"\n\nBODY\n· อธิบายว่าระบบตื่น 6 โมงทำอะไรบ้าง\n· โชว์รายงานเช้าจริง" },
+      "12": { events: [{ t: "7:30a", k: "CAROUSEL" }],
+              script: "CAROUSEL · 6 สไลด์\nสรุปเทรนด์ AI ประจำสัปดาห์ ที่เอามาทำคอนเทนต์ได้" },
+      "15": { events: [{ t: "8:00a", k: "REEL · IG" }, { t: "6:00p", k: "STORY" }],
+              script: "HOOK\n\"ผมเสียเงิน 308,000/เดือน ไปกับทีม เพื่อให้คุณไม่ต้องเสีย\"\n\nBODY\n· ไล่ทีละตำแหน่งที่ระบบทำแทนได้\n· สรุปต้นทุนจริงหลังใช้ระบบ\n\nSTORY (6:00p)\nโพลถาม: ตอนนี้ใช้กี่แอป?" },
+      "17": { events: [{ t: "7:30a", k: "REEL · TT" }],
+              script: "HOOK\n\"ยังไม่มีใครพูดถึงเรื่องนี้เลย\"\n\nBODY\n· หยิบเทรนด์วันนี้จากหน้า เทรนด์วันนี้\n· ให้มุมที่คู่แข่งยังไม่จับ" },
+      "19": { events: [{ t: "9:00a", k: "CAROUSEL" }],
+              script: "CAROUSEL · 5 สไลด์\nเบื้องหลังตัวเลข: ROAS แต่ละ campaign และเหตุผลที่หยุดตัวที่ไม่คุ้ม" },
+      "22": { events: [{ t: "7:30a", k: "REEL · IG" }],
+              script: "HOOK\n\"สร้างระบบการตลาดเสร็จใน 1 สุดสัปดาห์\"\n\nBODY\n· ไล่ 4 บล็อกของระบบ\n· โชว์ผลลัพธ์ 7 วันแรก" }
+    }
+  },
+  ads: {
+    kpis: [
+      { k: "งบที่ใช้ · 7D",   v: "฿38,200", delta: "+31%",  dir: "up", spark: [19,21,20,24,26,29,31,34], color: "#a8752a" },
+      { k: "ลูกค้าใหม่ · 7D", v: "450",     delta: "+44%",  dir: "up", spark: [14,18,16,22,25,31,36,42] },
+      { k: "ROAS รวม",       v: "4.8×",    delta: "+0.6×", dir: "up", spark: [26,28,25,30,31,33,35,36] }
+    ],
+    note: "Claude ดึงข้อมูลจาก Meta Ads ทุกเช้า สรุปว่า Campaign ไหนคุ้มที่สุด Campaign ไหนควรหยุด",
+    campaigns: [
+      { name: "โปรเปิดตัว · สินค้า",        spend: "฿12,400", customers: "168", cpa: "฿74",  roas: "6.8×", good: true },
+      { name: "รีมาร์เก็ตติ้ง · คนเข้าเพจ", spend: "฿8,600",  customers: "124", cpa: "฿69",  roas: "5.5×", good: true },
+      { name: "วิดีโอรีวิวลูกค้า",          spend: "฿9,200",  customers: "96",  cpa: "฿96",  roas: "4.2×", good: true },
+      { name: "กลุ่มความสนใจใหม่ (Broad)",  spend: "฿5,400",  customers: "38",  cpa: "฿142", roas: "2.2×", good: false },
+      { name: "คอนเทนต์สายให้ความรู้",      spend: "฿2,600",  customers: "24",  cpa: "฿108", roas: "4.0×", good: true }
+    ],
+    total: { name: "รวมทั้งหมด", spend: "฿38,200", customers: "450", cpa: "฿85", roas: "4.8×" },
+    advice: "Campaign <b>\"โปรเปิดตัว · สินค้า\"</b> ROAS 6.8× — คุ้มที่สุด แนะนำเพิ่มงบอีก 20% ส่วน Campaign <b>\"กลุ่มความสนใจใหม่ (Broad)\"</b> ROAS 2.2× ต่ำกว่าเกณฑ์ ควรหยุดหรือปรับกลุ่มเป้าหมายใหม่ — ย้ายงบ ฿5,400 ไปตัวแรกจะได้ลูกค้าเพิ่มอีกราว 73 ราย/สัปดาห์"
   }
-  document.getElementById('burger').onclick = function () { openSide(!side.classList.contains('on')); };
+};
+
+/* ============================================================
+   Content OS — ตัวหน้าเว็บ
+   ============================================================ */
+(function () {
+  var D = DEMO;                       /* ข้อมูลที่ใช้จริง (อาจถูกแทนด้วย data.json) */
+  var $ = function (s) { return document.querySelector(s); };
+
+  /* ---------- helper ---------- */
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  /* ฟิลด์ที่ตั้งใจให้ใส่ <b> ได้ (สรุป/คำแนะนำจาก Claude) — ตัด tag อื่นทิ้ง */
+  function rich(v) {
+    return esc(v).replace(/&lt;(\/?)(b|i|em|strong)&gt;/g, '<$1$2>');
+  }
+  function head(page, title, sub) {
+    return '<div class="phead"><div class="eyebrow">' + esc(page) + '</div>' +
+      '<h1>' + esc(title) + '</h1><p>' + esc(sub) + '</p></div>';
+  }
+  function spark(nums, color) {
+    if (!nums || nums.length < 2) return '';
+    var lo = Math.min.apply(null, nums), hi = Math.max.apply(null, nums), span = (hi - lo) || 1;
+    var pts = nums.map(function (n, i) {
+      var x = (i / (nums.length - 1)) * 100;
+      var y = 27 - ((n - lo) / span) * 25;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    return '<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none">' +
+      '<polyline points="' + pts + '" fill="none" stroke="' + esc(color || '#2f7d52') + '" stroke-width="1.6"/></svg>';
+  }
+  function kpis(list) {
+    return '<div class="stats">' + (list || []).map(function (s) {
+      var foot = s.note
+        ? '<span class="mono" style="font-size:12px;color:var(--muted)">' + esc(s.note) + '</span>'
+        : spark(s.spark, s.color) +
+          (s.delta ? '<span class="delta ' + (s.dir === 'down' ? 'down' : 'up') + '">' + esc(s.delta) + '</span>' : '');
+      return '<div class="stat"><div class="k">' + esc(s.k) + '</div>' +
+        '<div class="v">' + esc(s.v) + '</div><div class="f">' + foot + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function claudeBox(title, bodyHtml) {
+    return '<div class="claude"><b>' + esc(title) + '</b>' + bodyHtml + '</div>';
+  }
+  function row(main, note, tail) {
+    return '<div class="row"><div class="main"><b>' + esc(main) + '</b>' +
+      (note ? '<small>' + esc(note) + '</small>' : '') + '</div>' + (tail || '') + '</div>';
+  }
+  function tag(text, kind) {
+    return '<span class="tag' + (kind ? ' ' + kind : '') + '">' + esc(text) + '</span>';
+  }
+  function ghost(text, go) {
+    return '<button class="ghost"' + (go ? ' data-go="' + esc(go) + '"' : '') + '>' + esc(text) + '</button>';
+  }
+  function card(title, badge, note, inner) {
+    return '<div class="card"><header><h2>' + esc(title) + '</h2>' + (badge || '') + '</header>' +
+      (note ? '<div class="note">' + esc(note) + '</div>' : '') + inner + '</div>';
+  }
+
+  /* ---------- แถบบอกที่มาของข้อมูล ---------- */
+  function srcBar() {
+    var m = D.meta || {};
+    if (m.source === 'live') {
+      var warn = (m.warnings || []).length
+        ? ' · <span class="mono">ยังไม่ได้ต่อ: ' + esc(m.warnings.join(', ')) + '</span>' : '';
+      return '<div class="srcbar live"><b>● ข้อมูลจริง</b> อัปเดตล่าสุด ' + esc(m.updatedLabel || '') + warn + '</div>';
+    }
+    return '<div class="srcbar"><b>ตัวอย่างระบบ</b> — ตัวเลขทั้งหมดเป็นข้อมูลสมมติ ' +
+      '<span class="mono">ต่อ API จริงได้ที่ scripts/build_data.py</span></div>';
+  }
+
+  /* ---------- แต่ละหน้า ---------- */
+  function renderOverview() {
+    var o = D.overview || {};
+    var sum = '<ul>' + (o.summary || []).map(function (x) { return '<li>' + rich(x) + '</li>'; }).join('') + '</ul>';
+    var todo = '<div class="rows">' + (o.todo || []).map(function (t) {
+      return row(t.title, t.note, ghost(t.cta, t.go));
+    }).join('') + '</div>';
+    return head('Output · รายงานเช้านี้', 'ภาพรวม + รายงานสรุปทุกเช้า',
+      'ทุกอย่างที่เกิดขึ้นเมื่อวาน สรุปมาให้แล้วตอน 6:00 น. — คุณแค่เปิดมาอ่านตอนกินกาแฟ') +
+      srcBar() + kpis(o.kpis) + claudeBox('✦ สรุปเช้านี้โดย Claude', sum) +
+      card('สิ่งที่ควรทำวันนี้', tag((o.todo || []).length + ' รายการ'),
+        'Claude เรียงให้แล้วตามผลกระทบต่อยอด — ทำจากบนลงล่าง', todo);
+  }
+
+  function renderAnalytics() {
+    var a = D.analytics || {};
+    var top = '<div class="rows">' + (a.top || []).map(function (t) {
+      return row(t.title, t.note, ghost('ทำแนวนี้อีก', 'hooks'));
+    }).join('') + '</div>';
+    var weak = '<div class="rows">' + (a.weak || []).map(function (t) {
+      return row(t.title, t.note, tag(t.tag));
+    }).join('') + '</div>';
+    return head('Data วิเคราะห์ผล', 'ANALYTICS', 'ดูว่าคอนเทนต์ไหนเวิร์ค ไม่เวิร์ค แล้วรู้ว่าควรทำอะไรต่อ') +
+      kpis(a.kpis) +
+      card('Top 5 คอนเทนต์มาแรง · 7 วันล่าสุด', tag('ชนะค่าเฉลี่ย 2 เท่า', 'good'), a.topNote, top) +
+      ((a.weak || []).length ? card('ที่ยังไม่เวิร์ค', tag('ต่ำกว่าค่าเฉลี่ย', 'pink'),
+        'ไม่ใช่ของเสีย — Claude บอกว่าควรแก้ตรงไหนก่อนทิ้ง', weak) : '');
+  }
+
+  function renderRivals() {
+    var r = D.rivals || {}, s = r.spotlight || {};
+    var grid = '<div class="grid4">' + (r.creators || []).map(function (c) {
+      var arrow = c.dir === 'down' ? '▼' : '▲';
+      return '<div class="cre"><div class="av">' + esc((c.handle || '?').replace('@', '').charAt(0).toUpperCase()) + '</div>' +
+        '<div><b>' + esc(c.handle) + '</b><small>' + esc(c.followers) +
+        ' <span class="delta ' + (c.dir === 'down' ? 'down' : 'up') + '">' + arrow + ' ' + esc(c.delta) + '</span></small></div></div>';
+    }).join('') + '</div>';
+
+    var spot = s.handle ? '<div class="spot"><div class="av">' + esc(s.handle.replace('@', '').charAt(0).toUpperCase()) + '</div>' +
+      '<div style="flex:1;min-width:220px">' +
+      '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.6">ความเคลื่อนไหวสูงสุดสัปดาห์นี้</div>' +
+      '<b style="font-size:17px">' + esc(s.handle) + '</b><p>' + rich(s.text) + '</p>' +
+      ghost('ดูสถิติเชิงลึก', 'hooks') + '</div>' +
+      '<div class="big"><b>' + esc(s.big) + '</b><div class="mono" style="font-size:11px;opacity:.6">' + esc(s.bigNote) + '</div></div></div>' : '';
+
+    var hooks = '<div class="rows">' + (r.hooks || []).map(function (h) {
+      return row(h.title, h.note, tag(h.tag) + ghost('เก็บเข้าคลัง', 'hooks'));
+    }).join('') + '</div>';
+
+    return head('Data วิเคราะห์ผล', 'ติดตามคู่แข่ง', 'ดูว่าคู่แข่งกำลังใช้ hook อะไรอยู่ตอนนี้ แล้วหยิบมาปรับใช้กับคุณ') +
+      '<div class="card"><header><h2 class="mono" style="font-size:15px">กำลังติดตาม · ' +
+      (r.creators || []).length + ' CREATORS</h2><span class="tag" style="margin-left:auto">อัปเดต 06:00</span></header>' +
+      grid + '</div>' + spot +
+      card('HOOK ที่แกะมาได้', tag('พร้อมใช้', 'good'),
+        'Claude ดึง reel ที่ปังที่สุดของแต่ละเจ้า มาถอดเป็น hook ให้ใช้ต่อได้เลย', hooks);
+  }
+
+  function renderTrends() {
+    var t = D.trends || {};
+    var rows = '<div class="rows">' + (t.items || []).map(function (i) {
+      var tail = tag(i.tag, i.kind) + (i.skip
+        ? '<span class="mono" style="font-size:11.5px;color:var(--muted)">' + esc(i.skip) + '</span>'
+        : ghost('→ ทำเป็น hook', 'hooks'));
+      return '<div class="row"><div class="main"><b class="mono">' + esc(i.title) + '</b></div>' + tail + '</div>';
+    }).join('') + '</div>';
+    return head('Data วิเคราะห์ผล', 'เทรนด์วันนี้', 'ข่าว AI ล่าสุดทุกเช้า คัดเฉพาะอันที่เอามาทำคอนเทนต์ได้') +
+      '<div class="card"><header><h2>เทรนด์วันนี้ · ' + esc(t.sources) + ' sources</h2>' +
+      '<span class="tag warn" style="margin-left:auto">' + esc(t.badge) + '</span></header>' +
+      '<div class="note">Claude ดึงข่าวจาก ' + esc(t.sources) + ' แหล่งทุกเช้า ติด tag ให้ แล้วส่งสรุปมาตอน 7 โมง</div>' +
+      rows + '</div>' +
+      claudeBox('✦ Claude แนะนำ', '<p>' + rich(t.advice) + '</p>');
+  }
+
+  function renderHooks() {
+    var h = D.hooks || {};
+    var rows = (h.items || []).map(function (i) {
+      return '<div class="row"><div class="main"><b>' + esc(i.text) + '</b></div>' +
+        '<span class="mono" style="color:var(--muted);font-size:12.5px">' + esc(i.uses) + '</span>' +
+        tag(i.tag, i.kind) + '</div>';
+    }).join('');
+    return head('ทำคอนเทนต์', 'คลัง HOOK', 'hook ทั้งหมดของคุณ — รวมที่เก็บจากคู่แข่งด้วย พร้อมหยิบไปเขียนสคริปต์') +
+      '<div class="card"><header><h2><span id="hookCount">' + esc(h.total) + '</span> hooks · ค้นหาได้</h2></header>' +
+      '<div class="note">Claude transcribe + templatize hook ที่คุณเซฟให้อัตโนมัติ</div>' +
+      '<div style="padding:0 18px 14px"><input class="search mono" id="hookSearch" placeholder="ค้นหา hooks…" /></div>' +
+      '<div class="rows" id="hookRows">' + rows + '</div></div>';
+  }
+
+  function renderSchedule() {
+    var s = D.schedule || {}, ps = s.platforms || [];
+    var chips = ps.map(function (p) {
+      return '<button class="chip' + (p.on ? ' on' : '') + '" data-plat="' + esc(p.name) + '">' + esc(p.name) + '</button>';
+    }).join('');
+    var slots = ps.map(function (p) {
+      return '<div class="slot" data-plat="' + esc(p.name) + '"' + (p.on ? '' : ' hidden') + '>' +
+        '<span class="nm">' + esc(p.name) + '</span><span>' + esc(p.time) + '</span>' +
+        '<span class="why">' + esc(p.why) + '</span></div>';
+    }).join('');
+    var caps = ps.map(function (p) {
+      return '<div class="cap" data-plat="' + esc(p.name) + '"' + (p.on ? '' : ' hidden') + '>' +
+        '<div class="nm">' + esc(p.name.toUpperCase()) + '</div>' + esc(p.caption) +
+        (p.tags ? '<br /><span class="mono" style="font-size:11.5px;color:var(--muted)">' + esc(p.tags) + '</span>' : '') + '</div>';
+    }).join('');
+    var v = s.video || {};
+    return head('ทำคอนเทนต์', 'ตั้งเวลาโพสต์', 'ตั้งเวลาให้ Claude โพสต์คอนเทนต์ให้อัตโนมัติ ครบทุกแพลตฟอร์ม') +
+      '<div class="card">' +
+      '<div class="prev"><div class="thumb">▶</div><div>' +
+      '<div class="mono" style="font-size:11px;color:var(--muted)">กำลังตั้งเวลาโพสต์</div>' +
+      '<b style="font-size:17px">' + esc(v.title) + '</b>' +
+      '<div class="mono" style="font-size:11.5px;color:var(--muted)">' + esc(v.meta) + '</div></div></div>' +
+      '<div class="step"><div class="num">1</div><div style="flex:1"><h3>เลือกแพลตฟอร์ม</h3>' +
+      '<div class="chips" id="platChips">' + chips + '</div></div></div>' +
+      '<div class="step"><div class="num">2</div><div style="flex:1"><h3>เวลาโพสต์ (แต่ละแพลตฟอร์ม)</h3>' +
+      '<div class="note" style="padding:0 0 10px">Claude เลือกเวลาที่คนดูเยอะที่สุดให้แต่ละแพลตฟอร์ม</div>' +
+      '<div id="slots">' + slots + '</div></div></div>' +
+      '<div class="step"><div class="num">3</div><div style="flex:1"><h3>Caption (ปรับให้แต่ละแพลตฟอร์ม)</h3>' +
+      '<div class="note" style="padding:0 0 10px">Claude ปรับ caption + แฮชแท็กให้เหมาะกับแต่ละแพลตฟอร์ม</div>' +
+      '<div id="caps">' + caps + '</div></div></div></div>' +
+      '<button class="newbtn" style="width:100%;padding:14px;border-radius:12px;font-size:15px" id="confirmBtn">' +
+      '✦ ยืนยันตั้งเวลาโพสต์ (<span id="platCount">0</span> แพลตฟอร์ม)</button>';
+  }
+
+  function renderCalendar() {
+    var c = D.calendar || {}, days = c.days || {};
+    var first = new Date(c.year, c.month - 1, 1);
+    var pad = first.getDay();                                   /* 0 = อาทิตย์ */
+    var total = new Date(c.year, c.month, 0).getDate();
+    var count = Object.keys(days).reduce(function (n, d) { return n + (days[d].events || []).length; }, 0);
+
+    var cells = '';
+    for (var i = 0; i < pad; i++) cells += '<div class="cell pad"></div>';
+    for (var d = 1; d <= total; d++) {
+      var day = days[String(d)];
+      var evs = day ? (day.events || []) : [];
+      cells += evs.length
+        ? '<button class="cell has" data-day="' + d + '"><span class="d">' + d + '</span>' +
+          evs.map(function (e) { return '<div class="ev">' + esc(e.t) + '<br>' + esc(e.k) + '</div>'; }).join('') + '</button>'
+        : '<div class="cell"><span class="d">' + d + '</span></div>';
+    }
+    return head('ทำคอนเทนต์', 'ปฏิทิน CONTENT', 'ทุกคอนเทนต์ที่ตั้งเวลาไว้ในที่เดียว กดที่ช่องเพื่อดู script เต็ม') +
+      '<div class="card"><header><h2>' + esc(c.label) + '</h2>' +
+      '<span class="tag good" style="margin-left:auto">' + count + ' รายการ · ' + esc(c.platforms) + ' PLATFORMS</span></header>' +
+      '<div class="note">Claude เติมปฏิทินอัตโนมัติด้วยคำสั่ง /script · กดที่ช่องเพื่อดู script เต็ม</div>' +
+      '<div class="cal"><div class="calhead"><div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div></div>' +
+      '<div class="calgrid" id="calGrid">' + cells + '</div></div></div>';
+  }
+
+  function renderAds() {
+    var a = D.ads || {}, t = a.total || {};
+    function tr(c, foot) {
+      var col = foot ? '' : ' style="color:var(--' + (c.good === false ? 'down' : 'up') + ')"';
+      return '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.spend) + '</td><td>' + esc(c.customers) +
+        '</td><td>' + esc(c.cpa) + '</td><td class="roas"' + col + '>' + esc(c.roas) + '</td></tr>';
+    }
+    var table = '<div class="tw"><table><thead><tr><th>Campaign</th><th>งบที่ใช้</th><th>ลูกค้า</th>' +
+      '<th>ต้นทุน/ราย</th><th>ROAS</th></tr></thead><tbody>' +
+      (a.campaigns || []).map(function (c) { return tr(c); }).join('') + '</tbody>' +
+      (t.name ? '<tfoot>' + tr(t, true) + '</tfoot>' : '') + '</table></div>';
+    return head('โฆษณา', 'ADS · FB/IG', 'Campaign ไหนคุ้ม ไหนไม่คุ้ม ทำเงินได้เท่าไหร่ ROAS เป็นเท่าไหร่ — รู้ทุกเช้า') +
+      kpis(a.kpis) +
+      '<div class="card"><header><h2>ผลงานแต่ละ Campaign · 7 วันล่าสุด</h2>' +
+      '<span class="tag" style="margin-left:auto">FB + IG</span></header>' +
+      '<div class="note">' + esc(a.note) + '</div>' + table + '</div>' +
+      claudeBox('✦ Claude แนะนำ', '<p>' + rich(a.advice) + '</p>');
+  }
+
+  /* ---------- วาดทั้งหมด ---------- */
+  function renderAll() {
+    var m = D.meta || {};
+    $('#topStamp').textContent = 'อัปเดตล่าสุดโดย Claude · ' + (m.updatedLabel || '');
+    $('#whoName').textContent = m.brand || '';
+    $('#whoSub').textContent = (m.followers || '') + (m.window ? ' · ' + m.window : '');
+    $('#whoAv').textContent = (m.brand || '?').replace('@', '').charAt(0).toUpperCase();
+    $('#sideFoot').innerHTML = esc(m.footer || '').replace(/\n/g, '<br />');
+    $('#mapSrc').innerHTML = srcBar();
+
+    $('#p-overview').innerHTML = renderOverview();
+    $('#p-analytics').innerHTML = renderAnalytics();
+    $('#p-rivals').innerHTML = renderRivals();
+    $('#p-trends').innerHTML = renderTrends();
+    $('#p-hooks').innerHTML = renderHooks();
+    $('#p-schedule').innerHTML = renderSchedule();
+    $('#p-calendar').innerHTML = renderCalendar();
+    $('#p-ads').innerHTML = renderAds();
+    syncPlats();
+  }
+
+  /* ---------- sidebar / routing ---------- */
+  var side = $('#side'), scrim = $('#scrim');
+  function openSide(v) { side.classList.toggle('on', v); scrim.classList.toggle('on', v); }
+  $('#burger').onclick = function () { openSide(!side.classList.contains('on')); };
   scrim.onclick = function () { openSide(false); };
 
-  /* ---------- routing ---------- */
   function go(id) {
     document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + id); });
     document.querySelectorAll('.navb').forEach(function (b) { b.classList.toggle('on', b.dataset.go === id); });
+    var nav = document.querySelector('.navb[data-go="' + id + '"]');
+    $('#topPill').textContent = nav ? nav.textContent.trim() : '';
     openSide(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-go]');
-    if (t) go(t.dataset.go);
-  });
 
-  /* ---------- core info modals ---------- */
-  var INFO = {
-    claude: { icon: '✦', kind: 'Orchestration', title: 'Claude',
-      text: 'สมองของระบบ ทุกอย่างในหน้านี้สั่งงานผ่าน Claude ตัวเดียว — วิเคราะห์ผล เขียนสคริปต์ ตั้งเวลาโพสต์ สรุปโฆษณา ไม่ต้องสลับแอปอีกต่อไป' },
-    memory: { icon: '▦', kind: 'Context Memory', title: 'Context Memory',
-      text: 'จำธุรกิจของคุณได้ — โทนการพูด กลุ่มลูกค้า สินค้า สิ่งที่เคยเวิร์คและไม่เวิร์ค ไม่ต้องอธิบายใหม่ทุกครั้งที่สั่งงาน ยิ่งใช้ยิ่งตรงกับแบรนด์คุณ' },
-    always: { icon: '◔', kind: 'Always-On', title: 'ตื่นทำงานเองทุกเช้า 6:00',
-      text: 'ระบบตื่นเองทุกเช้า ไปดู IG/FB โพสต์ใหม่ของคู่แข่ง เทรนด์ และโฆษณา มาสรุปรอไว้ให้เรียบร้อย คุณแค่เปิดมาอ่านตอนกินกาแฟ' },
-    connect: { icon: '⇄', kind: 'Connectors', title: 'ต่อกับเครื่องมือที่ใช้อยู่',
-      text: 'Instagram · Facebook · TikTok · YouTube · Meta Ads · Google Sheets · Drive — ดึงข้อมูลเข้า สั่งงานออก จบในที่เดียว ไม่ต้องก๊อปวางข้ามแอป' }
-  };
-  var ms = document.getElementById('mscrim');
+  /* ---------- modal ---------- */
+  var ms = $('#mscrim');
   function showModal(o) {
-    document.getElementById('mIcon').textContent = o.icon;
-    document.getElementById('mKind').textContent = o.kind;
-    document.getElementById('mTitle').textContent = o.title;
-    document.getElementById('mText').textContent = o.text;
-    var pre = document.getElementById('mPre');
+    $('#mIcon').textContent = o.icon || '✦';
+    $('#mKind').textContent = o.kind || '';
+    $('#mTitle').textContent = o.title || '';
+    $('#mText').textContent = o.text || '';
+    var pre = $('#mPre');
     pre.hidden = !o.pre;
     pre.textContent = o.pre || '';
     ms.classList.add('on');
   }
   function closeModal() { ms.classList.remove('on'); }
-  document.getElementById('mOk').onclick = closeModal;
+  $('#mOk').onclick = closeModal;
   ms.onclick = function (e) { if (e.target === ms) closeModal(); };
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); openSide(false); } });
-  document.querySelectorAll('[data-info]').forEach(function (b) {
-    b.onclick = function () { showModal(INFO[b.dataset.info]); };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeModal(); openSide(false); }
   });
 
-  /* ---------- hook search ---------- */
-  var q = document.getElementById('hookSearch');
-  q.oninput = function () {
-    var v = q.value.trim().toLowerCase();
-    var n = 0;
-    document.querySelectorAll('#hookRows .row').forEach(function (r) {
-      var hit = r.textContent.toLowerCase().indexOf(v) > -1;
-      r.hidden = !hit;
-      if (hit) n++;
-    });
-    document.getElementById('hookCount').textContent = v ? n : 482;
-  };
-
-  /* ---------- scheduler chips ---------- */
+  /* ---------- scheduler ---------- */
   function syncPlats() {
     var on = [];
     document.querySelectorAll('#platChips .chip').forEach(function (c) {
@@ -718,66 +826,70 @@ tfoot td{font-weight:800;border-top:1px solid var(--line2)}
     document.querySelectorAll('#slots .slot, #caps .cap').forEach(function (el) {
       el.hidden = on.indexOf(el.dataset.plat) === -1;
     });
-    document.getElementById('platCount').textContent = on.length;
+    var n = $('#platCount');
+    if (n) n.textContent = on.length;
     return on;
   }
-  document.querySelectorAll('#platChips .chip').forEach(function (c) {
-    c.onclick = function () { c.classList.toggle('on'); syncPlats(); };
-  });
-  syncPlats();
-  document.getElementById('confirmBtn').onclick = function () {
-    var on = syncPlats();
-    showModal({
-      icon: '✓', kind: 'ตั้งเวลาเรียบร้อย', title: 'เข้าคิวแล้ว ' + on.length + ' แพลตฟอร์ม',
-      text: 'Claude จะโพสต์ให้ตามเวลาที่ตั้งไว้ และสรุปผลกลับมาให้ในรายงานเช้าถัดไป',
-      pre: on.join(' · ') || 'ยังไม่ได้เลือกแพลตฟอร์ม'
-    });
-  };
 
-  /* ---------- calendar ---------- */
-  var EVENTS = {
-    2:  [{ t: '7:30a', k: 'REEL · IG' }],
-    4:  [{ t: '7:30a', k: 'CAROUSEL · IG' }],
-    8:  [{ t: '7:30a', k: 'REEL · IG+TT' }],
-    10: [{ t: '5:00p', k: 'REEL · YT' }],
-    12: [{ t: '7:30a', k: 'CAROUSEL' }],
-    15: [{ t: '8:00a', k: 'REEL · IG' }, { t: '6:00p', k: 'STORY' }],
-    17: [{ t: '7:30a', k: 'REEL · TT' }],
-    19: [{ t: '9:00a', k: 'CAROUSEL' }],
-    22: [{ t: '7:30a', k: 'REEL · IG' }]
-  };
-  var SCRIPTS = {
-    2:  'HOOK (0:00–0:03)\n"คุณต้องมี content dashboard…"\n\nBODY (0:03–0:32)\n· ปัญหา: เปิด 5 แอปกว่าจะรู้ว่าคลิปไหนเวิร์ค\n· ทางออก: หน้าเดียวที่สรุปให้ทุกเช้า 6 โมง\n· โชว์หน้าจอจริง 3 วินาที\n\nCTA (0:32–0:42)\n"คอมเมนต์คำว่า SYSTEM เดี๋ยวส่งให้"',
-    4:  'CAROUSEL · 7 สไลด์\n1) 5 อย่างที่อยากรู้ก่อนเริ่มทำคอนเทนต์\n2–6) ทีละข้อ พร้อมตัวเลขจริง\n7) CTA: เซฟไว้อ่านตอนเริ่มทำ',
-    8:  'HOOK\n"เลิกใช้แอป Notes ทำ content ได้แล้ว"\n\nBODY\n· เทียบ เมื่อก่อน vs ตอนนี้\n· โชว์ปฏิทินที่ Claude เติมให้เอง\n\nCTA\n"ถ้าอยากได้ระบบนี้ ทักมาได้เลย"',
-    10: 'HOOK\n"cron job คือเพื่อนที่ดีที่สุดของคนทำคอนเทนต์"\n\nBODY\n· อธิบายว่าระบบตื่น 6 โมงทำอะไรบ้าง\n· โชว์รายงานเช้าจริง',
-    12: 'CAROUSEL · 6 สไลด์\nสรุปเทรนด์ AI ประจำสัปดาห์ ที่เอามาทำคอนเทนต์ได้',
-    15: 'HOOK\n"ผมเสียเงิน 308,000/เดือน ไปกับทีม เพื่อให้คุณไม่ต้องเสีย"\n\nBODY\n· ไล่ทีละตำแหน่งที่ระบบทำแทนได้\n· สรุปต้นทุนจริงหลังใช้ระบบ\n\nSTORY (6:00p)\nโพลถาม: ตอนนี้ใช้กี่แอป?',
-    17: 'HOOK\n"ยังไม่มีใครพูดถึงเรื่องนี้เลย"\n\nBODY\n· หยิบเทรนด์วันนี้จากหน้า เทรนด์วันนี้\n· ให้มุมที่คู่แข่งยังไม่จับ',
-    19: 'CAROUSEL · 5 สไลด์\nเบื้องหลังตัวเลข: ROAS แต่ละ campaign และเหตุผลที่หยุดตัวที่ไม่คุ้ม',
-    22: 'HOOK\n"สร้างระบบการตลาดเสร็จใน 1 สุดสัปดาห์"\n\nBODY\n· ไล่ 4 บล็อกของระบบ\n· โชว์ผลลัพธ์ 7 วันแรก'
-  };
-  var grid = document.getElementById('calGrid');
-  var html = '';
-  for (var i = 0; i < 1; i++) html += '<div class="cell pad"></div>';   /* 1 มิ.ย. 2026 = วันจันทร์ */
-  for (var d = 1; d <= 30; d++) {
-    var ev = EVENTS[d];
-    html += '<' + (ev ? 'button' : 'div') + ' class="cell' + (ev ? ' has" data-day="' + d : '') + '">';
-    html += '<span class="d">' + d + '</span>';
-    if (ev) ev.forEach(function (e) { html += '<div class="ev">' + e.t + '<br>' + e.k + '</div>'; });
-    html += '</' + (ev ? 'button' : 'div') + '>';
-  }
-  grid.innerHTML = html;
-  grid.addEventListener('click', function (e) {
-    var c = e.target.closest('[data-day]');
-    if (!c) return;
-    var d = c.dataset.day;
-    showModal({
-      icon: '▦', kind: EVENTS[d].map(function (x) { return x.t + ' ' + x.k; }).join('  ·  '),
-      title: d + ' มิถุนายน 2026', text: 'script เต็มที่ Claude ร่างไว้ให้ — แก้ได้ก่อนถึงเวลาโพสต์',
-      pre: SCRIPTS[d]
-    });
+  /* ---------- event delegation (ทำงานได้แม้หน้าถูกวาดใหม่) ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-go]');
+    if (t) { go(t.dataset.go); return; }
+
+    var q = e.target.closest('[data-info]');
+    if (q) { showModal((D.core || {})[q.dataset.info]); return; }
+
+    var chip = e.target.closest('#platChips .chip');
+    if (chip) { chip.classList.toggle('on'); syncPlats(); return; }
+
+    if (e.target.closest('#confirmBtn')) {
+      var on = syncPlats();
+      showModal({
+        icon: '✓', kind: 'ตั้งเวลาเรียบร้อย', title: 'เข้าคิวแล้ว ' + on.length + ' แพลตฟอร์ม',
+        text: 'Claude จะโพสต์ให้ตามเวลาที่ตั้งไว้ และสรุปผลกลับมาให้ในรายงานเช้าถัดไป',
+        pre: on.join(' · ') || 'ยังไม่ได้เลือกแพลตฟอร์ม'
+      });
+      return;
+    }
+
+    var cell = e.target.closest('#calGrid [data-day]');
+    if (cell) {
+      var day = (D.calendar.days || {})[cell.dataset.day] || {};
+      showModal({
+        icon: '▦',
+        kind: (day.events || []).map(function (x) { return x.t + ' ' + x.k; }).join('  ·  '),
+        title: cell.dataset.day + ' ' + (D.calendar.label || '').split('·')[0].trim(),
+        text: 'script เต็มที่ Claude ร่างไว้ให้ — แก้ได้ก่อนถึงเวลาโพสต์',
+        pre: day.script
+      });
+    }
   });
+
+  document.addEventListener('input', function (e) {
+    if (e.target.id !== 'hookSearch') return;
+    var v = e.target.value.trim().toLowerCase(), n = 0;
+    document.querySelectorAll('#hookRows .row').forEach(function (r) {
+      var hit = r.textContent.toLowerCase().indexOf(v) > -1;
+      r.hidden = !hit;
+      if (hit) n++;
+    });
+    $('#hookCount').textContent = v ? n : (D.hooks.total || n);
+  });
+
+  /* ---------- โหลด data.json ถ้ามี (เปิดผ่าน http เท่านั้น) ---------- */
+  function boot() {
+    renderAll();
+    if (location.protocol === 'file:') return;      /* file:// อ่านไฟล์ข้างเคียงไม่ได้ */
+    fetch('data.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.meta) return;
+        Object.keys(j).forEach(function (k) { D[k] = j[k]; });
+        renderAll();
+      })
+      .catch(function () { /* ไม่มีไฟล์ = ใช้ข้อมูลตัวอย่างต่อไป */ });
+  }
+  boot();
 })();
 </script>
 </body>
