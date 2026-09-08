@@ -38,6 +38,8 @@ jobs:
           # ไม่ตั้งค่าไหน = ข้ามส่วนนั้น หน้าเว็บจะใช้ข้อมูลตัวอย่างของส่วนนั้นต่อไป
           FB_AD_ACCOUNT_ID: ${{ secrets.FB_AD_ACCOUNT_ID }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          # ให้ Claude คิดคอนเทนต์เอง — ไม่ตั้ง = ได้แค่ตัวเลขจริง
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           LOG_LEVEL: INFO
         run: python content-os/scripts/build_data.py
 

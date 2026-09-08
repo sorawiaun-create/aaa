@@ -31,6 +31,7 @@ log = logging.getLogger("content-os")
 
 TZ = timezone(timedelta(hours=7))  # เวลาไทย
 GRAPH = "https://graph.facebook.com"
+MODEL_DEFAULT = "claude-opus-5"
 TIMEOUT = 30
 
 # action_type ที่นับว่าเป็น "ลูกค้า 1 ราย"
@@ -322,11 +323,25 @@ def build_analytics(g: Graph, ig_id: str) -> dict:
 
 
 def build_profile(g: Graph, ig_id: str) -> dict:
-    """ชื่อบัญชี + จำนวนผู้ติดตาม (ไว้โชว์ในเมนูซ้าย)"""
-    d = g.get(ig_id, fields="username,followers_count")
+    """ชื่อบัญชี ผู้ติดตาม bio และแคปชันล่าสุด
+
+    bio กับแคปชันไม่ได้เอาไปโชว์บนหน้าเว็บ แต่ส่งให้ Claude อ่านเพื่อเดาเองว่า
+    ธุรกิจนี้ทำอะไร ลูกค้าเป็นใคร โทนแบบไหน — เจ้าของไม่ต้องมากรอกเอง
+    """
+    d = g.get(ig_id, fields="username,followers_count,biography")
+    captions: list[str] = []
+    try:
+        for m in g.get_all(f"{ig_id}/media", fields="caption", limit=12)[:12]:
+            first_line = (m.get("caption") or "").split("\n")[0].strip()
+            if first_line:
+                captions.append(first_line[:120])
+    except RuntimeError as e:
+        log.warning("  อ่านแคปชันล่าสุดไม่ได้: %s", e)
     return {
         "brand": "@" + d["username"] if d.get("username") else "",
         "followers": compact(d.get("followers_count", 0)),
+        "biography": d.get("biography", ""),
+        "captions": captions,
     }
 
 
@@ -422,7 +437,7 @@ def main() -> int:
             "window": "7D",
             "updatedLabel": now.strftime("%d/%m/%Y %H:%M น."),
             "footer": "CONTENT OS\nข้อมูลจริง · อัปเดตทุก 6:00 น.",
-            "warnings": warnings,
+            "warnings": warnings,   # ยังเติมได้อีกในขั้น AI ข้างล่าง (เป็น list เดียวกัน)
         },
         "overview": build_overview(analytics, ads),
     }
@@ -434,6 +449,36 @@ def main() -> int:
         for k in ("_revenue", "_customers"):
             ads.pop(k, None)
         data["ads"] = ads
+
+    # ---- ให้ Claude คิดคอนเทนต์ต่อจากตัวเลขจริง ----
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        try:
+            from brain import Brain, to_sections
+
+            brain = Brain(os.getenv("CONTENT_OS_MODEL") or MODEL_DEFAULT)
+            log.info("ให้ Claude ค้นเว็บหาเทรนด์และคู่แข่ง…")
+            research = brain.research(profile)
+            log.info("ให้ Claude วางแผนคอนเทนต์…")
+            plan = brain.plan(profile, {"analytics": analytics, "ads": ads}, research, now.date())
+
+            data.update(to_sections(plan, now.date()))
+            if plan.get("summary"):
+                data["overview"]["summary"] = plan["summary"]
+            if plan.get("todo"):
+                data["overview"]["todo"] = plan["todo"]
+            if analytics is not None and plan.get("weak"):
+                data["analytics"]["weak"] = plan["weak"]
+            if ads is not None and plan.get("adsAdvice"):
+                data["ads"]["advice"] = plan["adsAdvice"]
+            data["meta"]["plannedBy"] = "Claude"
+            log.info("Claude วางแผนให้แล้ว: %s", plan.get("profile", {}).get("niche", ""))
+        except Exception as e:  # noqa: BLE001
+            # ตัวเลขจริงยังใช้ได้ แค่ส่วนที่ AI คิดจะกลับไปใช้ข้อมูลตัวอย่าง
+            log.warning("Claude วางแผนไม่สำเร็จ: %s", e)
+            warnings.append("แผนคอนเทนต์จาก AI")
+    else:
+        log.info("ไม่พบ ANTHROPIC_API_KEY — ข้ามขั้นให้ AI คิดคอนเทนต์")
+        warnings.append("แผนคอนเทนต์จาก AI")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

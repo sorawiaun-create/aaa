@@ -662,10 +662,13 @@ var DEMO = {
         : ghost('→ ทำเป็น hook', 'hooks'));
       return '<div class="row"><div class="main"><b class="mono">' + esc(i.title) + '</b></div>' + tail + '</div>';
     }).join('') + '</div>';
+    /* ข้อมูลตัวอย่างนับเป็นจำนวนแหล่ง ส่วนของจริง Claude ค้นเว็บเอง จึงให้ตั้งชื่อป้ายเองได้ */
+    var srcLabel = t.sourcesLabel || (t.sources + ' sources');
+    var srcNote = t.sourcesNote || ('Claude ดึงข่าวจาก ' + t.sources + ' แหล่งทุกเช้า ติด tag ให้ แล้วส่งสรุปมาตอน 7 โมง');
     return head('Data วิเคราะห์ผล', 'เทรนด์วันนี้', 'ข่าว AI ล่าสุดทุกเช้า คัดเฉพาะอันที่เอามาทำคอนเทนต์ได้') +
-      '<div class="card"><header><h2>เทรนด์วันนี้ · ' + esc(t.sources) + ' sources</h2>' +
+      '<div class="card"><header><h2>เทรนด์วันนี้ · ' + esc(srcLabel) + '</h2>' +
       '<span class="tag warn" style="margin-left:auto">' + esc(t.badge) + '</span></header>' +
-      '<div class="note">Claude ดึงข่าวจาก ' + esc(t.sources) + ' แหล่งทุกเช้า ติด tag ให้ แล้วส่งสรุปมาตอน 7 โมง</div>' +
+      '<div class="note">' + esc(srcNote) + '</div>' +
       rows + '</div>' +
       claudeBox('✦ Claude แนะนำ', '<p>' + rich(t.advice) + '</p>');
   }
