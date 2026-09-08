@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "t": "2026-09-08T13:21:16.870564+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 4,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว - สำเนา",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=288.39 (>100) และ ทุนซื้อ=96.13 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=215.79 (>100) และ ทุนซื้อ=215.79 (>80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา - สำเนา",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=459.89 (>300) และ ROAS=2.17 (<2.80)",
+          "status": "applied",
+          "error": null
+        },
+        {
+          "account": "กระบะหลัก",
+          "campaign": "กระบะ Ai โคตรถูก",
+          "rule": "กฎใหม่",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=681.38 (>300) และ ROAS=0 (<2.80)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-09-08T08:22:57.300836+07:00",
       "dry_run": false,
       "summary": {
@@ -1678,17 +1730,6 @@
           "error": null
         }
       ]
-    },
-    {
-      "t": "2026-08-31T11:20:31.319522+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 0,
-        "budget_changes": 0,
-        "skipped_cooldown": 1,
-        "errors": 0
-      },
-      "events": []
     }
   ]
 }
