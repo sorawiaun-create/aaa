@@ -74,6 +74,10 @@
         <textarea data-k="ai.blockWords"></textarea>
         <div class="ttlh-row"><button class="ttlh-btn main" data-act="ai-toggle">เริ่ม AI ตอบคอมเมนต์</button></div>
         <div class="ttlh-row">
+          <input type="text" data-test-input placeholder="ลองพิมพ์คำถามลูกค้า" style="flex:1;width:auto">
+          <button class="ttlh-btn" data-act="ai-test">ทดสอบคำตอบ</button>
+        </div>
+        <div class="ttlh-row">
           <button class="ttlh-btn" data-pick="chatList">จิ้มเลือกกล่องแชท</button>
           <button class="ttlh-btn" data-pick="chatInput">จิ้มเลือกช่องพิมพ์</button>
         </div>
@@ -353,6 +357,9 @@
         save();
         break;
       }
+      case 'ai-test':
+        autoReply.test($('[data-test-input]').value);
+        break;
       case 'clear-log':
         logEl.innerHTML = '';
         break;

@@ -50,11 +50,18 @@ test('shouldReply: ข้ามข้อความระบบของ TikTok
   assert.equal(core.shouldReply({ user: 'A', text: 'กำลังดูสินค้ารายการนี้ หมายเลข14' }, {}, ai, 1).ok, false);
 });
 
-test('shouldReply: ข้ามคอมเมนต์ที่เคยเห็นแล้ว', () => {
+test('shouldReply: ข้ามคอมเมนต์ที่ตอบไปแล้ว', () => {
+  const ai = Object.assign(baseAi(), { enabled: true });
+  const comment = { user: 'nene', text: 'มีสีดำไหม' };
+  const state = { handled: { [core.commentId(comment)]: 1 } };
+  assert.equal(core.shouldReply(comment, state, ai, 2000).ok, false);
+});
+
+test('shouldReply: แค่ "อ่านเข้าคิวแล้ว" (seen) ต้องไม่บล็อกการตอบ', () => {
   const ai = Object.assign(baseAi(), { enabled: true });
   const comment = { user: 'nene', text: 'มีสีดำไหม' };
   const state = { seen: { [core.commentId(comment)]: 1 } };
-  assert.equal(core.shouldReply(comment, state, ai, 2000).ok, false);
+  assert.equal(core.shouldReply(comment, state, ai, 2000).ok, true);
 });
 
 test('shouldReply: คนเดิมต้องรอครบ cooldown', () => {

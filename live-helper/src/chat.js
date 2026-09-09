@@ -5,7 +5,8 @@
 
   function createAutoReply({ getSettings, log, onStatus, askAI }) {
     const state = {
-      seen: {},          // id คอมเมนต์ที่เห็นแล้ว -> เวลา
+      seen: {},          // id คอมเมนต์ที่อ่านเข้าคิวแล้ว -> เวลา (กันเข้าคิวซ้ำ)
+      handled: {},       // id คอมเมนต์ที่ตัดสินใจ/ตอบไปแล้ว -> เวลา
       lastByUser: {},    // ผู้ใช้ -> เวลาที่ตอบล่าสุด
       replyTimes: [],    // เวลาที่ตอบไป (ใช้จำกัดจำนวนต่อนาที)
       ownTexts: [],      // ข้อความที่เราส่งเอง กันตอบตัวเอง
@@ -44,15 +45,22 @@
       if (ids.length > 500) delete state.seen[ids[0]];
     }
 
-    function collect(node) {
-      const comment = dom.parseCommentNode(node);
-      if (!comment) return;
+    function collect(comment) {
       const id = core.commentId(comment);
       if (state.seen[id]) return;
       remember(comment);
       state.queue.push(comment);
       if (state.queue.length > 30) state.queue.shift(); // คอมเมนต์เก่าเกินไปก็ไม่ต้องตอบแล้ว
       status();
+    }
+
+    // อ่านได้เป็นคอมเมนต์แล้วหยุดที่ชั้นนั้น ถ้ายังอ่านไม่ได้ค่อยไล่ลงชั้นลูก
+    // (บางทีหน้าเว็บยัดมาทั้งก้อน บางทีมาทีละรายการ)
+    function collectTree(node, depth) {
+      if (!node || node.nodeType !== 1 || depth > 4) return;
+      const comment = dom.parseCommentNode(node);
+      if (comment) { collect(comment); return; }
+      for (const child of Array.from(node.children)) collectTree(child, depth + 1);
     }
 
     function send(text) {
@@ -73,6 +81,7 @@
       const settings = getSettings();
       const comment = state.queue.shift();
       const verdict = core.shouldReply(comment, state, settings.ai, Date.now());
+      state.handled[core.commentId(comment)] = Date.now();
       if (!verdict.ok) {
         state.skipped += 1;
         log('mute', 'ข้าม "' + comment.text + '" — ' + verdict.reason);
@@ -134,11 +143,7 @@
 
       state.observer = new MutationObserver((records) => {
         for (const record of records) {
-          record.addedNodes.forEach((node) => {
-            if (node.nodeType !== 1) return;
-            collect(node);
-            node.querySelectorAll && node.querySelectorAll(':scope > *').forEach(collect);
-          });
+          record.addedNodes.forEach((node) => collectTree(node, 0));
         }
       });
       state.observer.observe(list, { childList: true, subtree: true });
@@ -163,6 +168,22 @@
         status();
       },
       isRunning() { return !!state.observer; },
+      // ทดสอบว่าเส้นทาง AI ใช้ได้ไหม โดยไม่ต้องรอลูกค้าคอมเมนต์จริง
+      async test(text) {
+        const settings = getSettings();
+        const comment = { user: 'ทดสอบ', text: String(text || '').trim() };
+        if (!comment.text) { log('warn', 'พิมพ์ข้อความที่จะทดสอบก่อน'); return; }
+        log('info', 'ทดสอบ: ' + comment.text);
+        const system = core.buildSystemPrompt(settings.ai, {
+          scraped: dom.scrapeProducts(8),
+          knowledge: settings.products,
+          focusBasket: settings.pin.basket,
+        });
+        const result = await askAI({ system, user: core.buildUserPrompt(comment, []) });
+        if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
+        if (core.isSkip(result.text)) { log('mute', 'AI เลือกไม่ตอบข้อความนี้'); return; }
+        log('ok', 'AI ตอบว่า → ' + core.sanitizeReply(result.text, settings.ai.maxChars));
+      },
       state,
     };
   }

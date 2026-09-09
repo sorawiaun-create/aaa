@@ -153,7 +153,7 @@
 
   /**
    * ตัดสินว่าคอมเมนต์นี้ควรให้ AI ตอบไหม
-   * state = { seen: {id: ts}, lastByUser: {user: ts}, replyTimes: [ts], ownTexts: [text] }
+   * state = { handled: {id: ts}, lastByUser: {user: ts}, replyTimes: [ts], ownTexts: [text] }
    */
   function shouldReply(comment, state, ai, now) {
     const text = normText(comment && comment.text);
@@ -163,7 +163,8 @@
     if (!ai.enabled) return { ok: false, reason: 'ปิดระบบ AI อยู่' };
     if (!text) return { ok: false, reason: 'ข้อความว่าง' };
     if (text.length < ai.minCommentChars) return { ok: false, reason: 'ข้อความสั้นเกินไป' };
-    if ((st.seen || {})[commentId(comment)]) return { ok: false, reason: 'ตอบ/เห็นคอมเมนต์นี้แล้ว' };
+    // seen = อ่านเข้าคิวแล้ว (กันซ้ำในคิว) ส่วน handled = ตัดสินใจ/ตอบไปแล้ว
+    if ((st.handled || {})[commentId(comment)]) return { ok: false, reason: 'ตอบคอมเมนต์นี้ไปแล้ว' };
     if (containsAny(text, st.ownTexts || [])) return { ok: false, reason: 'ข้อความของเราเอง' };
     if (containsAny(text, ai.ignoreWords)) return { ok: false, reason: 'เป็นข้อความระบบ (เข้าร่วม/ซื้อ/แชร์)' };
     if (containsAny(text, ai.blockWords)) return { ok: false, reason: 'ติดคำต้องห้าม' };
