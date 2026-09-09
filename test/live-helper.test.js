@@ -98,6 +98,74 @@ test('shouldReply: ปิดระบบอยู่ = ไม่ตอบ', () =
   assert.equal(core.shouldReply({ user: 'a', text: 'ราคา' }, {}, baseAi(), 1).ok, false);
 });
 
+// --- ลูกค้าอ้างสินค้าด้วยเลขตะกร้า ---
+test('detectBasket: อ่านเลขจากคำเรียกแบบไทย', () => {
+  assert.equal(core.detectBasket('หมายเลข14 ราคาเท่าไหร่'), 14);
+  assert.equal(core.detectBasket('เบอร์ 3 มีสีอะไรบ้าง'), 3);
+  assert.equal(core.detectBasket('ตัวที่ 2 ค่ะ'), 2);
+  assert.equal(core.detectBasket('#40'), 40);
+});
+
+test('detectBasket: เลขโดด ๆ = ขอดูสินค้าเบอร์นั้น', () => {
+  assert.equal(core.detectBasket('14'), 14);
+  assert.equal(core.detectBasket(' 7 '), 7);
+});
+
+test('detectBasket: ประโยคที่มีเลขปนแต่ไม่ได้เรียกสินค้า = null', () => {
+  assert.equal(core.detectBasket('ตัวนี้ราคาเท่าไหร่'), null);
+  assert.equal(core.detectBasket('มี 2 สีไหม'), null);
+  assert.equal(core.detectBasket('ส่งกี่วันคะ'), null);
+  assert.equal(core.detectBasket('เบอร์ 999'), null);
+});
+
+test('resolveProduct: รวมข้อมูลที่ดึงมากับที่กรอกเอง โดยของที่กรอกเองมาก่อน', () => {
+  const ctx = {
+    scraped: [{ index: 2, name: 'ชื่อจากหน้าเว็บ', price: '฿139' }],
+    knowledge: [{ basket: 2, name: 'ชื่อที่กรอกเอง', price: '', info: 'มีสีดำ' }],
+  };
+  const found = core.resolveProduct(2, ctx);
+  assert.equal(found.name, 'ชื่อที่กรอกเอง');
+  assert.equal(found.price, '฿139');
+  assert.equal(found.info, 'มีสีดำ');
+  assert.equal(found.known, true);
+});
+
+test('resolveProduct: ตะกร้าที่ไม่มีข้อมูล = known false', () => {
+  const found = core.resolveProduct(40, { scraped: [], knowledge: [] });
+  assert.equal(found.known, false);
+  assert.equal(found.basket, 40);
+});
+
+test('buildUserPrompt: บอก AI ว่าลูกค้าอ้างถึงตะกร้าไหน', () => {
+  const withInfo = core.buildUserPrompt({ user: 'a', text: 'หมายเลข2 ราคา' }, [],
+    { basket: 2, name: 'เก้าอี้ยาว', price: '฿139', info: 'พับได้', known: true });
+  assert.ok(withInfo.includes('ตะกร้าที่ 2'));
+  assert.ok(withInfo.includes('เก้าอี้ยาว'));
+  assert.ok(withInfo.includes('พับได้'));
+
+  const unknown = core.buildUserPrompt({ user: 'a', text: '40' }, [],
+    { basket: 40, name: '', price: '', info: '', known: false });
+  assert.ok(unknown.includes('ห้ามเดา'));
+});
+
+test('buildSystemPrompt: มีกติกาสำหรับคำถามตะกร้าอื่น และชวนกลับตัวหลัก', () => {
+  const answer = core.buildSystemPrompt(baseAi(), { focusBasket: 1 });
+  assert.ok(answer.includes('ห้ามเดาราคาหรือสเปก'));
+  assert.ok(answer.includes('ชวนกลับมาที่สินค้าตะกร้าที่ 1'));
+
+  const brief = core.buildSystemPrompt(Object.assign(baseAi(), { otherBasketMode: 'brief', pullBackToMain: false }),
+    { focusBasket: 1 });
+  assert.ok(brief.includes('ห้ามลงรายละเอียดเอง'));
+  assert.ok(!brief.includes('ชวนกลับมาที่สินค้าตะกร้าที่ 1'));
+});
+
+test('normalizeSettings: โหมดคำถามตะกร้าอื่น ค่าเริ่มต้น answer และกันค่ามั่ว', () => {
+  assert.equal(core.normalizeSettings(null).ai.otherBasketMode, 'answer');
+  assert.equal(core.normalizeSettings({ ai: { otherBasketMode: 'xx' } }).ai.otherBasketMode, 'answer');
+  assert.equal(core.normalizeSettings({ ai: { otherBasketMode: 'skip' } }).ai.otherBasketMode, 'skip');
+  assert.equal(core.normalizeSettings(null).ai.pullBackToMain, true);
+});
+
 // --- คำตอบจาก AI ---
 test('sanitizeReply: ตัด markdown/เครื่องหมายคำพูด/ขึ้นบรรทัดใหม่', () => {
   assert.equal(core.sanitizeReply('**ตอบ:** "มีค่ะ ส่งฟรี"', 100), 'มีค่ะ ส่งฟรี');

@@ -61,6 +61,14 @@
         <div class="ttlh-status" data-ai-status>ยังไม่เริ่มทำงาน</div>
         <label class="ttlh-check"><input type="checkbox" data-k="ai.dryRun"> โหมดร่าง (ให้ AI คิดคำตอบแต่ยังไม่ส่ง)</label>
         <label class="ttlh-check"><input type="checkbox" data-k="ai.onlyQuestions"> ตอบเฉพาะคอมเมนต์ที่เป็นคำถาม</label>
+        <div class="ttlh-row"><label>ถ้าลูกค้าถามตะกร้าอื่น</label>
+          <select data-k="ai.otherBasketMode">
+            <option value="answer">ตอบเท่าที่มีข้อมูล</option>
+            <option value="brief">ตอบสั้น ให้รอแม่ค้าโชว์</option>
+            <option value="skip">ไม่ตอบ (แม่ค้าตอบเอง)</option>
+          </select>
+        </div>
+        <label class="ttlh-check"><input type="checkbox" data-k="ai.pullBackToMain"> ตอบเสร็จแล้วชวนกลับมาที่สินค้าหลัก</label>
         <div class="ttlh-row"><label>ตอบได้ไม่เกิน (ข้อความ/นาที)</label><input type="number" min="1" max="30" data-k="ai.replyPerMin"></div>
         <div class="ttlh-row"><label>คนเดิมเว้น (วินาที)</label><input type="number" min="0" max="3600" step="10" data-k="ai.userCooldownSec"></div>
         <div class="ttlh-row"><label>ความยาวคำตอบไม่เกิน</label><input type="number" min="20" max="100" data-k="ai.maxChars"></div>
@@ -243,7 +251,8 @@
       const el = $('[data-ai-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
       el.innerHTML = 'กำลังฟังแชท · คิว <b>' + state.queue + '</b> · ตอบแล้ว <b>' + state.replied
-        + '</b> · ข้าม <b>' + state.skipped + '</b>' + (settings.ai.dryRun ? ' · โหมดร่าง' : '');
+        + '</b> · ข้าม <b>' + state.skipped + '</b> · ถามตะกร้าอื่น <b>' + state.otherBasket + '</b>'
+        + (settings.ai.dryRun ? ' · โหมดร่าง' : '');
     },
   });
 

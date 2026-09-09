@@ -17,6 +17,7 @@
       timer: null,
       replied: 0,
       skipped: 0,
+      otherBasket: 0,   // จำนวนคำถามที่พูดถึงตะกร้าอื่น (แม่ค้าอาจอยากตอบเอง)
       lastWarnAt: 0,
     };
 
@@ -27,6 +28,7 @@
         queue: state.queue.length,
         replied: state.replied,
         skipped: state.skipped,
+        otherBasket: state.otherBasket,
       });
     }
 
@@ -93,12 +95,28 @@
       status();
       try {
         const focus = settings.pin.basket;
-        const system = core.buildSystemPrompt(settings.ai, {
+        const context = {
           scraped: dom.scrapeProducts(8),
           knowledge: settings.products,
           focusBasket: focus,
-        });
-        const user = core.buildUserPrompt(comment, state.recent);
+        };
+
+        // ลูกค้าอ้างสินค้าด้วยเลข เช่น "หมายเลข14" — เช็กว่าเป็นตัวหลักหรือตัวอื่น
+        const basket = core.detectBasket(comment.text);
+        const reference = basket ? core.resolveProduct(basket, context) : null;
+        if (reference && reference.basket !== focus) {
+          state.otherBasket += 1;
+          log('ask', 'ถามถึงตะกร้าที่ ' + reference.basket + ' — ' + comment.user + ': ' + comment.text
+            + (reference.known ? '' : ' (ยังไม่มีข้อมูลตัวนี้)'));
+          if (settings.ai.otherBasketMode === 'skip') {
+            state.skipped += 1;
+            log('mute', 'ไม่ตอบให้ ตามที่ตั้งไว้ว่าให้แม่ค้าตอบเอง');
+            return;
+          }
+        }
+
+        const system = core.buildSystemPrompt(settings.ai, context);
+        const user = core.buildUserPrompt(comment, state.recent, reference);
         const result = await askAI({ system, user });
         if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
 

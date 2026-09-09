@@ -35,6 +35,12 @@
       replyPerMin: 6,       // ตอบได้ไม่เกินกี่ข้อความต่อนาที
       userCooldownSec: 90,  // คนเดิมเว้นกี่วินาทีถึงตอบอีกครั้ง
       onlyQuestions: false, // ตอบเฉพาะคอมเมนต์ที่เป็นคำถาม
+      // ลูกค้าถามถึงสินค้าตะกร้าอื่นที่ไม่ใช่ตัวหลัก จะเอายังไง
+      //   answer = ตอบเท่าที่มีข้อมูล (ค่าเริ่มต้น)
+      //   brief  = ตอบสั้น ๆ ให้รอแม่ค้าโชว์ ไม่ลงรายละเอียด
+      //   skip   = ไม่ตอบ ปล่อยให้แม่ค้าตอบเอง (ยังขึ้นเตือนในบันทึก)
+      otherBasketMode: 'answer',
+      pullBackToMain: true, // ปิดท้ายด้วยการชวนกลับมาที่สินค้าหลัก
       ignoreWords: DEFAULT_IGNORE.slice(),
       blockWords: [],       // เจอคำเหล่านี้ = ไม่ตอบเด็ดขาด
       dryRun: true,         // เริ่มต้นให้ "ร่างอย่างเดียว ไม่ส่ง" กันพลาด
@@ -98,6 +104,8 @@
     ai.enabled = !!ai.enabled;
     ai.dryRun = !!ai.dryRun;
     ai.onlyQuestions = !!ai.onlyQuestions;
+    ai.pullBackToMain = !!ai.pullBackToMain;
+    if (!['answer', 'brief', 'skip'].includes(ai.otherBasketMode)) ai.otherBasketMode = 'answer';
     ai.model = String(ai.model || DEFAULT_SETTINGS.ai.model).trim() || DEFAULT_SETTINGS.ai.model;
     ai.apiBase = String(ai.apiBase || DEFAULT_SETTINGS.ai.apiBase).trim().replace(/\/+$/, '');
     ai.apiKey = String(ai.apiKey || '').trim();
@@ -134,6 +142,41 @@
       const needle = normText(w).toLowerCase();
       return needle && hay.includes(needle);
     });
+  }
+
+  // ลูกค้าไทยเรียกสินค้าด้วยเลข: "หมายเลข 14", "เบอร์ 3", "ตัวที่ 2", "#5"
+  // หรือพิมพ์เลขมาโดด ๆ ("14") ซึ่งในไลฟ์แปลว่าขอดูสินค้าเบอร์นั้น
+  const BASKET_PATTERNS = [
+    /(?:หมายเลข|เลขที่|เลข|เบอร์|ตะกร้าที่|ตะกร้า|ตัวที่|อันที่|ชิ้นที่|รายการที่|no\.?|#)\s*(\d{1,3})/i,
+    /^\s*(\d{1,3})\s*$/,
+  ];
+
+  function detectBasket(text) {
+    const hay = normText(text);
+    if (!hay) return null;
+    for (const re of BASKET_PATTERNS) {
+      const match = hay.match(re);
+      if (!match) continue;
+      const n = Number(match[1]);
+      if (n >= 1 && n <= 200) return n;
+    }
+    return null;
+  }
+
+  // รวมข้อมูลตะกร้าหนึ่ง ๆ จากที่ดึงมาจากหน้าเว็บ + ที่เจ้าของร้านกรอกไว้
+  function resolveProduct(basket, context) {
+    if (!basket) return null;
+    const ctx = context || {};
+    const scraped = (ctx.scraped || []).find((p) => p.index === basket) || null;
+    const known = (ctx.knowledge || []).find((p) => p.basket === basket) || null;
+    if (!scraped && !known) return { basket, name: '', price: '', info: '', known: false };
+    return {
+      basket,
+      name: (known && known.name) || (scraped && scraped.name) || '',
+      price: (known && known.price) || (scraped && scraped.price) || '',
+      info: (known && known.info) || '',
+      known: true,
+    };
   }
 
   const QUESTION_HINTS = [
@@ -227,7 +270,21 @@
       lines.push(ai.extraRules);
     }
     if (focus) {
-      lines.push('- ถ้าลูกค้าพูดว่า "ตัวนี้" "อันนี้" "ตัวที่ปักหมุด" ให้หมายถึงสินค้าตะกร้าที่ ' + focus);
+      lines.push('- ถ้าลูกค้าพูดว่า "ตัวนี้" "อันนี้" "ตัวที่ปักหมุด" ให้หมายถึงสินค้าตะกร้าที่ ' + focus
+        + ' ซึ่งเป็นสินค้าหลักที่กำลังขายอยู่');
+      lines.push('- ลูกค้ามักเรียกสินค้าด้วยเลข เช่น "หมายเลข 14" "เบอร์ 3" หรือพิมพ์เลขมาโดด ๆ'
+        + ' ให้เข้าใจว่าหมายถึงสินค้าตะกร้าลำดับนั้น');
+      if (ai.otherBasketMode === 'brief') {
+        lines.push('- ถ้าถามถึงตะกร้าอื่นที่ไม่ใช่ที่ ' + focus
+          + ' ให้ตอบสั้น ๆ ว่ากดดูในตะกร้าได้เลย เดี๋ยวแม่ค้าโชว์ให้ดู ห้ามลงรายละเอียดเอง');
+      } else {
+        lines.push('- ถ้าถามถึงตะกร้าอื่น ให้ตอบเท่าที่มีข้อมูลจริงในรายการด้านล่างเท่านั้น'
+          + ' ถ้าไม่มีข้อมูลให้บอกว่ากดดูในตะกร้าได้เลย เดี๋ยวแม่ค้าโชว์ให้ดู ห้ามเดาราคาหรือสเปก');
+      }
+      if (ai.pullBackToMain) {
+        lines.push('- เมื่อตอบเรื่องตะกร้าอื่นเสร็จ ถ้าความยาวยังพอ ให้ชวนกลับมาที่สินค้าตะกร้าที่ '
+          + focus + ' สั้น ๆ หนึ่งวรรค');
+      }
     }
 
     if (scraped.length) {
@@ -259,7 +316,7 @@
     return lines.join('\n');
   }
 
-  function buildUserPrompt(comment, recent) {
+  function buildUserPrompt(comment, recent, reference) {
     const lines = [];
     const history = (recent || []).slice(-6).filter(Boolean);
     if (history.length) {
@@ -269,6 +326,18 @@
     }
     lines.push('คอมเมนต์ที่ต้องตอบ:');
     lines.push(normText(comment && comment.user) + ': ' + normText(comment && comment.text));
+
+    if (reference && reference.basket) {
+      lines.push('');
+      lines.push('[ระบบตรวจพบ] ลูกค้าน่าจะถามถึงสินค้าตะกร้าที่ ' + reference.basket);
+      if (reference.known && (reference.name || reference.price)) {
+        lines.push('ข้อมูลที่มี: ' + (normText(reference.name) || '(ไม่มีชื่อ)')
+          + (reference.price ? ' ราคา ' + reference.price : ''));
+        if (reference.info) lines.push('รายละเอียด: ' + normText(reference.info));
+      } else {
+        lines.push('ยังไม่มีข้อมูลของตะกร้านี้ — ห้ามเดา ให้บอกลูกค้าว่ากดดูในตะกร้าได้เลย เดี๋ยวแม่ค้าโชว์ให้ดู');
+      }
+    }
     return lines.join('\n');
   }
 
@@ -320,7 +389,7 @@
   const api = {
     DEFAULT_SETTINGS, DEFAULT_IGNORE,
     clampInt, toWordList, normalizeSettings, normalizeProducts, normText,
-    commentId, containsAny, looksLikeQuestion, pruneTimestamps, shouldReply,
+    commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,
   };
