@@ -14,6 +14,7 @@ const KEYS = {
   lastRun: 0,
   actedIds: {}, // campaignId -> ts (avoid repeat actions within a window)
   createdTs: {}, // channelId -> ts of last auto-create (rate-limit new campaigns)
+  createRoiState: {}, // channelId -> {roi, date}: escalating create-ROI per day
   scaledTs: {}, // campaignId -> ts of last budget scale-up
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
   history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
@@ -806,6 +807,7 @@ async function runRules() {
   }
   const acted = s.actedIds || {};
   const createdTs = s.createdTs || {};
+  const createRoiState = s.createRoiState || {};
   const scaledTs = s.scaledTs || {};
   const roiTs = s.roiTs || {};
   const now = Date.now();
@@ -904,13 +906,33 @@ async function runRules() {
           actions.push({ ok: true, name: "↳ ข้ามการสร้างใหม่", reason: "เพิ่งสร้างไปเมื่อครู่ (กันสร้างรัว)" });
         } else {
           await sleep(700); // let the pause/reduce settle before creating (avoids lock/mutex clash)
-          const cr = await execCreate(c.id, ch.id, st.actions.createRoi, st.actions.createBudget);
-          if (cr && cr.ok) createdTs[ch.id] = now;
+          // Escalating create ROI: each replacement can step the ROI target up
+          // (to test a higher ROI when campaigns keep failing). Starts at
+          // createRoi, +createRoiStep per recreation, capped at createRoiMax,
+          // reset daily. Step 0 = fixed createRoi (old behaviour).
+          const baseRoi = Number(st.actions.createRoi) || 0;
+          const step = Number(st.actions.createRoiStep) || 0;
+          const maxRoi = Number(st.actions.createRoiMax) || 0;
+          const today = bangkokDateStr();
+          let useRoi = baseRoi;
+          if (step > 0) {
+            const prev = createRoiState[ch.id];
+            useRoi = prev && prev.date === today && typeof prev.roi === "number" ? prev.roi : baseRoi;
+          }
+          const cr = await execCreate(c.id, ch.id, useRoi, st.actions.createBudget);
+          if (cr && cr.ok) {
+            createdTs[ch.id] = now;
+            if (step > 0) {
+              let next = Math.round((useRoi + step) * 100) / 100;
+              if (maxRoi > 0) next = Math.min(next, maxRoi);
+              createRoiState[ch.id] = { roi: next, date: today };
+            }
+          }
           actions.push({
             ok: cr && cr.ok,
-            name: `↳ สร้างใหม่ (ROI ${st.actions.createRoi}, งบ ${st.actions.createBudget}฿)`,
+            name: `↳ สร้างใหม่ (ROI ${useRoi}, งบ ${st.actions.createBudget}฿)`,
             reason: cr && cr.ok
-              ? `สำเร็จ${cr.tries > 1 ? ` (ลอง ${cr.tries} ครั้ง)` : ""}`
+              ? `สำเร็จ${step > 0 ? ` · ครั้งหน้า ROI ${Math.min(Math.round((useRoi + step) * 100) / 100, maxRoi || Infinity)}` : ""}${cr.tries > 1 ? ` (ลอง ${cr.tries} ครั้ง)` : ""}`
               : `ไม่สำเร็จ [code ${(cr && cr.code) ?? "?"}]: ${(cr && (cr.msg || cr.error)) || "?"}`,
           });
         }
@@ -1098,7 +1120,7 @@ async function runRules() {
   }
 
   await chrome.storage.local.set({
-    actedIds: acted, createdTs, scaledTs, roiTs, history, channelMemory,
+    actedIds: acted, createdTs, createRoiState, scaledTs, roiTs, history, channelMemory,
     aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
     pauseDiag: nextDiag, lastScan: scan, lastScanTs: now,
   });

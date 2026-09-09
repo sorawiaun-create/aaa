@@ -29,6 +29,8 @@ function defaultSettings() {
       reduceBudgetBeforePause: true,
       createNew: false,
       createRoi: 1,
+      createRoiStep: 0, // step ROI up each recreation (0 = fixed); tests higher ROI when campaigns fail
+      createRoiMax: 5, // cap for the escalating create ROI
       createBudget: 300,
       telegram: false,
     },
@@ -877,9 +879,12 @@ function renderSettings() {
     <div class="card">
       <div class="row"><span><b>เปิดใช้งาน</b></span>
         <label class="switch"><input type="checkbox" id="aCreate" ${s.actions.createNew ? "checked" : ""}><span class="slider"></span></label></div>
-      <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
+      <div class="row" style="margin-top:8px"><label>ROI เป้าหมาย (เริ่มต้น)</label><input type="number" step="0.1" id="cRoi" value="${s.actions.createRoi}"></div>
+      <div class="row" style="margin-top:6px"><label>เพิ่ม ROI ทุกครั้งที่สร้างใหม่ (+)</label><input type="number" step="0.1" id="cRoiStep" value="${s.actions.createRoiStep ?? 0}"></div>
+      <div class="row" style="margin-top:6px"><label>ROI สูงสุด (เพดาน)</label><input type="number" step="0.1" id="cRoiMax" value="${s.actions.createRoiMax ?? 5}"></div>
       <div class="row" style="margin-top:6px"><label>งบเริ่มต้น (฿)</label><input type="number" id="cBudget" value="${s.actions.createBudget}"></div>
       <div class="muted" style="margin-top:6px">เมื่อปิดแคมเปญเดิม จะสร้างตัวใหม่ด้วยค่านี้ (ROI + งบ)</div>
+      <div class="muted" style="margin-top:6px"><b>ไล่เทส ROI:</b> ถ้าตั้ง "เพิ่ม ROI" > 0 → ทุกครั้งที่สร้างใหม่จะดัน ROI ขึ้นทีละเท่านี้ (เช่น 0.5 → 0.6 → 0.7…) จนถึงเพดาน เพื่อหาค่า ROI ที่ทำให้แคมรอด · รีเซตกลับค่าเริ่มต้นทุกวัน · ใส่ 0 = ใช้ค่าคงที่</div>
       <div class="muted" style="margin-top:6px">โคลนจากแคมเปญเดิมของช่องนี้อัตโนมัติ (ไม่ต้องสร้างมือก่อน)</div>
       <button class="ghost" id="testCreate" style="width:100%;margin-top:8px">🧪 ทดสอบสร้าง 1 ตัวเลย (ใช้ค่าด้านบน)</button>
       <div class="msg" id="createMsg"></div>
@@ -998,6 +1003,8 @@ function renderSettings() {
         reduceBudgetBeforePause: $("aReduce").checked,
         createNew: $("aCreate").checked,
         createRoi: Number($("cRoi").value),
+        createRoiStep: Number($("cRoiStep").value) || 0,
+        createRoiMax: Number($("cRoiMax").value) || 0,
         createBudget: Number($("cBudget").value),
         telegram: $("aTg").checked,
       },
