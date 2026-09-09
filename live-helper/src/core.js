@@ -14,7 +14,12 @@
       enabled: false,
       basket: 1,            // ปักหมุด "ตะกร้าที่เท่าไหร่"
       intervalSec: 30,      // ทุกกี่วินาที (30 / 60 / ตั้งเอง)
-      extendWhenPinned: true, // ถ้าปักอยู่แล้วให้กด "+30 วินาที" ต่อเวลาแทน
+      // ถ้าถึงรอบแล้วสินค้ายังปักหมุดค้างอยู่ จะทำอะไรต่อ
+      //   repin  = ยกเลิกหมุดแล้วปักใหม่ (การ์ดเด้งขึ้นจอผู้ชมอีกรอบ) ← ค่าเริ่มต้น
+      //   extend = กด "+30 วินาที" ต่อเวลา (หมุดค้างไว้เฉย ๆ ไม่เด้งใหม่)
+      //   wait   = ปล่อยไว้จนหมุดหมดอายุเอง
+      whenPinned: 'repin',
+      repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
     ai: {
@@ -34,8 +39,32 @@
       blockWords: [],       // เจอคำเหล่านี้ = ไม่ตอบเด็ดขาด
       dryRun: true,         // เริ่มต้นให้ "ร่างอย่างเดียว ไม่ส่ง" กันพลาด
     },
+    // คลังข้อมูลสินค้าที่เจ้าของร้านกรอกเอง — AI ใช้ตอบลูกค้า
+    // [{ basket, name, price, info }]
+    products: [],
     selectors: { pinButton: '', chatList: '', chatInput: '', sendButton: '' },
   };
+
+  // คลังข้อมูลสินค้า: เรียงตามเลขตะกร้า ตะกร้าละรายการเดียว
+  function normalizeProducts(raw) {
+    const list = Array.isArray(raw) ? raw : [];
+    const seen = {};
+    const out = [];
+    for (const item of list) {
+      if (!item || typeof item !== 'object') continue;
+      const basket = clampInt(item.basket, 1, 200, 0);
+      if (!basket || seen[basket]) continue;
+      seen[basket] = true;
+      out.push({
+        basket,
+        name: String(item.name || '').trim().slice(0, 120),
+        price: String(item.price || '').trim().slice(0, 40),
+        info: String(item.info || '').trim().slice(0, 1500),
+      });
+      if (out.length >= 30) break;
+    }
+    return out.sort((a, b) => a.basket - b.basket);
+  }
 
   function clampInt(value, min, max, fallback) {
     const n = Math.round(Number(value));
@@ -60,7 +89,8 @@
 
     pin.enabled = !!pin.enabled;
     pin.dryRun = !!pin.dryRun;
-    pin.extendWhenPinned = !!pin.extendWhenPinned;
+    if (!['repin', 'extend', 'wait'].includes(pin.whenPinned)) pin.whenPinned = 'repin';
+    pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
     pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
     // ต่ำกว่า 15 วิ เสี่ยงโดนระบบมองว่าสแปม จึงล็อกขั้นต่ำไว้
     pin.intervalSec = clampInt(pin.intervalSec, 15, 3600, DEFAULT_SETTINGS.pin.intervalSec);
@@ -83,7 +113,7 @@
 
     for (const key of Object.keys(selectors)) selectors[key] = String(selectors[key] || '').trim();
 
-    return { pin, ai, selectors };
+    return { pin, ai, products: normalizeProducts(src.products), selectors };
   }
 
   // ---------- คอมเมนต์ ----------
@@ -172,7 +202,11 @@
     return text;
   }
 
-  function buildSystemPrompt(ai, products) {
+  function buildSystemPrompt(ai, context) {
+    const ctx = context || {};
+    const scraped = Array.isArray(ctx.scraped) ? ctx.scraped : [];
+    const knowledge = Array.isArray(ctx.knowledge) ? ctx.knowledge : [];
+    const focus = ctx.focusBasket || null;
     const lines = [];
     lines.push('คุณคือผู้ช่วยตอบคอมเมนต์ในไลฟ์ขายของบน TikTok Shop แทนแม่ค้า');
     if (ai.shopName) lines.push('ชื่อร้าน: ' + ai.shopName);
@@ -191,14 +225,35 @@
       lines.push('กติกาเพิ่มเติมจากเจ้าของร้าน:');
       lines.push(ai.extraRules);
     }
-    const list = (products || []).filter(Boolean).slice(0, 20);
-    if (list.length) {
+    if (focus) {
+      lines.push('- ถ้าลูกค้าพูดว่า "ตัวนี้" "อันนี้" "ตัวที่ปักหมุด" ให้หมายถึงสินค้าตะกร้าที่ ' + focus);
+    }
+
+    if (scraped.length) {
       lines.push('');
-      lines.push('สินค้าในไลฟ์ตอนนี้:');
-      list.forEach((p, i) => {
+      lines.push('รายการสินค้าที่เห็นในไลฟ์ตอนนี้ (ชื่อ/ราคาจากหน้าคอนโซล):');
+      scraped.slice(0, 20).forEach((p) => {
         const price = p.price ? ' — ' + p.price : '';
-        lines.push((i + 1) + '. ' + normText(p.name) + price);
+        const mark = focus && p.index === focus ? '  ← กำลังขายตัวนี้' : '';
+        lines.push('ตะกร้า ' + (p.index || '?') + '. ' + normText(p.name) + price + mark);
       });
+    }
+
+    if (knowledge.length) {
+      lines.push('');
+      lines.push('ข้อมูลสินค้าละเอียดที่เจ้าของร้านกรอกไว้ (ใช้ตอบลูกค้าได้เลย):');
+      knowledge.slice(0, 30).forEach((p) => {
+        const head = 'ตะกร้า ' + p.basket + ': ' + normText(p.name || '(ไม่ระบุชื่อ)')
+          + (p.price ? ' — ' + p.price : '')
+          + (focus && p.basket === focus ? '  ← กำลังขายตัวนี้' : '');
+        lines.push(head);
+        if (p.info) lines.push(normText(p.info));
+      });
+    }
+
+    if (!scraped.length && !knowledge.length) {
+      lines.push('');
+      lines.push('(ยังไม่มีข้อมูลสินค้า — ถ้าลูกค้าถามรายละเอียดสินค้า ให้บอกว่าเดี๋ยวแม่ค้าตอบในไลฟ์)');
     }
     return lines.join('\n');
   }
@@ -246,20 +301,24 @@
   // ---------- ตัวจับเวลาปักหมุด ----------
   /**
    * pinState = { lastActionAt: number|null, pinned: boolean }
-   * คืนค่า 'pin' | 'extend' | 'wait' | 'off'
+   * คืนค่า 'pin' | 'repin' | 'extend' | 'wait' | 'off'
    */
   function nextPinAction(pinState, pin, now) {
     if (!pin.enabled) return 'off';
     const st = pinState || {};
     const last = st.lastActionAt;
     if (last != null && now - last < pin.intervalSec * 1000) return 'wait';
-    if (st.pinned) return pin.extendWhenPinned ? 'extend' : 'wait';
+    if (st.pinned) {
+      if (pin.whenPinned === 'repin') return 'repin';
+      if (pin.whenPinned === 'extend') return 'extend';
+      return 'wait';
+    }
     return 'pin';
   }
 
   const api = {
     DEFAULT_SETTINGS, DEFAULT_IGNORE,
-    clampInt, toWordList, normalizeSettings, normText,
+    clampInt, toWordList, normalizeSettings, normalizeProducts, normText,
     commentId, containsAny, looksLikeQuestion, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,

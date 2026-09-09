@@ -123,12 +123,50 @@ test('extractText: รวมเฉพาะบล็อกข้อความ'
   assert.equal(core.extractText(null), '');
 });
 
-test('buildSystemPrompt: ใส่ลิมิตตัวอักษรและรายการสินค้า', () => {
+test('buildSystemPrompt: ใส่ลิมิตตัวอักษรและรายการสินค้าที่เห็นในไลฟ์', () => {
   const ai = Object.assign(baseAi(), { shopName: 'ร้านทดสอบ', maxChars: 80 });
-  const prompt = core.buildSystemPrompt(ai, [{ name: 'เก้าอี้แคมป์ปิ้ง', price: '฿245.55' }]);
+  const prompt = core.buildSystemPrompt(ai, {
+    scraped: [{ index: 1, name: 'เก้าอี้แคมป์ปิ้ง', price: '฿245.55' }],
+  });
   assert.ok(prompt.includes('ไม่เกิน 80 ตัวอักษร'));
   assert.ok(prompt.includes('ร้านทดสอบ'));
-  assert.ok(prompt.includes('เก้าอี้แคมป์ปิ้ง — ฿245.55'));
+  assert.ok(prompt.includes('ตะกร้า 1. เก้าอี้แคมป์ปิ้ง — ฿245.55'));
+});
+
+test('buildSystemPrompt: ใส่คลังข้อมูลสินค้าและชี้ว่าตัวไหนกำลังขาย', () => {
+  const prompt = core.buildSystemPrompt(baseAi(), {
+    scraped: [{ index: 1, name: 'เก้าอี้', price: '฿245' }, { index: 2, name: 'เก้าอี้ยาว', price: '฿139' }],
+    knowledge: [{ basket: 1, name: 'เก้าอี้แคมป์ปิ้ง', price: '฿245', info: 'มีสีดำ แดง รับน้ำหนัก 120 กก. ส่งฟรี' }],
+    focusBasket: 1,
+  });
+  assert.ok(prompt.includes('รับน้ำหนัก 120 กก.'));
+  assert.ok(prompt.includes('"ตัวนี้"'));
+  assert.ok(prompt.includes('← กำลังขายตัวนี้'));
+});
+
+test('buildSystemPrompt: ไม่มีข้อมูลสินค้า = สั่งไม่ให้เดา', () => {
+  const prompt = core.buildSystemPrompt(baseAi(), {});
+  assert.ok(prompt.includes('ยังไม่มีข้อมูลสินค้า'));
+});
+
+// --- คลังข้อมูลสินค้า ---
+test('normalizeProducts: เรียงตามตะกร้า ตัดซ้ำ และตัดรายการที่ไม่มีเลขตะกร้า', () => {
+  const list = core.normalizeSettings({
+    products: [
+      { basket: 3, name: 'ค', info: 'x' },
+      { basket: 1, name: 'ก' },
+      { basket: 1, name: 'ซ้ำ' },
+      { name: 'ไม่มีตะกร้า' },
+    ],
+  }).products;
+  assert.equal(list.length, 2);
+  assert.equal(list[0].basket, 1);
+  assert.equal(list[0].name, 'ก');
+  assert.equal(list[1].basket, 3);
+});
+
+test('normalizeProducts: ค่าเริ่มต้นเป็นลิสต์ว่าง', () => {
+  assert.equal(core.normalizeSettings(null).products.length, 0);
 });
 
 // --- จังหวะปักหมุด ---
@@ -137,19 +175,28 @@ test('nextPinAction: ปิดอยู่ = off', () => {
 });
 
 test('nextPinAction: ยังไม่ครบรอบ = wait', () => {
-  const pin = { enabled: true, intervalSec: 30, extendWhenPinned: true };
+  const pin = { enabled: true, intervalSec: 30, whenPinned: 'repin' };
   assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 10000), 'wait');
 });
 
 test('nextPinAction: ครบรอบแล้วยังไม่ปัก = pin', () => {
-  const pin = { enabled: true, intervalSec: 30, extendWhenPinned: true };
+  const pin = { enabled: true, intervalSec: 30, whenPinned: 'repin' };
   assert.equal(core.nextPinAction({ lastActionAt: null, pinned: false }, pin, 0), 'pin');
   assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 40000), 'pin');
 });
 
-test('nextPinAction: ครบรอบและปักอยู่แล้ว = ต่อเวลา (หรือรอถ้าปิดตัวเลือกนี้)', () => {
+test('nextPinAction: ครบรอบและปักค้างอยู่ = ยกเลิกแล้วปักใหม่ (ค่าเริ่มต้น)', () => {
   const now = 100000;
   const state = { lastActionAt: now - 40000, pinned: true };
-  assert.equal(core.nextPinAction(state, { enabled: true, intervalSec: 30, extendWhenPinned: true }, now), 'extend');
-  assert.equal(core.nextPinAction(state, { enabled: true, intervalSec: 30, extendWhenPinned: false }, now), 'wait');
+  const at = (mode) => core.nextPinAction(state, { enabled: true, intervalSec: 30, whenPinned: mode }, now);
+  assert.equal(at('repin'), 'repin');
+  assert.equal(at('extend'), 'extend');
+  assert.equal(at('wait'), 'wait');
+});
+
+test('normalizeSettings: โหมดเมื่อปักค้างอยู่ ค่าเริ่มต้นคือ repin และกันค่ามั่ว', () => {
+  assert.equal(core.normalizeSettings(null).pin.whenPinned, 'repin');
+  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'มั่ว' } }).pin.whenPinned, 'repin');
+  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'extend' } }).pin.whenPinned, 'extend');
+  assert.equal(core.normalizeSettings({ pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
 });

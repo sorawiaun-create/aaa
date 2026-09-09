@@ -27,6 +27,7 @@
     <div class="ttlh-tabs">
       <button data-tab="pin" class="on">ปักหมุด</button>
       <button data-tab="ai">AI ตอบแชท</button>
+      <button data-tab="prod">สินค้า</button>
       <button data-tab="cfg">ตั้งค่า</button>
       <button data-tab="log">บันทึก</button>
     </div>
@@ -40,7 +41,13 @@
           <button class="ttlh-btn" data-preset="60">1 นาที</button>
           <button class="ttlh-btn" data-preset="120">2 นาที</button>
         </div>
-        <label class="ttlh-check"><input type="checkbox" data-k="pin.extendWhenPinned"> ถ้าปักอยู่แล้วให้กดต่อเวลาแทน</label>
+        <div class="ttlh-row"><label>ถ้าถึงรอบแล้วยังปักค้างอยู่</label>
+          <select data-k="pin.whenPinned">
+            <option value="repin">ยกเลิกแล้วปักใหม่ (เด้งขึ้นจอผู้ชม)</option>
+            <option value="extend">กดต่อเวลา (ไม่เด้งใหม่)</option>
+            <option value="wait">รอจนหมุดหมดอายุเอง</option>
+          </select>
+        </div>
         <label class="ttlh-check"><input type="checkbox" data-k="pin.dryRun"> โหมดซ้อม (ไม่คลิกจริง)</label>
         <div class="ttlh-row">
           <button class="ttlh-btn main" data-act="pin-toggle">เริ่มปักหมุดอัตโนมัติ</button>
@@ -70,6 +77,16 @@
           <button class="ttlh-btn" data-pick="chatList">จิ้มเลือกกล่องแชท</button>
           <button class="ttlh-btn" data-pick="chatInput">จิ้มเลือกช่องพิมพ์</button>
         </div>
+      </div>
+
+      <div class="ttlh-tab" data-pane="prod">
+        <p class="ttlh-note">ข้อมูลตรงนี้คือสิ่งที่ AI ใช้ตอบลูกค้า — หน้าคอนโซลมีแค่ชื่อกับราคา
+          รายละเอียด (สี ไซส์ ค่าส่ง ของแถม การรับประกัน) ต้องกรอกเองครั้งเดียว</p>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-act="prod-scrape">ดึงชื่อ+ราคาจากหน้านี้</button>
+          <button class="ttlh-btn" data-act="prod-add">＋ เพิ่มเอง</button>
+        </div>
+        <div data-products></div>
       </div>
 
       <div class="ttlh-tab" data-pane="cfg">
@@ -149,6 +166,46 @@
       }
     });
   }
+
+  // ---------- คลังข้อมูลสินค้า ----------
+  const productsEl = $('[data-products]');
+
+  function renderProducts() {
+    if (!settings.products.length) {
+      productsEl.innerHTML = '<p class="ttlh-note">ยังไม่มีข้อมูลสินค้า — กด "ดึงชื่อ+ราคาจากหน้านี้" เพื่อเริ่ม</p>';
+      return;
+    }
+    productsEl.innerHTML = settings.products.map((p, i) => `
+      <div class="ttlh-prod" data-idx="${i}">
+        <div class="ttlh-row">
+          <label>ตะกร้าที่</label>
+          <input type="number" min="1" max="200" data-f="basket" value="${p.basket}" style="width:64px">
+          <button class="ttlh-btn" data-act="prod-del" title="ลบ">✕</button>
+        </div>
+        <div class="ttlh-row"><label>ชื่อ</label><input type="text" data-f="name" value="${escapeAttr(p.name)}"></div>
+        <div class="ttlh-row"><label>ราคา</label><input type="text" data-f="price" value="${escapeAttr(p.price)}"></div>
+        <textarea data-f="info" placeholder="สี/ไซส์ที่มี, ค่าส่ง, ของแถม, รับประกัน, วัสดุ, ข้อควรรู้">${escapeText(p.info)}</textarea>
+      </div>`).join('');
+  }
+
+  function escapeAttr(value) {
+    return String(value == null ? '' : value).replace(/[&"<>]/g, (ch) =>
+      ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' }[ch]));
+  }
+  function escapeText(value) {
+    return String(value == null ? '' : value).replace(/[&<>]/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  }
+
+  productsEl.addEventListener('input', (ev) => {
+    const field = ev.target.dataset.f;
+    const row = ev.target.closest('[data-idx]');
+    if (!field || !row) return;
+    const item = settings.products[Number(row.dataset.idx)];
+    if (!item) return;
+    item[field] = field === 'basket' ? Number(ev.target.value) : ev.target.value;
+    save();
+  });
 
   // ---------- เครื่องทำงาน ----------
   function askAI(payload) {
@@ -260,9 +317,42 @@
       case 'reset':
         settings = core.normalizeSettings(null);
         fillFields();
+        renderProducts();
         save();
         log('info', 'ล้างค่าทั้งหมดกลับเป็นค่าเริ่มต้นแล้ว');
         break;
+      case 'prod-scrape': {
+        const found = dom.scrapeProducts(20);
+        if (!found.length) { log('warn', 'ยังหาการ์ดสินค้าในหน้านี้ไม่เจอ — เลื่อนรายการสินค้าให้เห็นก่อน'); break; }
+        for (const item of found) {
+          const existing = settings.products.find((p) => p.basket === item.index);
+          if (existing) { existing.name = item.name; existing.price = item.price; }
+          else settings.products.push({ basket: item.index, name: item.name, price: item.price, info: '' });
+        }
+        settings = core.normalizeSettings(settings);
+        renderProducts();
+        save();
+        log('ok', 'ดึงข้อมูลสินค้ามา ' + found.length + ' รายการ (รายละเอียดต้องกรอกเองเพิ่ม)');
+        break;
+      }
+      case 'prod-add': {
+        const used = settings.products.map((p) => p.basket);
+        let next = 1;
+        while (used.includes(next)) next += 1;
+        settings.products.push({ basket: next, name: '', price: '', info: '' });
+        settings = core.normalizeSettings(settings);
+        renderProducts();
+        save();
+        break;
+      }
+      case 'prod-del': {
+        const row = target.closest('[data-idx]');
+        if (!row) break;
+        settings.products.splice(Number(row.dataset.idx), 1);
+        renderProducts();
+        save();
+        break;
+      }
       case 'clear-log':
         logEl.innerHTML = '';
         break;
@@ -339,6 +429,7 @@
     settings.ai.enabled = false;
     fillFields();
     bindFields();
+    renderProducts();
 
     // หน้าคอนโซลเป็น SPA กว่าจะวาดเสร็จอาจกินเวลา จึงตรวจซ้ำได้ถึง 30 วินาที
     let tries = 0;

@@ -29,6 +29,38 @@
       const action = core.nextPinAction(state, pin, Date.now());
       if (action === 'off' || action === 'wait') { status(); return; }
 
+      // ยกเลิกหมุดแล้วปักใหม่ เพื่อให้การ์ดสินค้าเด้งขึ้นจอผู้ชมอีกรอบ
+      if (action === 'repin') {
+        const unpin = dom.unpinButton(pin.basket);
+        if (!unpin) {
+          warn('หาปุ่ม "ยกเลิกการปักหมุด" ของตะกร้าที่ ' + pin.basket + ' ไม่เจอ');
+          status();
+          return;
+        }
+        state.lastActionAt = Date.now();
+        if (pin.dryRun) {
+          log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักสินค้าที่ ' + pin.basket + ' ใหม่');
+          status();
+          return;
+        }
+        dom.realClick(unpin);
+        // รอให้หน้าเว็บอัปเดตปุ่มกลับเป็น "ปักหมุด" ก่อนค่อยกดซ้ำ
+        setTimeout(() => {
+          const again = dom.pinButton(pin.basket, settings.selectors.pinButton);
+          if (!again) {
+            warn('ยกเลิกหมุดแล้วแต่หาปุ่มปักหมุดใหม่ไม่เจอ — รอบหน้าจะลองอีกครั้ง');
+            state.lastActionAt = null; // ให้ลองใหม่ทันทีในรอบถัดไป
+            return;
+          }
+          dom.realClick(again);
+          state.lastActionAt = Date.now();
+          log('ok', 'ปักหมุดสินค้าที่ ' + pin.basket + ' ใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ)');
+          status();
+        }, pin.repinGapMs);
+        status();
+        return;
+      }
+
       if (action === 'extend') {
         const btn = dom.extendButton();
         if (!btn) { status(); return; } // ปุ่มต่อเวลาโผล่เฉพาะตอนหมุดใกล้หมด รอรอบหน้า

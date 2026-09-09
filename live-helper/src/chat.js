@@ -83,8 +83,12 @@
       state.busy = true;
       status();
       try {
-        const products = dom.scrapeProducts(8);
-        const system = core.buildSystemPrompt(settings.ai, products);
+        const focus = settings.pin.basket;
+        const system = core.buildSystemPrompt(settings.ai, {
+          scraped: dom.scrapeProducts(8),
+          knowledge: settings.products,
+          focusBasket: focus,
+        });
         const user = core.buildUserPrompt(comment, state.recent);
         const result = await askAI({ system, user });
         if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
