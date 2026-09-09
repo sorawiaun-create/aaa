@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ผู้ช่วยไลฟ์</title>
+<style>
+  body { width: 260px; margin: 0; padding: 14px;
+    font: 13px/1.55 -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif; color: #161823; }
+  h1 { font-size: 14px; margin: 0 0 10px; }
+  #status { background: #f6f6f7; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; font-size: 12px; }
+  #status.ok { background: #eaf7ee; color: #0b6b31; }
+  #status.warn { background: #fff5e5; color: #8a5300; }
+  button { width: 100%; padding: 9px 12px; margin-bottom: 8px; border-radius: 8px; cursor: pointer;
+    border: 1px solid #dcdce0; background: #fff; font: inherit; }
+  button.main { background: #fe2c55; border-color: #fe2c55; color: #fff; font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  p { color: #8a8b91; font-size: 11.5px; margin: 10px 0 0; }
+</style>
+<h1>ผู้ช่วยไลฟ์ TikTok</h1>
+<div id="status">กำลังตรวจสอบหน้าเว็บ...</div>
+<button id="toggle" class="main" disabled>เปิดแผงควบคุมในหน้านี้</button>
+<button id="open">เปิดคอนโซล LIVE ของ TikTok</button>
+<p>แผงควบคุมจะลอยอยู่มุมขวาล่างของหน้าคอนโซล LIVE — ลากย้ายและกด – เพื่อย่อได้</p>
+<script src="popup.js"></script>

@@ -292,6 +292,45 @@
     document.addEventListener('mouseup', () => { dragging = false; });
   })();
 
+  // ---------- เปิด/ซ่อนแผง ----------
+  let mounted = false;
+
+  function mount() {
+    if (mounted || !document.body) return;
+    document.body.appendChild(panel);
+    mounted = true;
+  }
+
+  function unmount() {
+    if (!mounted) return;
+    panel.remove();
+    mounted = false;
+  }
+
+  // สคริปต์ถูกโหลดในทุกหน้าของ tiktok.com แต่แผงจะโผล่เองเฉพาะหน้าคอนโซล LIVE
+  // (หน้าอื่นเรียกเปิดเองได้จากไอคอนส่วนขยายบนแถบเครื่องมือ)
+  function looksLikeLiveConsole() {
+    if (/livecenter\.tiktok\.com|live_monitor|live_manage|livemanager/i.test(location.href)) return true;
+    const text = (document.body && document.body.innerText) || '';
+    if (/คอนโซล LIVE|ตัวจัดการ LIVE|LIVE Manager|Live Console/i.test(text)) return true;
+    return dom.byLabel(dom.PIN_LABEL, document).length > 0;
+  }
+
+  // ให้หน้าต่างป๊อปอัปของไอคอนส่วนขยายสั่งเปิด/ซ่อนแผงได้
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || typeof message.type !== 'string') return false;
+    if (message.type === 'ttlh:ping') {
+      sendResponse({ ok: true, mounted, liveConsole: looksLikeLiveConsole() });
+      return false;
+    }
+    if (message.type === 'ttlh:toggle') {
+      if (mounted) unmount(); else mount();
+      sendResponse({ ok: true, mounted });
+      return false;
+    }
+    return false;
+  });
+
   // ---------- เริ่มระบบ ----------
   chrome.storage.local.get(SETTINGS_KEY, (stored) => {
     settings = core.normalizeSettings(stored && stored[SETTINGS_KEY]);
@@ -300,7 +339,17 @@
     settings.ai.enabled = false;
     fillFields();
     bindFields();
-    document.body.appendChild(panel);
-    log('info', 'พร้อมใช้งาน — เปิดคอนโซล LIVE ค้างไว้ แล้วกดเริ่มได้เลย');
+
+    // หน้าคอนโซลเป็น SPA กว่าจะวาดเสร็จอาจกินเวลา จึงตรวจซ้ำได้ถึง 30 วินาที
+    let tries = 0;
+    (function autoMount() {
+      if (mounted) return;
+      if (looksLikeLiveConsole()) {
+        mount();
+        log('info', 'พร้อมใช้งาน — เปิดคอนโซล LIVE ค้างไว้ แล้วกดเริ่มได้เลย');
+        return;
+      }
+      if (tries < 30) { tries += 1; setTimeout(autoMount, 1000); }
+    })();
   });
 })(typeof window !== 'undefined' ? window : globalThis);
