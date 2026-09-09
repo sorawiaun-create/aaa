@@ -389,32 +389,85 @@ async function probeExtraChannelEndpoints(ctx, out) {
   }
 }
 
+// TikTok returns only ~10 campaigns per page (page_size is capped server-side)
+// and an account can hold 1000+ historical campaigns. Reading page 1 of the
+// default order therefore misses the campaigns that are actually LIVE right now
+// on other channels — so we (a) sort by today's cost so active/spending
+// campaigns surface first, then (b) page through until the active ones are all
+// collected. This keeps every delivering campaign visible regardless of how
+// many dead ones exist.
 async function fetchCampaigns(ctx, out) {
   const date = bangkokDateStr();
-  const body = {
+  const url = buildUrl(EP.CAMPAIGN_LIST, ctxParams(ctx, false));
+  const base = {
     query_list: CAMPAIGN_QUERY_LIST,
     start_time: date,
     end_time: date,
-    order_field: "campaign_id",
-    order_type: 1,
-    page: 1,
-    page_size: 200,
+    page_size: 200, // ignored by TikTok (caps at ~10) but harmless
     campaign_status: ["no_delete"],
     campaign_shop_automation_type: 2,
     external_type_list: ["305"],
   };
-  try {
-    const resp = await apiFetch(
-      buildUrl(EP.CAMPAIGN_LIST, ctxParams(ctx, false)),
-      { method: "POST", body: JSON.stringify(body) }
-    );
-    out.probes.post_campaign_list = resp;
+  const isActive = (c) => {
+    const p = String(c.campaign_primary_status ?? "").toLowerCase();
+    return p === "delivery_ok" || p === "enable" || num(c.lod_shop_cost ?? c.cost) > 0;
+  };
+  const getPage = async (page, order) => {
+    try {
+      return await apiFetch(url, { method: "POST", body: JSON.stringify({ ...base, page, ...order }) });
+    } catch (e) {
+      out.errors.push(`post_campaign_list p${page}: ${e}`);
+      return null;
+    }
+  };
+  // Pick an order that puts active campaigns on the first page. Try cost desc,
+  // then cost asc (in case order_type is flipped), then the default id order.
+  const orders = [
+    { order_field: "lod_shop_cost", order_type: 0 },
+    { order_field: "lod_shop_cost", order_type: 1 },
+    { order_field: "campaign_id", order_type: 1 },
+  ];
+  let order = null, first = null;
+  for (const o of orders) {
+    const resp = await getPage(1, o);
     const arr = findCampaignArray(resp, 0) || [];
-    return mapCampaigns(arr);
-  } catch (e) {
-    out.errors.push("post_campaign_list: " + e);
+    if (!arr.length) continue;
+    order = o;
+    first = resp;
+    if (arr.some(isActive)) break; // this order surfaced active campaigns
+  }
+  if (!first) {
+    out.errors.push("post_campaign_list: no data");
     return [];
   }
+  out.probes.post_campaign_list = first;
+  const pageCount = (first.data && first.data.pagination && first.data.pagination.page_count) || 1;
+  const seen = new Map();
+  const absorb = (resp) => {
+    const arr = findCampaignArray(resp, 0) || [];
+    let active = false;
+    for (const c of arr) {
+      const id = String(c.campaign_id ?? c.campaign_id_str ?? c.id ?? "");
+      if (id && !seen.has(id)) seen.set(id, c);
+      if (isActive(c)) active = true;
+    }
+    return { n: arr.length, active };
+  };
+  const MAX_PAGES = 30, MIN_PAGES = 12;
+  let foundActive = absorb(first).active;
+  const last = Math.min(pageCount, MAX_PAGES);
+  for (let page = 2; page <= last; page++) {
+    const resp = await getPage(page, order);
+    if (!resp) break;
+    const r = absorb(resp);
+    if (r.active) foundActive = true;
+    if (r.n === 0) break;
+    // Once we've seen active campaigns and then hit a page with none (the list
+    // is spend-sorted, so actives cluster at the front), stop — but always scan
+    // at least MIN_PAGES as a safety net in case the sort wasn't honored.
+    if (page >= MIN_PAGES && foundActive && !r.active) break;
+  }
+  return mapCampaigns([...seen.values()]);
 }
 
 // Read an existing campaign's full ad data (used as the create template).
