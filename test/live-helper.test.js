@@ -211,6 +211,22 @@ test('buildUserPrompt: แนบประโยคที่เพิ่งตอ
   assert.ok(prompt.includes('กดดูในตะกร้าได้เลยค่ะ'));
 });
 
+test('buildSystemPrompt: ห้ามรับปากว่าจะหยิบสินค้าตัวอื่นมาโชว์', () => {
+  const prompt = core.buildSystemPrompt(baseAi(), { focusBasket: 1 });
+  assert.ok(prompt.includes('ห้ามพูดว่าจะหยิบสินค้าตัวอื่นมาโชว์'));
+  assert.ok(!prompt.includes('เดี๋ยวแม่ค้าหยิบมาโชว์'));
+
+  const brief = core.buildSystemPrompt(Object.assign(baseAi(), { otherBasketMode: 'brief' }), { focusBasket: 1 });
+  assert.ok(!brief.includes('เดี๋ยวแม่ค้าโชว์ให้ดู'));
+});
+
+test('buildUserPrompt: ตะกร้าที่ไม่มีข้อมูล ต้องไม่สั่งให้รับปากโชว์', () => {
+  const prompt = core.buildUserPrompt({ user: 'a', text: '40' }, [],
+    { basket: 40, name: '', price: '', info: '', known: false });
+  assert.ok(prompt.includes('ห้ามรับปากว่าจะโชว์ให้ดู'));
+  assert.ok(!prompt.includes('เดี๋ยวแม่ค้าโชว์ให้ดู'));
+});
+
 test('buildSystemPrompt: มีกติกาสำหรับคำถามตะกร้าอื่น และชวนกลับตัวหลัก', () => {
   const answer = core.buildSystemPrompt(baseAi(), { focusBasket: 1 });
   assert.ok(answer.includes('ห้ามเดาราคาหรือสเปกเด็ดขาด'));

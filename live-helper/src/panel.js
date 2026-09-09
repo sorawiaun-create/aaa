@@ -70,7 +70,7 @@
         <div class="ttlh-row"><label>ถ้าลูกค้าถามตะกร้าอื่น</label>
           <select data-k="ai.otherBasketMode">
             <option value="answer">ตอบเท่าที่มีข้อมูล</option>
-            <option value="brief">ตอบสั้น ให้รอแม่ค้าโชว์</option>
+            <option value="brief">ตอบสั้น ชี้ไปที่ตะกร้า</option>
             <option value="skip">ไม่ตอบ (แม่ค้าตอบเอง)</option>
           </select>
         </div>
