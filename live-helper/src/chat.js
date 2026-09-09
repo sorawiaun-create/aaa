@@ -116,7 +116,7 @@
         }
 
         const system = core.buildSystemPrompt(settings.ai, context);
-        const user = core.buildUserPrompt(comment, state.recent, reference);
+        const user = core.buildUserPrompt(comment, state.recent, reference, state.ownTexts);
         const result = await askAI({ system, user });
         if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
 
@@ -129,6 +129,8 @@
         if (!reply) { state.skipped += 1; log('mute', 'AI ตอบว่าง เลยข้าม'); return; }
 
         if (settings.ai.dryRun) {
+          state.ownTexts.push(reply);
+          if (state.ownTexts.length > 20) state.ownTexts.shift();
           log('info', '[ร่าง ไม่ส่ง] ' + comment.user + ' → ' + reply);
           return;
         }
@@ -197,7 +199,7 @@
           knowledge: settings.products,
           focusBasket: settings.pin.basket,
         });
-        const result = await askAI({ system, user: core.buildUserPrompt(comment, []) });
+        const result = await askAI({ system, user: core.buildUserPrompt(comment, [], null, state.ownTexts) });
         if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
         if (core.isSkip(result.text)) { log('mute', 'AI เลือกไม่ตอบข้อความนี้'); return; }
         log('ok', 'AI ตอบว่า → ' + core.sanitizeReply(result.text, settings.ai.maxChars));

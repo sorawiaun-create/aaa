@@ -32,9 +32,10 @@
       extraRules: '',
       maxChars: 100,        // ช่องแชทไลฟ์จำกัด 100 ตัวอักษร
       minCommentChars: 2,
-      replyPerMin: 6,       // ตอบได้ไม่เกินกี่ข้อความต่อนาที
-      userCooldownSec: 90,  // คนเดิมเว้นกี่วินาทีถึงตอบอีกครั้ง
-      onlyQuestions: false, // ตอบเฉพาะคอมเมนต์ที่เป็นคำถาม
+      replyPerMin: 15,      // ตอบได้ไม่เกินกี่ข้อความต่อนาที
+      userCooldownSec: 20,  // คนเดิมเว้นกี่วินาทีถึงตอบอีกครั้ง
+      // ขอบเขตการตอบ: all = ตอบทุกคอมเมนต์ (รวมทักทาย/คำชม) · questions = เฉพาะคำถาม
+      replyScope: 'all',
       // ลูกค้าถามถึงสินค้าตะกร้าอื่นที่ไม่ใช่ตัวหลัก จะเอายังไง
       //   answer = ตอบเท่าที่มีข้อมูล (ค่าเริ่มต้น)
       //   brief  = ตอบสั้น ๆ ให้รอแม่ค้าโชว์ ไม่ลงรายละเอียด
@@ -103,8 +104,8 @@
 
     ai.enabled = !!ai.enabled;
     ai.dryRun = !!ai.dryRun;
-    ai.onlyQuestions = !!ai.onlyQuestions;
     ai.pullBackToMain = !!ai.pullBackToMain;
+    if (!['all', 'questions'].includes(ai.replyScope)) ai.replyScope = 'all';
     if (!['answer', 'brief', 'skip'].includes(ai.otherBasketMode)) ai.otherBasketMode = 'answer';
     ai.model = String(ai.model || DEFAULT_SETTINGS.ai.model).trim() || DEFAULT_SETTINGS.ai.model;
     ai.apiBase = String(ai.apiBase || DEFAULT_SETTINGS.ai.apiBase).trim().replace(/\/+$/, '');
@@ -244,7 +245,9 @@
     if (containsAny(text, st.ownTexts || [])) return { ok: false, reason: 'ข้อความของเราเอง' };
     if (containsAny(text, ai.ignoreWords)) return { ok: false, reason: 'เป็นข้อความระบบ (เข้าร่วม/ซื้อ/แชร์)' };
     if (containsAny(text, ai.blockWords)) return { ok: false, reason: 'ติดคำต้องห้าม' };
-    if (ai.onlyQuestions && !looksLikeQuestion(text)) return { ok: false, reason: 'ไม่ใช่คำถาม' };
+    if (ai.replyScope === 'questions' && !looksLikeQuestion(text)) {
+      return { ok: false, reason: 'ตั้งไว้ให้ตอบเฉพาะคำถาม' };
+    }
 
     const last = (st.lastByUser || {})[user.toLowerCase()];
     if (user && last && now - last < ai.userCooldownSec * 1000) {
@@ -291,11 +294,18 @@
     lines.push('');
     lines.push('กติกา:');
     lines.push('- ตอบเป็นภาษาไทย ข้อความเดียว บรรทัดเดียว ไม่เกิน ' + ai.maxChars + ' ตัวอักษร');
-    lines.push('- ตอบเฉพาะสิ่งที่ผู้ชมถาม สั้น กระชับ ไม่ทักทายยืดยาว');
+    if (ai.replyScope === 'all') {
+      lines.push('- ตอบ "ทุกคอมเมนต์" รวมถึงคำทักทาย คำชม อีโมจิ หรือคำพูดลอย ๆ');
+      lines.push('  ถ้าไม่ใช่คำถาม ให้ตอบรับสั้น ๆ อย่างเป็นมิตร (ขอบคุณ/ทักกลับ/ชวนดูสินค้า)');
+    } else {
+      lines.push('- ตอบเฉพาะสิ่งที่ผู้ชมถาม สั้น กระชับ ไม่ทักทายยืดยาว');
+    }
+    lines.push('- สำคัญ: ห้ามตอบเป็นประโยคแพทเทิร์นเดิมซ้ำ ๆ ให้เปลี่ยนคำพูด สลับคำขึ้นต้น'
+      + ' และปรับให้เข้ากับสิ่งที่ลูกค้าคนนั้นพูดจริง ๆ ทุกครั้ง');
     lines.push('- ห้ามแต่งข้อมูลที่ไม่มีในรายการสินค้า (ราคา/โปร/ค่าส่ง/สต็อก) ถ้าไม่รู้ให้บอกว่าเดี๋ยวแม่ค้าตอบในไลฟ์');
     lines.push('- ห้ามใส่ลิงก์ เบอร์โทร ไอดีไลน์ หรือชวนคุยนอกแพลตฟอร์ม');
     lines.push('- ห้ามสัญญาเรื่องการรักษาโรค การลงทุน หรือผลลัพธ์เกินจริง');
-    lines.push('- ถ้าเป็นข้อความหยาบคาย ก่อกวน สแปม หรือไม่มีอะไรให้ตอบ ให้ตอบว่า SKIP อย่างเดียว');
+    lines.push('- ตอบว่า SKIP อย่างเดียว เฉพาะกรณีข้อความหยาบคาย ก่อกวน สแปม หรือโฆษณาร้านอื่นเท่านั้น');
     lines.push('- ตอบกลับมาเป็นข้อความที่จะพิมพ์ลงแชทเท่านั้น ห้ามใส่คำอธิบาย เครื่องหมายคำพูด หรือ markdown');
     if (ai.extraRules) {
       lines.push('');
@@ -312,7 +322,11 @@
           + ' ให้ตอบสั้น ๆ ว่ากดดูในตะกร้าได้เลย เดี๋ยวแม่ค้าโชว์ให้ดู ห้ามลงรายละเอียดเอง');
       } else {
         lines.push('- ถ้าถามถึงตะกร้าอื่น ให้ตอบเท่าที่มีข้อมูลจริงในรายการด้านล่างเท่านั้น'
-          + ' ถ้าไม่มีข้อมูลให้บอกว่ากดดูในตะกร้าได้เลย เดี๋ยวแม่ค้าโชว์ให้ดู ห้ามเดาราคาหรือสเปก');
+          + ' ถ้าไม่มีข้อมูลของตัวนั้น ให้ชวนกดเข้าไปดูในตะกร้า ห้ามเดาราคาหรือสเปกเด็ดขาด');
+        lines.push('  แนวการตอบเวลาไม่มีข้อมูล (เป็นแค่ "แนว" ห้ามลอกทั้งประโยค ให้เปลี่ยนคำพูดทุกครั้ง):');
+        lines.push('    · กดเข้าไปดูในตะกร้าได้เลยค่ะ มีรายละเอียดครบ');
+        lines.push('    · เบอร์นี้กดดูในตะกร้าก่อนได้นะคะ เดี๋ยวแม่ค้าหยิบมาโชว์');
+        lines.push('    · อยู่ในตะกร้าแล้วค่ะ กดดูรูปกับสเปกได้เลย');
       }
       if (ai.pullBackToMain) {
         lines.push('- เมื่อตอบเรื่องตะกร้าอื่นเสร็จ ถ้าความยาวยังพอ ให้ชวนกลับมาที่สินค้าตะกร้าที่ '
@@ -349,8 +363,14 @@
     return lines.join('\n');
   }
 
-  function buildUserPrompt(comment, recent, reference) {
+  function buildUserPrompt(comment, recent, reference, recentReplies) {
     const lines = [];
+    const lastReplies = (recentReplies || []).slice(-5).filter(Boolean);
+    if (lastReplies.length) {
+      lines.push('ประโยคที่เราเพิ่งตอบไปในไลฟ์ (ห้ามตอบซ้ำหรือใกล้เคียงกับพวกนี้):');
+      lastReplies.forEach((r) => lines.push('- ' + normText(r)));
+      lines.push('');
+    }
     const history = (recent || []).slice(-6).filter(Boolean);
     if (history.length) {
       lines.push('คอมเมนต์ก่อนหน้า (ไว้ดูบริบทเฉย ๆ ไม่ต้องตอบ):');

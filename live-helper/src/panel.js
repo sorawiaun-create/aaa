@@ -61,7 +61,12 @@
       <div class="ttlh-tab" data-pane="ai">
         <div class="ttlh-status" data-ai-status>ยังไม่เริ่มทำงาน</div>
         <label class="ttlh-check"><input type="checkbox" data-k="ai.dryRun"> โหมดร่าง (ให้ AI คิดคำตอบแต่ยังไม่ส่ง)</label>
-        <label class="ttlh-check"><input type="checkbox" data-k="ai.onlyQuestions"> ตอบเฉพาะคอมเมนต์ที่เป็นคำถาม</label>
+        <div class="ttlh-row"><label>ขอบเขตการตอบ</label>
+          <select data-k="ai.replyScope">
+            <option value="all">ตอบทุกคอมเมนต์</option>
+            <option value="questions">เฉพาะคำถาม</option>
+          </select>
+        </div>
         <div class="ttlh-row"><label>ถ้าลูกค้าถามตะกร้าอื่น</label>
           <select data-k="ai.otherBasketMode">
             <option value="answer">ตอบเท่าที่มีข้อมูล</option>
@@ -71,6 +76,10 @@
         </div>
         <label class="ttlh-check"><input type="checkbox" data-k="ai.pullBackToMain"> ตอบเสร็จแล้วชวนกลับมาที่สินค้าหลัก</label>
         <div class="ttlh-row"><label>ตอบได้ไม่เกิน (ข้อความ/นาที)</label><input type="number" min="1" max="30" data-k="ai.replyPerMin"></div>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-speed="fast">ตอบถี่ (คนเยอะ)</button>
+          <button class="ttlh-btn" data-speed="calm">ตอบพอประมาณ</button>
+        </div>
         <div class="ttlh-row"><label>คนเดิมเว้น (วินาที)</label><input type="number" min="0" max="3600" step="10" data-k="ai.userCooldownSec"></div>
         <div class="ttlh-row"><label>ความยาวคำตอบไม่เกิน</label><input type="number" min="20" max="100" data-k="ai.maxChars"></div>
         <label>โทนการพูด</label>
@@ -265,12 +274,25 @@
 
   // ---------- ปุ่มต่าง ๆ ----------
   panel.addEventListener('click', async (ev) => {
-    const target = ev.target.closest('[data-act], [data-tab], [data-preset], [data-pick]');
+    const target = ev.target.closest('[data-act], [data-tab], [data-preset], [data-speed], [data-pick]');
     if (!target) return;
 
     if (target.dataset.tab) {
       panel.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b === target));
       panel.querySelectorAll('[data-pane]').forEach((p) => p.classList.toggle('on', p.dataset.pane === target.dataset.tab));
+      return;
+    }
+
+    if (target.dataset.speed) {
+      const fast = target.dataset.speed === 'fast';
+      settings.ai.replyPerMin = fast ? 25 : 10;
+      settings.ai.userCooldownSec = fast ? 5 : 45;
+      settings = core.normalizeSettings(settings);
+      fillFields();
+      save();
+      log('info', fast
+        ? 'ตั้งเป็นตอบถี่: 25 ข้อความ/นาที · คนเดิมเว้น 5 วิ'
+        : 'ตั้งเป็นตอบพอประมาณ: 10 ข้อความ/นาที · คนเดิมเว้น 45 วิ');
       return;
     }
 

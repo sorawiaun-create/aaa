@@ -108,7 +108,7 @@ test('shouldReply: คนเดิมต้องรอครบ cooldown', () =
 });
 
 test('shouldReply: เกินโควตาต่อนาทีแล้วหยุดตอบ', () => {
-  const ai = Object.assign(baseAi(), { enabled: true, replyPerMin: 2 });
+  const ai = Object.assign(baseAi(), { enabled: true, replyPerMin: 2 });  // ค่าเริ่มต้นจริงคือ 15
   const now = 100000;
   const state = { replyTimes: [now - 1000, now - 2000] };
   assert.equal(core.shouldReply({ user: 'a', text: 'ราคาเท่าไหร่' }, state, ai, now).ok, false);
@@ -117,10 +117,23 @@ test('shouldReply: เกินโควตาต่อนาทีแล้ว�
   assert.equal(core.shouldReply({ user: 'a', text: 'ราคาเท่าไหร่' }, old, ai, now).ok, true);
 });
 
-test('shouldReply: โหมดตอบเฉพาะคำถาม', () => {
-  const ai = Object.assign(baseAi(), { enabled: true, onlyQuestions: true });
+test('shouldReply: ค่าเริ่มต้นตอบทุกคอมเมนต์ รวมคำชม', () => {
+  const ai = Object.assign(baseAi(), { enabled: true });
+  assert.equal(ai.replyScope, 'all');
+  assert.equal(core.shouldReply({ user: 'a', text: 'สวยมากเลย' }, {}, ai, 1).ok, true);
+  assert.equal(core.shouldReply({ user: 'a', text: 'สวัสดีค่ะ' }, {}, ai, 1).ok, true);
+});
+
+test('shouldReply: โหมดเฉพาะคำถาม', () => {
+  const ai = Object.assign(baseAi(), { enabled: true, replyScope: 'questions' });
   assert.equal(core.shouldReply({ user: 'a', text: 'สวยมากเลย' }, {}, ai, 1).ok, false);
   assert.equal(core.shouldReply({ user: 'a', text: 'มีสีแดงมั้ยคะ' }, {}, ai, 1).ok, true);
+});
+
+test('normalizeSettings: ขอบเขตการตอบ ค่าเริ่มต้น all และกันค่ามั่ว', () => {
+  assert.equal(core.normalizeSettings(null).ai.replyScope, 'all');
+  assert.equal(core.normalizeSettings({ ai: { replyScope: 'xx' } }).ai.replyScope, 'all');
+  assert.equal(core.normalizeSettings({ ai: { replyScope: 'questions' } }).ai.replyScope, 'questions');
 });
 
 test('shouldReply: ไม่ตอบข้อความของเราเอง และคำต้องห้าม', () => {
@@ -184,9 +197,24 @@ test('buildUserPrompt: บอก AI ว่าลูกค้าอ้างถ�
   assert.ok(unknown.includes('ห้ามเดา'));
 });
 
+test('buildSystemPrompt: สั่งห้ามตอบซ้ำแพทเทิร์นเดิม และตอบทุกคอมเมนต์', () => {
+  const prompt = core.buildSystemPrompt(baseAi(), {});
+  assert.ok(prompt.includes('ห้ามตอบเป็นประโยคแพทเทิร์นเดิมซ้ำ'));
+  assert.ok(prompt.includes('ตอบ "ทุกคอมเมนต์"'));
+  assert.ok(prompt.includes('SKIP อย่างเดียว เฉพาะกรณีข้อความหยาบคาย'));
+});
+
+test('buildUserPrompt: แนบประโยคที่เพิ่งตอบไป เพื่อกันตอบซ้ำ', () => {
+  const prompt = core.buildUserPrompt({ user: 'a', text: 'สวัสดี' }, [], null,
+    ['กดดูในตะกร้าได้เลยค่ะ', 'ขอบคุณค่ะ']);
+  assert.ok(prompt.includes('ห้ามตอบซ้ำ'));
+  assert.ok(prompt.includes('กดดูในตะกร้าได้เลยค่ะ'));
+});
+
 test('buildSystemPrompt: มีกติกาสำหรับคำถามตะกร้าอื่น และชวนกลับตัวหลัก', () => {
   const answer = core.buildSystemPrompt(baseAi(), { focusBasket: 1 });
-  assert.ok(answer.includes('ห้ามเดาราคาหรือสเปก'));
+  assert.ok(answer.includes('ห้ามเดาราคาหรือสเปกเด็ดขาด'));
+  assert.ok(answer.includes('ห้ามลอกทั้งประโยค'));
   assert.ok(answer.includes('ชวนกลับมาที่สินค้าตะกร้าที่ 1'));
 
   const brief = core.buildSystemPrompt(Object.assign(baseAi(), { otherBasketMode: 'brief', pullBackToMain: false }),
