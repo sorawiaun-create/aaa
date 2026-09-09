@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ผู้ช่วยไลฟ์ TikTok — ปักหมุดอัตโนมัติ + AI ตอบคอมเมนต์",
+  "version": "1.0.0",
+  "description": "ปักหมุดสินค้าซ้ำอัตโนมัติทุก 30 วิ/1 นาที (ตั้งเองได้) และให้ Claude ช่วยตอบคอมเมนต์ในคอนโซล LIVE ของ TikTok Shop",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.anthropic.com/*"],
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://livecenter.tiktok.com/*",
+        "https://seller-th.tiktok.com/*",
+        "https://seller-us.tiktok.com/*",
+        "https://seller.tiktok.com/*",
+        "https://*.tiktok.com/live_monitor*"
+      ],
+      "js": ["src/core.js", "src/dom.js", "src/autopin.js", "src/chat.js", "src/panel.js"],
+      "css": ["src/panel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

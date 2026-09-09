@@ -1,0 +1,44 @@
+/* แผงควบคุมลอยบนหน้า TikTok LIVE Manager — ตั้งชื่อคลาสขึ้นต้น ttlh- กันชนกับสไตล์ของ TikTok */
+.ttlh-panel {
+  position: fixed; right: 16px; bottom: 16px; width: 340px; max-height: 78vh;
+  z-index: 2147483645; display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; color: #161823; border: 1px solid #e3e3e5; border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+  font: 13px/1.5 -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+}
+.ttlh-panel * { box-sizing: border-box; }
+.ttlh-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: move;
+  background: #161823; color: #fff; }
+.ttlh-head b { flex: 1; font-size: 13px; font-weight: 600; }
+.ttlh-head button { background: transparent; border: 0; color: #fff; cursor: pointer; font-size: 15px; padding: 0 4px; }
+.ttlh-tabs { display: flex; border-bottom: 1px solid #ececee; }
+.ttlh-tabs button { flex: 1; padding: 8px 4px; border: 0; background: #fafafa; cursor: pointer;
+  font-size: 12px; color: #666; border-bottom: 2px solid transparent; }
+.ttlh-tabs button.on { background: #fff; color: #fe2c55; border-bottom-color: #fe2c55; font-weight: 600; }
+.ttlh-body { overflow: auto; padding: 12px; }
+.ttlh-tab { display: none; }
+.ttlh-tab.on { display: block; }
+.ttlh-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ttlh-row > label { flex: 1; color: #55555f; }
+.ttlh-row input[type="number"], .ttlh-row input[type="text"], .ttlh-row input[type="password"], .ttlh-row select {
+  width: 120px; padding: 5px 8px; border: 1px solid #dcdce0; border-radius: 6px; font: inherit; background: #fff; color: #161823; }
+.ttlh-panel textarea { width: 100%; min-height: 56px; padding: 6px 8px; border: 1px solid #dcdce0;
+  border-radius: 6px; font: inherit; resize: vertical; background: #fff; color: #161823; }
+.ttlh-panel label.ttlh-check { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: #55555f; }
+.ttlh-btn { padding: 7px 12px; border: 1px solid #dcdce0; border-radius: 8px; background: #fff;
+  cursor: pointer; font: inherit; color: #161823; }
+.ttlh-btn:hover { background: #f6f6f7; }
+.ttlh-btn.main { background: #fe2c55; border-color: #fe2c55; color: #fff; font-weight: 600; flex: 1; }
+.ttlh-btn.main.stop { background: #161823; border-color: #161823; }
+.ttlh-note { color: #8a8b91; font-size: 11.5px; margin: -4px 0 10px; }
+.ttlh-status { background: #f6f6f7; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; }
+.ttlh-status b { color: #fe2c55; }
+.ttlh-log { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
+.ttlh-log li { padding: 4px 6px; border-bottom: 1px solid #f2f2f4; word-break: break-word; }
+.ttlh-log time { color: #a5a5ad; margin-right: 6px; }
+.ttlh-log li.ok { color: #0b8a3d; }
+.ttlh-log li.warn { color: #b26a00; }
+.ttlh-log li.err { color: #d0021b; }
+.ttlh-log li.mute { color: #8a8b91; }
+.ttlh-panel.min .ttlh-body, .ttlh-panel.min .ttlh-tabs { display: none; }
+.ttlh-fab { position: fixed; right: 16px; bottom: 16px; z-index: 2147483645; display: none; }
