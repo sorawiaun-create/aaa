@@ -913,26 +913,28 @@ async function runRules() {
           const baseRoi = Number(st.actions.createRoi) || 0;
           const step = Number(st.actions.createRoiStep) || 0;
           const maxRoi = Number(st.actions.createRoiMax) || 0;
+          const escalate = !!st.actions.createRoiEscalate && step > 0; // toggle in UI
           const today = bangkokDateStr();
           let useRoi = baseRoi;
-          if (step > 0) {
+          if (escalate) {
             const prev = createRoiState[ch.id];
             useRoi = prev && prev.date === today && typeof prev.roi === "number" ? prev.roi : baseRoi;
           }
           const cr = await execCreate(c.id, ch.id, useRoi, st.actions.createBudget);
           if (cr && cr.ok) {
             createdTs[ch.id] = now;
-            if (step > 0) {
+            if (escalate) {
               let next = Math.round((useRoi + step) * 100) / 100;
               if (maxRoi > 0) next = Math.min(next, maxRoi);
               createRoiState[ch.id] = { roi: next, date: today };
             }
           }
+          const nextRoi = Math.min(Math.round((useRoi + step) * 100) / 100, maxRoi || Infinity);
           actions.push({
             ok: cr && cr.ok,
             name: `↳ สร้างใหม่ (ROI ${useRoi}, งบ ${st.actions.createBudget}฿)`,
             reason: cr && cr.ok
-              ? `สำเร็จ${step > 0 ? ` · ครั้งหน้า ROI ${Math.min(Math.round((useRoi + step) * 100) / 100, maxRoi || Infinity)}` : ""}${cr.tries > 1 ? ` (ลอง ${cr.tries} ครั้ง)` : ""}`
+              ? `สำเร็จ${escalate ? ` · ครั้งหน้า ROI ${nextRoi}` : ""}${cr.tries > 1 ? ` (ลอง ${cr.tries} ครั้ง)` : ""}`
               : `ไม่สำเร็จ [code ${(cr && cr.code) ?? "?"}]: ${(cr && (cr.msg || cr.error)) || "?"}`,
           });
         }
