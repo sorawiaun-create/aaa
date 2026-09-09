@@ -14,6 +14,12 @@
       onStatus(Object.assign({ running: !!state.timer, pinned: state.pinned, nextIn: next }, extra));
     }
 
+    // ป้ายกำกับที่อ่านรู้เรื่องว่ากำลังทำอะไรกับสินค้าตัวไหน
+    function label(basket) {
+      const name = dom.targetName(basket);
+      return 'ตะกร้าที่ ' + basket + (name ? ' — ' + name : '');
+    }
+
     function warn(message) {
       const now = Date.now();
       if (now - state.lastWarnAt < 15000) return; // กันบันทึกท่วมจอ
@@ -39,7 +45,7 @@
         }
         state.lastActionAt = Date.now();
         if (pin.dryRun) {
-          log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักสินค้าที่ ' + pin.basket + ' ใหม่');
+          log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักใหม่ · ' + label(pin.basket));
           status();
           return;
         }
@@ -54,7 +60,7 @@
           }
           dom.realClick(again);
           state.lastActionAt = Date.now();
-          log('ok', 'ปักหมุดสินค้าที่ ' + pin.basket + ' ใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ)');
+          log('ok', 'ปักหมุดใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ) · ' + label(pin.basket));
           status();
         }, pin.repinGapMs);
         status();
@@ -65,7 +71,7 @@
         const btn = dom.extendButton();
         if (!btn) { status(); return; } // ปุ่มต่อเวลาโผล่เฉพาะตอนหมุดใกล้หมด รอรอบหน้า
         if (pin.dryRun) log('info', '[ซ้อม] จะกดต่อเวลาหมุด (+วินาที)');
-        else { dom.realClick(btn); log('ok', 'ต่อเวลาหมุดสินค้าที่ ' + pin.basket + ' แล้ว'); }
+        else { dom.realClick(btn); log('ok', 'ต่อเวลาหมุด · ' + label(pin.basket)); }
         state.lastActionAt = Date.now();
         status();
         return;
@@ -78,10 +84,10 @@
         return;
       }
       if (pin.dryRun) {
-        log('info', '[ซ้อม] จะกดปักหมุดสินค้าที่ ' + pin.basket);
+        log('info', '[ซ้อม] จะกดปักหมุด · ' + label(pin.basket));
       } else {
         dom.realClick(btn);
-        log('ok', 'ปักหมุดสินค้าที่ ' + pin.basket + ' แล้ว');
+        log('ok', 'ปักหมุดแล้ว · ' + label(pin.basket));
       }
       state.lastActionAt = Date.now();
       status();
@@ -102,6 +108,19 @@
         status();
       },
       pinNow() { state.lastActionAt = null; tick(); },
+      // ตรวจก่อนกดจริงว่าระบบเล็งการ์ดใบไหนอยู่ (กันไปกดโดนคูปอง/การแจกรางวัล)
+      preview() {
+        const basket = getSettings().pin.basket;
+        const card = dom.productCard(basket);
+        if (!card) {
+          log('warn', 'ยังหาการ์ดสินค้าของตะกร้าที่ ' + basket + ' ไม่เจอ — เลื่อนรายการสินค้าให้เห็นการ์ดก่อน');
+          return;
+        }
+        dom.flash(card);
+        log('ok', 'จะปัก: ' + label(basket) + ' (กรอบสีชมพูในหน้าเว็บ)');
+        const all = dom.productCards().length;
+        log('info', 'ตอนนี้เห็นการ์ดสินค้าทั้งหมด ' + all + ' ใบ');
+      },
       isRunning() { return !!state.timer; },
       state,
     };

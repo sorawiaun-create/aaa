@@ -37,6 +37,42 @@ test('normalizeSettings: ตัด / ท้าย API base ออก', () => {
   assert.equal(core.normalizeSettings({ ai: { apiBase: 'https://x.dev///' } }).ai.apiBase, 'https://x.dev');
 });
 
+// --- แยกการ์ดสินค้าออกจากคูปอง/การแจกรางวัล (ข้อความจริงจากหน้าคอนโซล) ---
+const CARD_PRODUCT = '1 TOPSUN เก้าอี้สนาม รุ่นโซฟา ทรงหลังสูง 90 cm หนานุ่ม รองรับส. '
+  + 'ตัวเลือกโปรด ฿245.55 ฿639.00 อยู่ในสต็อก: 30.3K ค่าขอสาธิตสินค้า: 0 ปักหมุด '
+  + 'ยอดคลิก 512 จำนวนที่เพิ่มไปที่รถเข็น 25';
+const CARD_COUPON = 'ลด 15% ซื้อขั้นต่ำ ฿300.00 ปักหมุด';
+const CARD_GIVEAWAY = 'การแจกรางวัล: โบนัส ฿15.00 ผู้ชนะ 15 คน | 5 นาที เผยแพร่ 1/2';
+const CARD_STRIP = 'รายการสินค้าใน LIVE นี้ +45 ปักหมุด';
+
+test('isProductCardText: การ์ดสินค้าจริงผ่าน', () => {
+  assert.equal(core.isProductCardText(CARD_PRODUCT, true), true);
+});
+
+test('isProductCardText: คูปอง/การแจกรางวัล/แถบรายการรวม ต้องไม่ถูกนับเป็นสินค้า', () => {
+  assert.equal(core.isProductCardText(CARD_COUPON, true), false);
+  assert.equal(core.isProductCardText(CARD_COUPON, false), false);
+  assert.equal(core.isProductCardText(CARD_GIVEAWAY, false), false);
+  assert.equal(core.isProductCardText(CARD_STRIP, false), false);
+});
+
+test('isProductCardText: ไม่มีราคา = ไม่ใช่การ์ดสินค้า', () => {
+  assert.equal(core.isProductCardText('ปักหมุด', false), false);
+});
+
+test('cardIndexFromText: อ่านเลขตะกร้าจากหัวการ์ด', () => {
+  assert.equal(core.cardIndexFromText(CARD_PRODUCT), 1);
+  assert.equal(core.cardIndexFromText('2 TOPSUN เก้าอี้กลางแจ้ง ฿139.10'), 2);
+  assert.equal(core.cardIndexFromText('TOPSUN ไม่มีเลขนำหน้า ฿139.10'), null);
+});
+
+test('cardNameFromText: ตัดเลข ราคา และข้อความปุ่มออก', () => {
+  const name = core.cardNameFromText(CARD_PRODUCT);
+  assert.ok(name.startsWith('TOPSUN เก้าอี้สนาม'));
+  assert.ok(!name.includes('฿'));
+  assert.ok(!name.includes('ปักหมุด'));
+});
+
 // --- ตัวกรองคอมเมนต์ ---
 test('shouldReply: คอมเมนต์ปกติ = ตอบ', () => {
   const ai = Object.assign(baseAi(), { enabled: true });

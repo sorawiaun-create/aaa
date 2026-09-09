@@ -53,6 +53,7 @@
           <button class="ttlh-btn main" data-act="pin-toggle">เริ่มปักหมุดอัตโนมัติ</button>
           <button class="ttlh-btn" data-act="pin-now">ปักเดี๋ยวนี้</button>
         </div>
+        <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจก่อนปัก — จะปักตัวไหน?</button></div>
         <div class="ttlh-row"><button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด" เอง</button></div>
         <p class="ttlh-note">ขั้นต่ำ 15 วินาที เพื่อลดความเสี่ยงถูกระบบมองว่าสแปม</p>
       </div>
@@ -309,6 +310,9 @@
         break;
       case 'pin-now':
         autoPin.pinNow();
+        break;
+      case 'pin-preview':
+        autoPin.preview();
         break;
       case 'ai-toggle':
         if (autoReply.isRunning()) { settings.ai.enabled = false; autoReply.stop(); }

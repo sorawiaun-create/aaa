@@ -124,6 +124,39 @@
     return { pin, ai, products: normalizeProducts(src.products), selectors };
   }
 
+  // ---------- แยกแยะการ์ดในหน้าคอนโซล ----------
+  // คูปอง / การแจกรางวัล / แถบรายการสินค้ารวม ก็มีปุ่ม "ปักหมุด" เหมือนกัน
+  // ถ้าไม่คัดออก ระบบจะไปกดปักคูปองแทนสินค้า
+  const NOT_PRODUCT_RE = /(การแจกรางวัล|แจกรางวัล|โบนัส|ผู้ชนะ|คูปอง|ซื้อขั้นต่ำ|ส่วนลด|ลด\s*\d+\s*%|รายการสินค้าใน\s*LIVE|บิลบอร์ด|แฟลชเซล|เผยแพร่|giveaway|coupon|voucher)/i;
+  const PRODUCT_HINT_RE = /(อยู่ในสต็อก|ยอดคลิก|ค่าขอสาธิต|รถเข็น|สินค้าที่ขายได้|Attr\.|in stock|clicks)/i;
+
+  function hasPrice(text) {
+    return /฿|บาท/.test(String(text || ''));
+  }
+
+  function isProductCardText(text, requireHint) {
+    const raw = String(text || '');
+    if (!hasPrice(raw)) return false;
+    if (NOT_PRODUCT_RE.test(raw)) return false;
+    return requireHint ? PRODUCT_HINT_RE.test(raw) : true;
+  }
+
+  // เลขลำดับที่โชว์อยู่หัวการ์ด ("1 TOPSUN เก้าอี้สนาม ...")
+  function cardIndexFromText(text) {
+    const match = String(text || '').trim().match(/^(\d{1,3})(?!\d)/);
+    return match ? Number(match[1]) : null;
+  }
+
+  function cardNameFromText(text) {
+    return String(text || '')
+      .replace(/^\s*\d{1,3}\s*/, '')
+      .replace(/฿[\d,]+(?:\.\d+)?/g, ' ')
+      .replace(/(ปักหมุดแล้ว|ยกเลิกการปักหมุด|ปักหมุด|ตัวเลือกโปรด|อยู่ในสต็อก.*)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+  }
+
   // ---------- คอมเมนต์ ----------
   function normText(text) {
     return String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
@@ -389,6 +422,7 @@
   const api = {
     DEFAULT_SETTINGS, DEFAULT_IGNORE,
     clampInt, toWordList, normalizeSettings, normalizeProducts, normText,
+    hasPrice, isProductCardText, cardIndexFromText, cardNameFromText,
     commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,

@@ -42,22 +42,56 @@
     }
   }
 
-  // การ์ดสินค้าลำดับที่ n: หา "เลขลำดับ" ในกล่องเล็ก ๆ แล้วไต่ขึ้นไปหา element
-  // ที่ครอบทั้งการ์ด (ต้องมีปุ่มปักหมุดอยู่ข้างใน)
-  function productCard(index) {
-    const wanted = String(index);
-    const badges = Array.from(document.querySelectorAll('div, span, p'))
-      .filter((el) => el.children.length === 0 && textOf(el) === wanted && visible(el));
+  // การ์ดในหน้าคอนโซลมีหลายชนิดที่มีปุ่ม "ปักหมุด" เหมือนกันหมด
+  // (คูปอง, การแจกรางวัล, แถบรายการสินค้ารวม) ต้องคัดออกให้เหลือแต่การ์ดสินค้าจริง
+  const core = root.TTLH.core;
 
-    for (const badge of badges) {
-      let node = badge.parentElement;
-      for (let depth = 0; node && depth < 8; depth += 1, node = node.parentElement) {
-        const hasPin = byLabel(PIN_LABEL, node).length || byLabel(UNPIN_LABEL, node).length;
-        // การ์ดสินค้าจริงต้องมีทั้งปุ่มปักหมุดและราคา (฿) อยู่ในกล่องเดียวกัน
-        if (hasPin && /฿|บาท/.test(textOf(node))) return node;
-      }
+  // ไต่ขึ้นจากปุ่มปักหมุดไปหากล่องที่เป็น "การ์ดสินค้า" จริง ๆ
+  function cardOf(button, requireHint) {
+    let node = button.parentElement;
+    for (let depth = 0; node && depth < 10; depth += 1, node = node.parentElement) {
+      const text = textOf(node);
+      if (!core.hasPrice(text)) continue;
+      if (core.isProductCardText(text, requireHint)) return node;
+      // ไต่มาเจอกล่องที่เป็นคูปอง/การแจกรางวัลแล้ว = ปุ่มนี้ไม่ใช่ของสินค้า
+      if (!core.isProductCardText(text, false)) return null;
     }
     return null;
+  }
+
+  function collectCards(requireHint) {
+    const buttons = byLabel(PIN_LABEL, document).concat(byLabel(UNPIN_LABEL, document));
+    const cards = [];
+    for (const button of buttons) {
+      const card = cardOf(button, requireHint);
+      if (!card) continue;
+      // กันซ้ำ: การ์ดที่ครอบกันอยู่ถือเป็นใบเดียวกัน
+      if (cards.some((c) => c === card || c.contains(card) || card.contains(c))) continue;
+      cards.push(card);
+    }
+    return cards.sort((a, b) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+  }
+
+  function productCards() {
+    const strict = collectCards(true);
+    return strict.length ? strict : collectCards(false);
+  }
+
+  function cardIndex(card) {
+    return core.cardIndexFromText(textOf(card));
+  }
+
+  function cardName(card) {
+    return core.cardNameFromText(textOf(card));
+  }
+
+  // การ์ดสินค้าของ "ตะกร้าที่ n" — ยึดเลขที่โชว์บนการ์ดก่อน ถ้าไม่มีค่อยนับลำดับ
+  function productCard(index) {
+    const cards = productCards();
+    const byBadge = cards.find((card) => cardIndex(card) === index);
+    if (byBadge) return byBadge;
+    return cards[index - 1] || null;
   }
 
   // ปุ่ม "ปักหมุด" ของตะกร้าที่ n (ถ้าตั้ง selector เองไว้ ใช้อันนั้นก่อน)
@@ -65,11 +99,13 @@
     const manual = bySelector(selectorOverride);
     if (manual) return manual;
     const card = productCard(index);
-    if (card) {
-      const btn = byLabel(PIN_LABEL, card)[0];
-      if (btn) return btn;
-    }
-    return null;
+    return card ? byLabel(PIN_LABEL, card)[0] || null : null;
+  }
+
+  // ชื่อสินค้าที่ "กำลังจะถูกปัก" ไว้โชว์ในบันทึกให้ตรวจสอบได้ก่อนกด
+  function targetName(index) {
+    const card = productCard(index);
+    return card ? cardName(card) : '';
   }
 
   function unpinButton(index) {
@@ -181,24 +217,25 @@
     return true;
   }
 
+  // กะพริบกรอบให้เห็นว่าระบบเล็งการ์ดใบไหนอยู่
+  function flash(el) {
+    if (!el) return;
+    const prev = el.style.outline;
+    el.style.outline = '3px solid #fe2c55';
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(() => { el.style.outline = prev; }, 2500);
+  }
+
   // ดึงรายชื่อสินค้า+ราคาในไลฟ์ ไว้ให้ AI ใช้เป็นบริบท
   function scrapeProducts(limit) {
-    const max = limit || 10;
+    const cards = productCards().slice(0, limit || 10);
     const items = [];
-    for (let i = 1; i <= max; i += 1) {
-      const card = productCard(i);
-      if (!card) continue;
+    cards.forEach((card, i) => {
       const raw = textOf(card);
       const price = (raw.match(/฿[\d,]+(?:\.\d+)?/) || [])[0] || '';
-      const name = raw
-        .replace(/^\d+\s*/, '')
-        .replace(/฿[\d,]+(?:\.\d+)?/g, ' ')
-        .replace(/(ปักหมุดแล้ว|ยกเลิกการปักหมุด|ปักหมุด|ตัวเลือกโปรด|อยู่ในสต็อก.*)/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 80);
-      if (name) items.push({ index: i, name, price });
-    }
+      const name = cardName(card);
+      if (name) items.push({ index: cardIndex(card) || i + 1, name, price });
+    });
     return items;
   }
 
@@ -297,7 +334,8 @@
   root.TTLH = Object.assign(root.TTLH || {}, {
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
-      textOf, visible, byLabel, bySelector, productCard, pinButton, unpinButton,
+      textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
+      targetName, flash, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
       typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,
