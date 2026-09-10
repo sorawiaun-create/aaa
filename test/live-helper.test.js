@@ -339,15 +339,20 @@ test('withinClickBudget: คลิกที่เก่ากว่า 1 นา�
 });
 
 // --- ย้ายค่าที่บันทึกไว้จากเวอร์ชันก่อน ---
-test('normalizeSettings: ค่าเก่าที่ตั้ง repin ไว้ ถูกย้ายมาเป็น extend', () => {
-  const migrated = core.normalizeSettings({ pin: { whenPinned: 'repin', basket: 2 } });
+test('normalizeSettings: ค่าเก่าที่ตั้ง repin ไว้ ถูกย้ายมาเป็น extend และล้างตำแหน่งปุ่มที่จิ้มไว้', () => {
+  const migrated = core.normalizeSettings({
+    pin: { whenPinned: 'repin', basket: 2 },
+    selectors: { pinButton: 'div:nth-of-type(3) > button', chatInput: 'textarea' },
+  });
+  assert.equal(migrated.selectors.pinButton, '');   // ปุ่มนี้อาจกลายเป็น "ยกเลิกการปักหมุด" ไปแล้ว
+  assert.equal(migrated.selectors.chatInput, 'textarea'); // ของแชทไม่เกี่ยว เก็บไว้
   assert.equal(migrated.pin.whenPinned, 'extend');
   assert.equal(migrated.pin.basket, 2);   // ค่าอื่นต้องไม่หาย
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, 3);
 });
 
 test('normalizeSettings: ค่าที่บันทึกด้วยเวอร์ชันปัจจุบัน เลือก repin เองได้ตามเดิม', () => {
-  const kept = core.normalizeSettings({ version: 2, pin: { whenPinned: 'repin' } });
+  const kept = core.normalizeSettings({ version: 3, pin: { whenPinned: 'repin' } });
   assert.equal(kept.pin.whenPinned, 'repin');
 });
 
@@ -411,8 +416,9 @@ test('nextPinAction โหมดต่อเวลา: ปักหมุดอ�
 test('nextPinAction โหมดต่อเวลา: หมุดหลุดแล้วปักใหม่ให้ครั้งเดียว', () => {
   const pin = { enabled: true, intervalSec: 30, whenPinned: 'extend' };
   assert.equal(core.nextPinAction({ lastActionAt: null, pinned: false }, pin, 0), 'pin');
-  // เพิ่งกดไป ยังไม่ถึง 5 วิ ต้องไม่กดซ้ำ
-  assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 3000), 'wait');
+  // เพิ่งกดปักไป ต้องเว้นอย่างน้อย 20 วินาทีก่อนกดอีก แม้จะอ่านสถานะได้ว่ายังไม่ปัก
+  assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 15000), 'wait');
+  assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 25000), 'pin');
 });
 
 test('normalizeSettings: ค่าเริ่มต้นของวิธีทำให้หมุดอยู่ต่อคือ extend', () => {
@@ -440,6 +446,6 @@ test('nextPinAction: ครบรอบและปักค้างอยู�
 });
 
 test('normalizeSettings: กันค่ารอบยกเลิก-ปักใหม่ที่สั้นเกินไป', () => {
-  assert.equal(core.normalizeSettings({ version: 2, pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
-  assert.equal(core.normalizeSettings({ version: 2, pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
+  assert.equal(core.normalizeSettings({ version: 3, pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
+  assert.equal(core.normalizeSettings({ version: 3, pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
 });

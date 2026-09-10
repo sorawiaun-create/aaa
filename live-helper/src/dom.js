@@ -5,7 +5,7 @@
   'use strict';
 
   const PIN_LABEL = /^(ปักหมุด|ปักหมุดสินค้า|pin)$/i;
-  const UNPIN_LABEL = /^(ยกเลิกการปักหมุด|ยกเลิกปักหมุด|unpin)/i;
+  const UNPIN_LABEL = /^(ยกเลิก|unpin)/i;
   const PINNED_BADGE = /(ปักหมุดแล้ว|pinned)/i;
   const EXTEND_LABEL = /^\+\s*\d+\s*(วินาที|วิ|นาที|s|sec|min)/i;
 
@@ -96,10 +96,14 @@
 
   // ปุ่ม "ปักหมุด" ของตะกร้าที่ n (ถ้าตั้ง selector เองไว้ ใช้อันนั้นก่อน)
   function pinButton(index, selectorOverride) {
+    // ปุ่มปักหมุดกับยกเลิกคือปุ่มเดียวกันที่สลับข้อความ
+    // ถ้าเชื่อ selector ที่จำไว้เฉย ๆ จะไปกด "ยกเลิก" โดยไม่รู้ตัว จึงต้องเช็กข้อความทุกครั้ง
     const manual = bySelector(selectorOverride);
-    if (manual) return manual;
+    if (manual && PIN_LABEL.test(textOf(manual))) return manual;
     const card = productCard(index);
-    return card ? byLabel(PIN_LABEL, card)[0] || null : null;
+    if (!card) return null;
+    if (byLabel(UNPIN_LABEL, card).length) return null; // ปักอยู่แล้ว ไม่ต้องกดอะไร
+    return byLabel(PIN_LABEL, card)[0] || null;
   }
 
   // ชื่อสินค้าที่ "กำลังจะถูกปัก" ไว้โชว์ในบันทึกให้ตรวจสอบได้ก่อนกด

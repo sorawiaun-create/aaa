@@ -9,7 +9,7 @@
     'ได้ซื้อสินค้า', 'ได้แชร์ LIVE', 'ถูกใจ LIVE', 'joined', 'shared',
   ];
 
-  const SETTINGS_VERSION = 2;
+  const SETTINGS_VERSION = 3;
 
   const DEFAULT_SETTINGS = {
     version: SETTINGS_VERSION,
@@ -98,7 +98,8 @@
     const src = raw && typeof raw === 'object' ? raw : {};
     const pin = Object.assign({}, DEFAULT_SETTINGS.pin, src.pin);
     // ค่าที่บันทึกไว้ตั้งแต่เวอร์ชันก่อน: ย้ายมาใช้วิธีกดปุ่ม "+30 วินาที" ซึ่งปลอดภัยกว่า
-    if (src.version !== SETTINGS_VERSION && src.pin) pin.whenPinned = 'extend';
+    const migrating = src.version !== SETTINGS_VERSION && !!src.pin;
+    if (migrating) pin.whenPinned = 'extend';
     const ai = Object.assign({}, DEFAULT_SETTINGS.ai, src.ai);
     const selectors = Object.assign({}, DEFAULT_SETTINGS.selectors, src.selectors);
 
@@ -131,6 +132,8 @@
     ai.blockWords = toWordList(ai.blockWords);
 
     for (const key of Object.keys(selectors)) selectors[key] = String(selectors[key] || '').trim();
+    // ตำแหน่งปุ่มที่จิ้มไว้เองอาจชี้ไปที่ปุ่มที่ตอนนี้กลายเป็น "ยกเลิกการปักหมุด" — ล้างทิ้งตอนอัปเกรด
+    if (migrating) { selectors.pinButton = ''; selectors.extendButton = ''; }
 
     return { version: SETTINGS_VERSION, pin, ai, products: normalizeProducts(src.products), selectors };
   }
@@ -452,8 +455,9 @@
         return 'extend';
       }
       // หมุดหลุด (หมดเวลาไปแล้ว หรือยังไม่เคยปัก) ค่อยปักใหม่ครั้งเดียว
+      // เว้นอย่างน้อย 20 วินาที กันกรณีอ่านสถานะพลาดแล้ววนกดรัว
       if (!st.pinned) {
-        if (last != null && now - last < 5000) return 'wait';
+        if (last != null && now - last < 20000) return 'wait';
         return 'pin';
       }
       return 'wait';

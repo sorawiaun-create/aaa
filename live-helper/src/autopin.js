@@ -7,7 +7,7 @@
     const state = {
       lastActionAt: null, lastExtendAt: null, nextDelayMs: 0,
       pinned: false, extendAvailable: false, extends: 0,
-      clicks: [], timer: null, lastWarnAt: 0,
+      clicks: [], assumePinnedUntil: 0, pinAttempts: 0, timer: null, lastWarnAt: 0,
     };
 
     function stopTimer() {
@@ -70,9 +70,13 @@
     function tick() {
       const settings = getSettings();
       const pin = settings.pin;
-      state.pinned = dom.isPinned(pin.basket);
+      // เชื่อการกระทำของตัวเองด้วย ไม่ใช่เชื่อแต่สิ่งที่อ่านจากหน้าเว็บ:
+      // เพิ่งกดปักไปหมาด ๆ ให้ถือว่าปักแล้ว 25 วินาที กันอ่านสถานะพลาดแล้ววนกดซ้ำ
+      const domPinned = dom.isPinned(pin.basket);
+      state.pinned = domPinned || Date.now() < state.assumePinnedUntil;
       const extendBtn = dom.extendButton(settings.selectors.extendButton);
       state.extendAvailable = !!extendBtn;
+      if (domPinned && extendBtn) state.pinAttempts = 0;
 
       const action = core.nextPinAction(state, pin, Date.now());
       if (action === 'off' || action === 'wait') { status(); return; }
@@ -118,6 +122,8 @@
         } else {
           if (!click(extendBtn)) return;
           state.extends += 1;
+          state.pinAttempts = 0;
+          state.assumePinnedUntil = Date.now() + 25000;
           log('ok', 'ต่อเวลาหมุดแล้ว (ครั้งที่ ' + state.extends + ') · ' + label(pin.basket));
         }
         status();
@@ -134,7 +140,13 @@
         log('info', '[ซ้อม] จะกดปักหมุด · ' + label(pin.basket));
       } else {
         if (!click(btn)) return;
+        state.assumePinnedUntil = Date.now() + 25000;
+        state.pinAttempts += 1;
         log('ok', 'ปักหมุดแล้ว · ' + label(pin.basket));
+        if (pin.whenPinned === 'extend' && state.pinAttempts >= 3 && state.extends === 0) {
+          warn('ปักไป ' + state.pinAttempts + ' ครั้งแล้วแต่ยังไม่เคยเจอปุ่ม "+30 วินาที" เลย'
+            + ' — ตอนปุ่มโผล่ให้กด "จิ้มเลือกปุ่ม +30 วิ" เพื่อชี้ตำแหน่งให้ระบบ');
+        }
       }
       state.lastActionAt = Date.now();
       scheduleNext();
@@ -158,7 +170,8 @@
       pinNow() { state.lastActionAt = null; tick(); },
       // ตรวจก่อนกดจริงว่าระบบเล็งการ์ดใบไหนอยู่ (กันไปกดโดนคูปอง/การแจกรางวัล)
       preview() {
-        const basket = getSettings().pin.basket;
+        const settings = getSettings();
+        const basket = settings.pin.basket;
         const card = dom.productCard(basket);
         if (!card) {
           log('warn', 'ยังหาการ์ดสินค้าของตะกร้าที่ ' + basket + ' ไม่เจอ — เลื่อนรายการสินค้าให้เห็นการ์ดก่อน');
@@ -166,8 +179,14 @@
         }
         dom.flash(card);
         log('ok', 'จะปัก: ' + label(basket) + ' (กรอบสีชมพูในหน้าเว็บ)');
-        const all = dom.productCards().length;
-        log('info', 'ตอนนี้เห็นการ์ดสินค้าทั้งหมด ' + all + ' ใบ');
+
+        // รายงานสิ่งที่ระบบ "เห็น" จริง ๆ ไว้ไล่ปัญหาเวลาทำงานผิด
+        const pinBtn = dom.pinButton(basket, settings.selectors.pinButton);
+        const extendBtn = dom.extendButton(settings.selectors.extendButton);
+        log('info', 'สถานะที่อ่านได้ · การ์ดทั้งหมด ' + dom.productCards().length + ' ใบ'
+          + ' · ปักหมุดอยู่: ' + (dom.isPinned(basket) ? 'ใช่' : 'ไม่')
+          + ' · ปุ่มปักที่จะกด: ' + (pinBtn ? '"' + dom.textOf(pinBtn) + '"' : 'ไม่มี (ปักอยู่แล้วหรือหาไม่เจอ)')
+          + ' · ปุ่มต่อเวลา: ' + (extendBtn ? '"' + dom.textOf(extendBtn) + '"' : 'ยังไม่โผล่'));
       },
       isRunning() { return !!state.timer; },
       state,
