@@ -361,6 +361,38 @@ test('nextPinAction: ปิดอยู่ = off', () => {
   assert.equal(core.nextPinAction({}, { enabled: false, intervalSec: 30 }, 0), 'off');
 });
 
+// --- โหมดต่อเวลา (+30 วิ) ---
+test('nextPinAction โหมดต่อเวลา: ปุ่มโผล่เมื่อไหร่กดเลย ไม่ต้องรอรอบ', () => {
+  const pin = { enabled: true, intervalSec: 3600, whenPinned: 'extend' };
+  const state = { lastActionAt: 1000, pinned: true, extendAvailable: true };
+  assert.equal(core.nextPinAction(state, pin, 2000), 'extend');
+});
+
+test('nextPinAction โหมดต่อเวลา: กดรัวไม่ได้ ต้องเว้น 5 วินาที', () => {
+  const pin = { enabled: true, intervalSec: 3600, whenPinned: 'extend' };
+  const state = { lastActionAt: 0, pinned: true, extendAvailable: true, lastExtendAt: 10000 };
+  assert.equal(core.nextPinAction(state, pin, 12000), 'wait');
+  assert.equal(core.nextPinAction(state, pin, 16000), 'extend');
+});
+
+test('nextPinAction โหมดต่อเวลา: ปักหมุดอยู่แต่ปุ่มยังไม่โผล่ = รอเฉย ๆ', () => {
+  const pin = { enabled: true, intervalSec: 30, whenPinned: 'extend' };
+  const state = { lastActionAt: 0, pinned: true, extendAvailable: false };
+  assert.equal(core.nextPinAction(state, pin, 999999), 'wait');
+});
+
+test('nextPinAction โหมดต่อเวลา: หมุดหลุดแล้วปักใหม่ให้ครั้งเดียว', () => {
+  const pin = { enabled: true, intervalSec: 30, whenPinned: 'extend' };
+  assert.equal(core.nextPinAction({ lastActionAt: null, pinned: false }, pin, 0), 'pin');
+  // เพิ่งกดไป ยังไม่ถึง 5 วิ ต้องไม่กดซ้ำ
+  assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 3000), 'wait');
+});
+
+test('normalizeSettings: ค่าเริ่มต้นของวิธีทำให้หมุดอยู่ต่อคือ extend', () => {
+  assert.equal(core.normalizeSettings(null).pin.whenPinned, 'extend');
+  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'มั่ว' } }).pin.whenPinned, 'extend');
+});
+
 test('nextPinAction: ยังไม่ครบรอบ = wait', () => {
   const pin = { enabled: true, intervalSec: 30, whenPinned: 'repin' };
   assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 10000), 'wait');
@@ -372,18 +404,15 @@ test('nextPinAction: ครบรอบแล้วยังไม่ปัก =
   assert.equal(core.nextPinAction({ lastActionAt: 1000, pinned: false }, pin, 40000), 'pin');
 });
 
-test('nextPinAction: ครบรอบและปักค้างอยู่ = ยกเลิกแล้วปักใหม่ (ค่าเริ่มต้น)', () => {
+test('nextPinAction: ครบรอบและปักค้างอยู่ โหมด repin = ยกเลิกแล้วปักใหม่', () => {
   const now = 100000;
   const state = { lastActionAt: now - 40000, pinned: true };
   const at = (mode) => core.nextPinAction(state, { enabled: true, intervalSec: 30, whenPinned: mode }, now);
   assert.equal(at('repin'), 'repin');
-  assert.equal(at('extend'), 'extend');
   assert.equal(at('wait'), 'wait');
 });
 
-test('normalizeSettings: โหมดเมื่อปักค้างอยู่ ค่าเริ่มต้นคือ repin และกันค่ามั่ว', () => {
-  assert.equal(core.normalizeSettings(null).pin.whenPinned, 'repin');
-  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'มั่ว' } }).pin.whenPinned, 'repin');
-  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'extend' } }).pin.whenPinned, 'extend');
+test('normalizeSettings: กันค่ารอบยกเลิก-ปักใหม่ที่สั้นเกินไป', () => {
+  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
   assert.equal(core.normalizeSettings({ pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
 });

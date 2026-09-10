@@ -42,11 +42,11 @@
           <button class="ttlh-btn" data-preset="60">1 นาที</button>
           <button class="ttlh-btn" data-preset="120">2 นาที</button>
         </div>
-        <div class="ttlh-row"><label>ถ้าถึงรอบแล้วยังปักค้างอยู่</label>
+        <div class="ttlh-row"><label>วิธีทำให้หมุดอยู่ต่อ</label>
           <select data-k="pin.whenPinned">
+            <option value="extend">กด +30 วิ ทุกครั้งที่โผล่ (คลิกน้อยสุด)</option>
             <option value="repin">ยกเลิกแล้วปักใหม่ (เด้งขึ้นจอผู้ชม)</option>
-            <option value="extend">กดต่อเวลา (ไม่เด้งใหม่)</option>
-            <option value="wait">รอจนหมุดหมดอายุเอง</option>
+            <option value="wait">ปักครั้งเดียวแล้วปล่อย</option>
           </select>
         </div>
         <div class="ttlh-row"><label>สุ่มจังหวะ ± (%)</label><input type="number" min="0" max="50" step="5" data-k="pin.jitterPct"></div>
@@ -56,8 +56,12 @@
           <button class="ttlh-btn" data-act="pin-now">ปักเดี๋ยวนี้</button>
         </div>
         <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจก่อนปัก — จะปักตัวไหน?</button></div>
-        <div class="ttlh-row"><button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด" เอง</button></div>
-        <p class="ttlh-note">ขั้นต่ำ 15 วินาที เพื่อลดความเสี่ยงถูกระบบมองว่าสแปม</p>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด"</button>
+          <button class="ttlh-btn" data-pick="extendButton">จิ้มเลือกปุ่ม "+30 วิ"</button>
+        </div>
+        <p class="ttlh-note">โหมด “กด +30 วิ” ใช้ปุ่มที่ TikTok เตรียมไว้ให้ — คลิกเดียวต่อ 30 วินาที
+          เสี่ยงเจอจิ๊กซอว์น้อยที่สุด (ช่อง “ปักซ้ำทุก” ใช้เฉพาะโหมดยกเลิกแล้วปักใหม่)</p>
       </div>
 
       <div class="ttlh-tab" data-pane="ai">
@@ -256,8 +260,14 @@
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
-      el.innerHTML = 'กำลังทำงาน · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
-        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก') + ' · รอบถัดไปอีก <b>' + state.nextIn + '</b> วิ';
+      const head = 'กำลังทำงาน · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
+        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก');
+      if (state.mode === 'extend') {
+        el.innerHTML = head + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
+          + (state.extendReady ? 'ปุ่ม +30 วิ โผล่แล้ว' : 'รอปุ่ม +30 วิ');
+      } else {
+        el.innerHTML = head + ' · รอบถัดไปอีก <b>' + state.nextIn + '</b> วิ';
+      }
     },
   });
 

@@ -7,7 +7,7 @@
   const PIN_LABEL = /^(ปักหมุด|ปักหมุดสินค้า|pin)$/i;
   const UNPIN_LABEL = /^(ยกเลิกการปักหมุด|ยกเลิกปักหมุด|unpin)/i;
   const PINNED_BADGE = /(ปักหมุดแล้ว|pinned)/i;
-  const EXTEND_LABEL = /^\+\s*\d+\s*(วินาที|วิ|s|sec)/i;
+  const EXTEND_LABEL = /^\+\s*\d+\s*(วินาที|วิ|นาที|s|sec|min)/i;
 
   function textOf(el) {
     return (el && (el.innerText || el.textContent) || '').replace(/\s+/g, ' ').trim();
@@ -122,8 +122,19 @@
   }
 
   // ปุ่ม "+ 30 วินาที" ที่โผล่บนกล่องวิดีโอตอนหมุดใกล้หมดเวลา
-  function extendButton() {
-    return byLabel(EXTEND_LABEL, document)[0] || null;
+  // บางธีมไม่ได้ทำเป็น <button> จึงต้องไล่หาจากข้อความแล้วค่อยหากล่องที่กดได้
+  function extendButton(selectorOverride) {
+    const manual = bySelector(selectorOverride);
+    if (manual) return manual;
+
+    const direct = byLabel(EXTEND_LABEL, document)[0];
+    if (direct) return direct;
+
+    const leaf = Array.from(document.querySelectorAll('div, span, button, a, p')).find(
+      (el) => el.children.length === 0 && EXTEND_LABEL.test(textOf(el)) && visible(el)
+    );
+    if (!leaf) return null;
+    return leaf.closest('button, [role="button"], div[class*="btn"], div[class*="Btn"]') || leaf;
   }
 
   // กล่องรายการแชท: จับจากข้อความ empty state ก่อน ถ้าไม่เจอค่อยเดาจากช่องพิมพ์

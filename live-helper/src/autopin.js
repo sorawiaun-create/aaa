@@ -4,7 +4,11 @@
   const { core, dom } = root.TTLH;
 
   function createAutoPin({ getSettings, log, onStatus, getCaptchaCount }) {
-    const state = { lastActionAt: null, nextDelayMs: 0, pinned: false, timer: null, lastWarnAt: 0 };
+    const state = {
+      lastActionAt: null, lastExtendAt: null, nextDelayMs: 0,
+      pinned: false, extendAvailable: false, extends: 0,
+      timer: null, lastWarnAt: 0,
+    };
 
     // เรียกทุกครั้งหลังลงมือ เพื่อสุ่มรอบถัดไป (และยืดออกถ้าเคยเจอจิ๊กซอว์)
     function scheduleNext() {
@@ -18,7 +22,14 @@
       const wait = state.nextDelayMs || pin.intervalSec * 1000;
       const next = state.lastActionAt == null ? 0
         : Math.max(0, Math.ceil((state.lastActionAt + wait - Date.now()) / 1000));
-      onStatus(Object.assign({ running: !!state.timer, pinned: state.pinned, nextIn: next }, extra));
+      onStatus(Object.assign({
+        running: !!state.timer,
+        pinned: state.pinned,
+        nextIn: next,
+        mode: pin.whenPinned,
+        extends: state.extends,
+        extendReady: state.extendAvailable,
+      }, extra));
     }
 
     // ป้ายกำกับที่อ่านรู้เรื่องว่ากำลังทำอะไรกับสินค้าตัวไหน
@@ -38,6 +49,8 @@
       const settings = getSettings();
       const pin = settings.pin;
       state.pinned = dom.isPinned(pin.basket);
+      const extendBtn = dom.extendButton(settings.selectors.extendButton);
+      state.extendAvailable = !!extendBtn;
 
       const action = core.nextPinAction(state, pin, Date.now());
       if (action === 'off' || action === 'wait') { status(); return; }
@@ -76,12 +89,15 @@
       }
 
       if (action === 'extend') {
-        const btn = dom.extendButton();
-        if (!btn) { status(); return; } // ปุ่มต่อเวลาโผล่เฉพาะตอนหมุดใกล้หมด รอรอบหน้า
-        if (pin.dryRun) log('info', '[ซ้อม] จะกดต่อเวลาหมุด (+วินาที)');
-        else { dom.realClick(btn); log('ok', 'ต่อเวลาหมุด · ' + label(pin.basket)); }
-        state.lastActionAt = Date.now();
-        scheduleNext();
+        if (!extendBtn) { status(); return; } // ปุ่มโผล่เฉพาะตอนหมุดใกล้หมด รอรอบหน้า
+        state.lastExtendAt = Date.now();
+        if (pin.dryRun) {
+          log('info', '[ซ้อม] จะกดต่อเวลาหมุด ' + dom.textOf(extendBtn));
+        } else {
+          dom.realClick(extendBtn);
+          state.extends += 1;
+          log('ok', 'ต่อเวลาหมุดแล้ว (ครั้งที่ ' + state.extends + ') · ' + label(pin.basket));
+        }
         status();
         return;
       }
