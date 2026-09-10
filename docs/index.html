@@ -193,6 +193,7 @@
         <b style="font-size:14px">⏱ ยิงอัตโนมัติจากเครื่องนี้</b>
       </div>
       <div id="hbStatus" class="muted" style="font-size:12.5px;flex:1;min-width:200px">…</div>
+      <button class="btn ghost sm" onclick="showOverlay()" title="ใส่/เปลี่ยนกุญแจ GitHub">🔑 กุญแจ</button>
       <button class="btn sm" id="hbToggle" onclick="toggleHeartbeat()">…</button>
     </div>
     <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px">
@@ -202,6 +203,7 @@
       </div>
     </div>
     <div id="kpis" class="kpis"></div>
+    <div id="aiOverview"></div>
     <div class="card" style="padding:6px 16px 16px">
       <h3 style="margin:14px 4px 6px;font-size:15px">รายละเอียดรายบัญชี</h3>
       <div style="overflow-x:auto">
@@ -385,7 +387,12 @@
         <span class="tag ok">เพิ่มงบ</span> <span class="tag">คงไว้</span>
         <span class="tag err">ลดงบ/ปิด</span> — เป็นคำแนะนำ ยังไม่แก้แอดจริงให้
       </div>
-      <button class="btn green" id="aiRunBtn" onclick="runAI()" title="ให้ AI วิเคราะห์เดี๋ยวนี้ (ทำงานในเว็บ ไม่ต้องรอคลาวด์)">🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</button>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer" title="เปิดหน้าเว็บทิ้งไว้ AI จะสรุปให้เองเวลา 08:00 และ 20:00">
+          <input type="checkbox" id="aiSchedChk" onchange="toggleAiSched()"> สรุปอัตโนมัติ 08:00 &amp; 20:00
+        </label>
+        <button class="btn green" id="aiRunBtn" onclick="runAI()" title="ให้ AI วิเคราะห์เดี๋ยวนี้ (ทำงานในเว็บ ไม่ต้องรอคลาวด์)">🤖 ให้ AI วิเคราะห์เดี๋ยวนี้</button>
+      </div>
     </div>
     <div id="aiKeyBar" class="card" style="margin-bottom:10px;padding:10px 12px"></div>
     <div id="aiMeta" class="muted" style="font-size:12px;margin-bottom:10px"></div>
@@ -550,7 +557,9 @@ async function putCommandsFile(list,sha){
 
 /* ===================== token ===================== */
 let afterToken=null;
-function showOverlay(cb){afterToken=cb||null;document.getElementById("overlay").classList.add("show");}
+function showOverlay(cb){afterToken=(typeof cb==="function")?cb:null;
+  const inp=document.getElementById("tokenInput");if(inp)inp.value=token();   /* โชว์กุญแจเดิม ให้แก้ทับได้เลย */
+  document.getElementById("overlay").classList.add("show");if(inp)inp.focus();}
 function hideOverlay(){document.getElementById("overlay").classList.remove("show");}
 function saveToken(){const v=document.getElementById("tokenInput").value.trim();
   if(!v){toast("วางกุญแจก่อนครับ","err");return;}
@@ -1180,23 +1189,73 @@ function renderAI(a){
   }
   body.innerHTML=html;
 }
+/* การ์ดสรุป AI ที่โชว์ในหน้า "ภาพรวม" */
+function renderAiOverview(a){
+  const el=document.getElementById("aiOverview");if(!el)return;
+  if(!a||a.error){
+    el.innerHTML=`<div class="card" style="margin-bottom:12px;padding:12px 16px">
+      <span class="muted" style="font-size:12.5px">🤖 AI จะสรุปให้อัตโนมัติเวลา <b>08:00</b> และ <b>20:00</b> (เปิดหน้าเว็บทิ้งไว้) — หรือกดสรุปเดี๋ยวนี้ได้ในแท็บ <a href="#" onclick="showTab('ai');return false">AI วิเคราะห์</a></span></div>`;
+    return;
+  }
+  const H=AI_HEALTH[a.overall_health]||AI_HEALTH.warning;
+  const when=a.generated_at?new Date(a.generated_at).toLocaleString("th-TH"):"";
+  let html=`<div class="card" style="margin-bottom:12px">
+    <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+      <b style="font-size:15px">🤖 สรุปจาก AI</b><span class="tag ${H.cls}">${H.t}</span>
+      <div class="spacer"></div>
+      <span class="muted" style="font-size:11.5px">${when}</span>
+      <button class="btn ghost sm" onclick="showTab('ai')">ดูเต็ม ➜</button>
+    </div>
+    <div style="line-height:1.6">${esc(a.summary||"")}</div>`;
+  if((a.priority_actions||[]).length){
+    html+=`<div style="margin-top:8px"><b>ควรทำก่อน:</b><ul style="margin:6px 0 0;padding-left:20px;line-height:1.7">`+
+      a.priority_actions.slice(0,4).map(x=>`<li>${esc(x)}</li>`).join("")+`</ul></div>`;
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+/* ตัวจริงที่เรียก OpenAI — ใช้ร่วมกันทั้งปุ่มกดเอง และตัวสรุปอัตโนมัติ */
+async function runAiCore(){
+  const key=openaiKey();if(!key)throw new Error("ยังไม่ได้ใส่กุญแจ ChatGPT");
+  const st=OV_ST, bd=BOARD;
+  if(!st||!(st.accounts||[]).length)throw new Error("ยังไม่มีข้อมูลให้วิเคราะห์ — กด ↻ โหลดใหม่ ก่อน");
+  const res=await callOpenAI(key,aiModel(),AI_SYSTEM_PROMPT,buildAiPromptJS(st,bd));
+  res.generated_at=new Date().toISOString();res.model=aiModel();res.data_as_of=st.updated_at||null;
+  try{localStorage.setItem(AI_RESULT_STORE,JSON.stringify(res));}catch(e){}
+  renderAI(res);renderAiOverview(res);
+  return res;
+}
 async function runAI(){
   const key=openaiKey();
   if(!key){renderAiKeyBar();toast("ใส่กุญแจ ChatGPT ก่อนครับ (ช่องด้านบน)","err");
     const el=document.getElementById("aiKeyInput");if(el)el.focus();return;}
-  const st=OV_ST, bd=BOARD;
-  if(!st||!(st.accounts||[]).length){toast("ยังไม่มีข้อมูลให้วิเคราะห์ — กด ↻ โหลดใหม่ ก่อน","err");return;}
   const btn=document.getElementById("aiRunBtn");
   btn.disabled=true;btn.textContent="⏳ AI กำลังคิด…";
-  try{
-    const res=await callOpenAI(key,aiModel(),AI_SYSTEM_PROMPT,buildAiPromptJS(st,bd));
-    res.generated_at=new Date().toISOString();res.model=aiModel();
-    res.data_as_of=st.updated_at||null;
-    try{localStorage.setItem(AI_RESULT_STORE,JSON.stringify(res));}catch(e){}
-    renderAI(res);toast("🤖 วิเคราะห์เสร็จแล้ว ✓","ok");
-  }catch(e){toast("❌ "+e.message,"err");
+  try{await runAiCore();toast("🤖 วิเคราะห์เสร็จแล้ว ✓","ok");}
+  catch(e){toast("❌ "+e.message,"err");
     renderAI({error:e.message,generated_at:new Date().toISOString(),model:aiModel()});}
   btn.disabled=false;btn.textContent="🤖 ให้ AI วิเคราะห์เดี๋ยวนี้";
+}
+/* ===== สรุปอัตโนมัติ 08:00 และ 20:00 (ทำงานในเบราว์เซอร์ตอนเปิดหน้าเว็บ) ===== */
+const AI_SCHED_KEY="fbdash_ai_sched", AI_LAST_SLOT="fbdash_ai_last_slot", AI_SLOTS=[8,20];
+let aiFiring=false;
+function aiSchedOn(){return localStorage.getItem(AI_SCHED_KEY)!=="off";}   /* ค่าเริ่มต้น = เปิด */
+function syncAiSchedChk(){const c=document.getElementById("aiSchedChk");if(c)c.checked=aiSchedOn();}
+function toggleAiSched(){const c=document.getElementById("aiSchedChk");
+  localStorage.setItem(AI_SCHED_KEY,(c&&c.checked)?"on":"off");
+  toast((c&&c.checked)?"เปิดสรุปอัตโนมัติ 08:00 & 20:00 แล้ว ✓":"ปิดสรุปอัตโนมัติแล้ว",(c&&c.checked)?"ok":"");}
+function aiCurrentSlot(){const d=new Date();const h=d.getHours();if(!AI_SLOTS.includes(h))return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}:${h}`;}
+async function aiSchedTick(){
+  if(!aiSchedOn()||aiFiring)return;
+  const slot=aiCurrentSlot();if(!slot)return;
+  if(localStorage.getItem(AI_LAST_SLOT)===slot)return;      /* สล็อตนี้ทำไปแล้ว */
+  if(!openaiKey())return;                                    /* ไม่มีกุญแจ ข้าม */
+  if(!OV_ST||!(OV_ST.accounts||[]).length)return;            /* ยังไม่มีข้อมูล ข้ามไปนาทีถัดไป */
+  aiFiring=true;localStorage.setItem(AI_LAST_SLOT,slot);     /* จองกันยิงซ้ำ (ข้ามแท็บ) */
+  try{await runAiCore();toast("🤖 AI สรุปประจำ"+(new Date().getHours()<12?"เช้า (08:00)":"ค่ำ (20:00)")+" เสร็จแล้ว","ok");}
+  catch(e){localStorage.removeItem(AI_LAST_SLOT);}            /* พลาด → ให้ลองใหม่นาทีถัดไป */
+  finally{aiFiring=false;}
 }
 
 /* ===================== 🚀 สตูดิโอสร้างแอด (AI) ===================== */
@@ -1681,8 +1740,9 @@ async function boot(){
   try{renderLog(await loadActivity());}catch(e){renderLog(null);}
   try{renderCheck(await loadEval());}catch(e){renderCheck(null);}
   // AI: แสดงผลวิเคราะห์ล่าสุดที่เก็บไว้ในเบราว์เซอร์ (ทำงานฝั่งเว็บ ไม่ต้องรอคลาวด์)
-  try{const saved=localStorage.getItem(AI_RESULT_STORE);renderAI(saved?JSON.parse(saved):null);}
-  catch(e){renderAI(null);}
+  try{const saved=localStorage.getItem(AI_RESULT_STORE);const a=saved?JSON.parse(saved):null;renderAI(a);renderAiOverview(a);}
+  catch(e){renderAI(null);renderAiOverview(null);}
+  syncAiSchedChk();
 }
 
 /* ===================== theme (สว่าง/มืด) ===================== */
@@ -1737,10 +1797,12 @@ async function fireBeat(){
   hbFiring=true;localStorage.setItem(HB_LAST,String(Date.now()));updateHbUI();  /* จองล็อกก่อนยิง กัน tab อื่นยิงซ้ำ */
   try{await dispatchRun(false);toast("⏱ ยิงรอบอัตโนมัติแล้ว (จากเครื่องนี้)","ok");}
   catch(e){localStorage.setItem(HB_LAST,String(Date.now()-hbIntervalMs()+60000));  /* ล้มเหลว → ลองใหม่ใน ~1 นาที */
-    toast("⚠️ ยิงอัตโนมัติไม่สำเร็จ: "+e.message,"err");}
+    toast("⚠️ ยิงอัตโนมัติไม่สำเร็จ: "+e.message,"err");
+    if(/40[13]|สิทธิ์|กุญแจ/.test(e.message))showOverlay();}   /* กุญแจหมดอายุ/ไม่มีสิทธิ์ → ให้ใส่ใหม่เลย */
   finally{hbFiring=false;updateHbUI();}
 }
-function startHeartbeat(){if(hbTimer)clearInterval(hbTimer);hbTick();hbTimer=setInterval(hbTick,1000);}
+function masterTick(){hbTick();aiSchedTick();}
+function startHeartbeat(){if(hbTimer)clearInterval(hbTimer);masterTick();hbTimer=setInterval(masterTick,1000);}
 
 boot().finally(startHeartbeat);
 </script>
