@@ -187,6 +187,14 @@
 
   <!-- ===== ภาพรวม ===== -->
   <section id="overview">
+    <div class="card" id="hbCard" style="padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span id="hbDot" style="width:11px;height:11px;border-radius:50%;background:#888;flex:none"></span>
+        <b style="font-size:14px">⏱ ยิงอัตโนมัติจากเครื่องนี้</b>
+      </div>
+      <div id="hbStatus" class="muted" style="font-size:12.5px;flex:1;min-width:200px">…</div>
+      <button class="btn sm" id="hbToggle" onclick="toggleHeartbeat()">…</button>
+    </div>
     <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px">
       <div id="ovMeta" class="muted" style="font-size:12.5px"></div>
       <div>
@@ -1684,7 +1692,57 @@ function toggleTheme(){const light=!document.body.classList.contains("light");
   localStorage.setItem("fbdash_theme",light?"light":"dark");applyTheme(light?"light":"dark");}
 applyTheme(localStorage.getItem("fbdash_theme")||"dark");
 
-boot();
+/* ============ ยิงอัตโนมัติจากเครื่องนี้ (heartbeat) ============
+   เปิดหน้าเว็บทิ้งไว้ = เบราว์เซอร์สั่งรันจริงบนคลาวด์ให้ตรงเวลาทุก interval_mins นาที
+   (นาฬิกาเบราว์เซอร์แม่นกว่าตารางเวลาในตัวของ GitHub มาก)
+   ปิดเครื่อง/ปิดหน้าเว็บ → ยังมีตารางเวลาของคลาวด์เป็นตัวสำรอง
+   ประสาน tab หลายอันผ่าน localStorage (HB_LAST) กันยิงซ้ำ */
+const HB_KEY="fbdash_heartbeat", HB_LAST="fbdash_last_beat";
+let hbTimer=null, hbFiring=false;
+function hbOn(){return localStorage.getItem(HB_KEY)!=="off";}   /* ค่าเริ่มต้น = เปิด */
+function hbLast(){return Number(localStorage.getItem(HB_LAST)||0);}
+function hbIntervalMs(){const m=Number(CONFIG&&CONFIG.settings&&CONFIG.settings.interval_mins)||10;return Math.max(10,m)*60000;}
+function updateHbUI(){
+  const dot=document.getElementById("hbDot"),st=document.getElementById("hbStatus"),btn=document.getElementById("hbToggle");
+  if(!dot||!st||!btn)return;
+  const on=hbOn();
+  btn.textContent=on?"⏸ ปิด":"▶ เปิด";
+  btn.className="btn sm"+(on?"":" green");
+  if(!on){dot.style.background="#888";st.innerHTML="<b>ปิดอยู่</b> — ตอนนี้พึ่งตารางเวลาของคลาวด์อย่างเดียว (อาจช้าเป็นชั่วโมง)";return;}
+  if(!token()){dot.style.background="#f59e0b";
+    st.innerHTML="เปิดอยู่ แต่ยังไม่ได้ใส่กุญแจ — <a href=\"#\" onclick=\"requireToken(updateHbUI);return false\">ใส่กุญแจ</a> ก่อนถึงจะยิงได้";return;}
+  const every=Math.round(hbIntervalMs()/60000);
+  const remain=Math.max(0,hbIntervalMs()-(Date.now()-hbLast()));
+  const mm=Math.floor(remain/60000),ss=Math.floor((remain%60000)/1000);
+  const last=hbLast()?new Date(hbLast()).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}):"—";
+  dot.style.background=hbFiring?"#3b82f6":"#22c55e";
+  st.innerHTML=(hbFiring?"🔵 <b>กำลังยิง…</b>":"🟢 <b>เปิดอยู่</b>")+
+    ` · ทุก ${every} นาที · รอบต่อไปอีก <b>${mm}:${String(ss).padStart(2,"0")}</b> · ล่าสุด ${last}`;
+}
+function toggleHeartbeat(){
+  const turningOn=!hbOn();
+  localStorage.setItem(HB_KEY,turningOn?"on":"off");
+  if(turningOn){localStorage.setItem(HB_LAST,"0");             /* ให้ยิงรอบแรกทันที */
+    if(!token())requireToken(updateHbUI);}
+  updateHbUI();
+  toast(turningOn?"เปิดยิงอัตโนมัติจากเครื่องนี้แล้ว ✓":"ปิดยิงอัตโนมัติแล้ว",turningOn?"ok":"");
+}
+function hbTick(){
+  updateHbUI();
+  if(!hbOn()||!token()||hbFiring)return;
+  if(Date.now()-hbLast()<hbIntervalMs())return;
+  fireBeat();
+}
+async function fireBeat(){
+  hbFiring=true;localStorage.setItem(HB_LAST,String(Date.now()));updateHbUI();  /* จองล็อกก่อนยิง กัน tab อื่นยิงซ้ำ */
+  try{await dispatchRun(false);toast("⏱ ยิงรอบอัตโนมัติแล้ว (จากเครื่องนี้)","ok");}
+  catch(e){localStorage.setItem(HB_LAST,String(Date.now()-hbIntervalMs()+60000));  /* ล้มเหลว → ลองใหม่ใน ~1 นาที */
+    toast("⚠️ ยิงอัตโนมัติไม่สำเร็จ: "+e.message,"err");}
+  finally{hbFiring=false;updateHbUI();}
+}
+function startHeartbeat(){if(hbTimer)clearInterval(hbTimer);hbTick();hbTimer=setInterval(hbTick,1000);}
+
+boot().finally(startHeartbeat);
 </script>
 </body>
 </html>
