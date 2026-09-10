@@ -36,32 +36,28 @@
       <div class="ttlh-tab on" data-pane="pin">
         <div class="ttlh-status" data-pin-status>ยังไม่เริ่มทำงาน</div>
         <div class="ttlh-row"><label>ปักหมุดตะกร้าที่</label><input type="number" min="1" max="200" data-k="pin.basket"></div>
-        <div class="ttlh-row"><label>ปักซ้ำทุก (วินาที)</label><input type="number" min="15" max="3600" step="5" data-k="pin.intervalSec"></div>
+        <div class="ttlh-row"><label>กด "+30 วิ" ทุก (วินาที)</label><input type="number" min="20" max="120" data-k="pin.extendEverySec"></div>
         <div class="ttlh-row">
-          <button class="ttlh-btn" data-preset="30">30 วิ</button>
-          <button class="ttlh-btn" data-preset="60">1 นาที</button>
-          <button class="ttlh-btn" data-preset="120">2 นาที</button>
+          <button class="ttlh-btn" data-every="31">31 วิ</button>
+          <button class="ttlh-btn" data-every="33">33 วิ</button>
+          <button class="ttlh-btn" data-every="35">35 วิ</button>
         </div>
-        <div class="ttlh-row"><label>วิธีทำให้หมุดอยู่ต่อ</label>
-          <select data-k="pin.whenPinned">
-            <option value="extend">กด +30 วิ ทุกครั้งที่โผล่ (คลิกน้อยสุด)</option>
-            <option value="repin">ยกเลิกแล้วปักใหม่ (เด้งขึ้นจอผู้ชม)</option>
-            <option value="wait">ปักครั้งเดียวแล้วปล่อย</option>
-          </select>
-        </div>
-        <div class="ttlh-row"><label>สุ่มจังหวะ ± (%)</label><input type="number" min="0" max="50" step="5" data-k="pin.jitterPct"></div>
+        <div class="ttlh-row"><label>เพดานคลิก (ครั้ง/นาที)</label><input type="number" min="2" max="30" data-k="pin.maxClicksPerMin"></div>
         <label class="ttlh-check"><input type="checkbox" data-k="pin.dryRun"> โหมดซ้อม (ไม่คลิกจริง)</label>
         <div class="ttlh-row">
           <button class="ttlh-btn main" data-act="pin-toggle">เริ่มปักหมุดอัตโนมัติ</button>
-          <button class="ttlh-btn" data-act="pin-now">ปักเดี๋ยวนี้</button>
         </div>
-        <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจก่อนปัก — จะปักตัวไหน?</button></div>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-act="pin-now">ปักเดี๋ยวนี้</button>
+          <button class="ttlh-btn" data-act="extend-now">ต่อเวลาเดี๋ยวนี้</button>
+        </div>
+        <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจดูว่าระบบเห็นอะไรอยู่</button></div>
         <div class="ttlh-row">
           <button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด"</button>
           <button class="ttlh-btn" data-pick="extendButton">จิ้มเลือกปุ่ม "+30 วิ"</button>
         </div>
-        <p class="ttlh-note">โหมด “กด +30 วิ” ใช้ปุ่มที่ TikTok เตรียมไว้ให้ — คลิกเดียวต่อ 30 วินาที
-          เสี่ยงเจอจิ๊กซอว์น้อยที่สุด (ช่อง “ปักซ้ำทุก” ใช้เฉพาะโหมดยกเลิกแล้วปักใหม่)</p>
+        <p class="ttlh-note">ทำงานสองอย่างแยกกัน — ยังไม่ปักก็ปักให้ครั้งเดียว จากนั้นกดปุ่ม
+          “+30 วินาที” ทุก ๆ รอบที่ตั้งไว้ · ระบบนี้ไม่กด “ยกเลิกการปักหมุด” เลย</p>
       </div>
 
       <div class="ttlh-tab" data-pane="ai">
@@ -256,7 +252,6 @@
   const autoPin = createAutoPin({
     getSettings,
     log,
-    getCaptchaCount: () => runtime.captchaCount,
     onHalt() {
       settings.pin.enabled = false;
       save();
@@ -267,14 +262,11 @@
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
-      const head = 'กำลังทำงาน · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
-        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก');
-      if (state.mode === 'extend') {
-        el.innerHTML = head + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
-          + (state.extendReady ? 'ปุ่ม +30 วิ โผล่แล้ว' : 'รอปุ่ม +30 วิ');
-      } else {
-        el.innerHTML = head + ' · รอบถัดไปอีก <b>' + state.nextIn + '</b> วิ';
-      }
+      el.innerHTML = 'ทำงานอยู่ · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
+        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก')
+        + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
+        + (state.pinned ? 'กดต่อเวลาอีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด')
+        + (state.extendReady ? ' · เห็นปุ่ม +30 วิ แล้ว' : '');
     },
   });
 
@@ -332,7 +324,6 @@
       showAlert('');
       document.title = baseTitle;
 
-      const slower = core.backoffMultiplier(runtime.captchaCount).toFixed(1);
       if (was.pin) {
         settings.pin.enabled = true;
         autoPin.start();
@@ -343,13 +334,14 @@
         autoReply.start();
         syncToggle('[data-act="ai-toggle"]', true, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
       }
-      log('ok', 'ยืนยันผ่านแล้ว — ทำงานต่อ และยืดรอบปักหมุดเป็น ' + slower + ' เท่า เพื่อลดโอกาสเจอซ้ำ');
+      log('ok', 'ยืนยันผ่านแล้ว — ทำงานต่อให้แล้ว (เจอจิ๊กซอว์มา ' + runtime.captchaCount + ' ครั้ง'
+        + ' ถ้ายังเจอบ่อยให้เพิ่มรอบกด "+30 วิ" ขึ้นอีกหน่อย)');
     }
   }
 
   // ---------- ปุ่มต่าง ๆ ----------
   panel.addEventListener('click', async (ev) => {
-    const target = ev.target.closest('[data-act], [data-tab], [data-preset], [data-speed], [data-pick]');
+    const target = ev.target.closest('[data-act], [data-tab], [data-every], [data-speed], [data-pick]');
     if (!target) return;
 
     if (target.dataset.tab) {
@@ -371,12 +363,12 @@
       return;
     }
 
-    if (target.dataset.preset) {
-      settings.pin.intervalSec = Number(target.dataset.preset);
+    if (target.dataset.every) {
+      settings.pin.extendEverySec = Number(target.dataset.every);
       settings = core.normalizeSettings(settings);
       fillFields();
       save();
-      log('info', 'ตั้งรอบปักหมุดเป็นทุก ' + settings.pin.intervalSec + ' วินาที');
+      log('info', 'ตั้งให้กด "+30 วิ" ทุก ' + settings.pin.extendEverySec + ' วินาที');
       return;
     }
 
@@ -410,6 +402,9 @@
         break;
       case 'pin-preview':
         autoPin.preview();
+        break;
+      case 'extend-now':
+        autoPin.extendNow();
         break;
       case 'ai-toggle':
         if (autoReply.isRunning()) { settings.ai.enabled = false; autoReply.stop(); }

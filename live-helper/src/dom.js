@@ -112,11 +112,6 @@
     return card ? cardName(card) : '';
   }
 
-  function unpinButton(index) {
-    const card = productCard(index);
-    return card ? byLabel(UNPIN_LABEL, card)[0] || null : null;
-  }
-
   // ปักหมุดอยู่หรือยัง — ดูจากป้าย "ปักหมุดแล้ว" หรือปุ่มที่กลายเป็น "ยกเลิกการปักหมุด"
   function isPinned(index) {
     const card = productCard(index);
@@ -388,7 +383,7 @@
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
-      targetName, flash, captchaEl, beep, pinButton, unpinButton,
+      targetName, flash, captchaEl, beep, pinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
       typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,

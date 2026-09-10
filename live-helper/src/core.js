@@ -9,23 +9,15 @@
     'ได้ซื้อสินค้า', 'ได้แชร์ LIVE', 'ถูกใจ LIVE', 'joined', 'shared',
   ];
 
-  const SETTINGS_VERSION = 3;
+  const SETTINGS_VERSION = 4;
 
   const DEFAULT_SETTINGS = {
     version: SETTINGS_VERSION,
     pin: {
       enabled: false,
       basket: 1,            // ปักหมุด "ตะกร้าที่เท่าไหร่"
-      intervalSec: 30,      // ทุกกี่วินาที (30 / 60 / ตั้งเอง)
-      // วิธีทำให้หมุดอยู่ต่อเนื่อง
-      //   extend = ปักครั้งเดียว แล้วกดปุ่ม "+30 วินาที" ทุกครั้งที่มันโผล่ ← ค่าเริ่มต้น
-      //            (คลิกน้อยที่สุด ใช้ปุ่มที่ TikTok เตรียมไว้ให้ตรง ๆ)
-      //   repin  = ยกเลิกหมุดแล้วปักใหม่ทุกรอบ (การ์ดเด้งขึ้นจอผู้ชมอีกครั้ง แต่คลิกถี่กว่า)
-      //   wait   = ปักครั้งเดียวแล้วปล่อย
-      whenPinned: 'extend',
-      jitterPct: 15,        // สุ่มบวก/ลบรอบละกี่ % ไม่ให้กดตรงเป๊ะทุกครั้ง
+      extendEverySec: 31,   // กดปุ่ม "+30 วินาที" ทุกกี่วินาที (หมุดนับถอยหลัง 30 วิ)
       maxClicksPerMin: 8,   // เพดานกันระบบรวน ถ้าเกินนี้ให้หยุดตัวเองทันที
-      repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
     ai: {
@@ -99,19 +91,14 @@
     const pin = Object.assign({}, DEFAULT_SETTINGS.pin, src.pin);
     // ค่าที่บันทึกไว้ตั้งแต่เวอร์ชันก่อน: ย้ายมาใช้วิธีกดปุ่ม "+30 วินาที" ซึ่งปลอดภัยกว่า
     const migrating = src.version !== SETTINGS_VERSION && !!src.pin;
-    if (migrating) pin.whenPinned = 'extend';
     const ai = Object.assign({}, DEFAULT_SETTINGS.ai, src.ai);
     const selectors = Object.assign({}, DEFAULT_SETTINGS.selectors, src.selectors);
 
     pin.enabled = !!pin.enabled;
     pin.dryRun = !!pin.dryRun;
-    if (!['repin', 'extend', 'wait'].includes(pin.whenPinned)) pin.whenPinned = 'extend';
-    pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
-    pin.jitterPct = clampInt(pin.jitterPct, 0, 50, DEFAULT_SETTINGS.pin.jitterPct);
-    pin.maxClicksPerMin = clampInt(pin.maxClicksPerMin, 2, 30, DEFAULT_SETTINGS.pin.maxClicksPerMin);
     pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
-    // ต่ำกว่า 15 วิ เสี่ยงโดนระบบมองว่าสแปม จึงล็อกขั้นต่ำไว้
-    pin.intervalSec = clampInt(pin.intervalSec, 15, 3600, DEFAULT_SETTINGS.pin.intervalSec);
+    pin.extendEverySec = clampInt(pin.extendEverySec, 20, 120, DEFAULT_SETTINGS.pin.extendEverySec);
+    pin.maxClicksPerMin = clampInt(pin.maxClicksPerMin, 2, 30, DEFAULT_SETTINGS.pin.maxClicksPerMin);
 
     ai.enabled = !!ai.enabled;
     ai.dryRun = !!ai.dryRun;
@@ -440,55 +427,33 @@
 
   // ---------- ตัวจับเวลาปักหมุด ----------
   /**
-   * pinState = { lastActionAt: number|null, pinned: boolean }
-   * คืนค่า 'pin' | 'repin' | 'extend' | 'wait' | 'off'
+   * ตัดสินใจว่ารอบนี้ต้องทำอะไร — แยกเป็นสองงานที่ไม่ยุ่งกัน
+   *   งานที่ 1 ปักหมุด: ถ้ายังไม่ปัก → ปักครั้งเดียว / ถ้าปักอยู่แล้ว → ปล่อยไว้ ไม่แตะอีก
+   *   งานที่ 2 ต่อเวลา: ถึงรอบแล้วและปุ่ม "+30 วินาที" โผล่อยู่ → กด
+   * ระบบนี้ "ไม่กดยกเลิกการปักหมุด" ในทุกกรณี
+   *
+   * pinState = { pinned, extendAvailable, lastPinAt, lastExtendAt }
+   * คืนค่า 'extend' | 'pin' | 'wait' | 'off'
    */
   function nextPinAction(pinState, pin, now) {
     if (!pin.enabled) return 'off';
     const st = pinState || {};
-    const last = st.lastActionAt;
 
-    // โหมดต่อเวลา: ไม่ต้องรอรอบ ปุ่ม "+30 วินาที" โผล่เมื่อไหร่กดเลย (คลิกน้อยที่สุด)
-    if (pin.whenPinned === 'extend') {
-      if (st.extendAvailable) {
-        if (st.lastExtendAt != null && now - st.lastExtendAt < 5000) return 'wait';
-        return 'extend';
-      }
-      // หมุดหลุด (หมดเวลาไปแล้ว หรือยังไม่เคยปัก) ค่อยปักใหม่ครั้งเดียว
-      // เว้นอย่างน้อย 20 วินาที กันกรณีอ่านสถานะพลาดแล้ววนกดรัว
-      if (!st.pinned) {
-        if (last != null && now - last < 20000) return 'wait';
-        return 'pin';
-      }
+    // งานที่ 2 มาก่อน: หมุดที่ปักอยู่ต้องไม่ปล่อยให้หมดเวลา
+    if (st.pinned) {
+      const due = st.lastExtendAt == null || now - st.lastExtendAt >= pin.extendEverySec * 1000;
+      if (due && st.extendAvailable) return 'extend';
       return 'wait';
     }
 
-    // nextDelayMs = รอบที่คำนวณไว้จริง (รวมการสุ่มจังหวะและการถอยหลังเจอจิ๊กซอว์)
-    const wait = st.nextDelayMs || pin.intervalSec * 1000;
-    if (last != null && now - last < wait) return 'wait';
-    if (st.pinned) return pin.whenPinned === 'repin' ? 'repin' : 'wait';
+    // งานที่ 1: ยังไม่ปัก → ปักครั้งเดียว แล้วเว้นอย่างน้อย 20 วินาทีก่อนลองใหม่
+    if (st.lastPinAt != null && now - st.lastPinAt < 20000) return 'wait';
     return 'pin';
   }
 
   // เพดานคลิก: ถ้าโค้ดรวนแล้วกดรัว ต้องหยุดตัวเองก่อนที่ TikTok จะมาหยุดให้
   function withinClickBudget(times, now, maxPerMin) {
     return pruneTimestamps(times, now, 60000).length < clampInt(maxPerMin, 2, 30, 8);
-  }
-
-  // เจอหน้ายืนยันตัวตน (จิ๊กซอว์) แปลว่าเรากดถี่เกินไป — ยืดรอบออกทุกครั้งที่เจอ
-  function backoffMultiplier(captchaCount) {
-    const n = clampInt(captchaCount, 0, 20, 0);
-    return Math.min(4, 1 + n * 0.5);
-  }
-
-  // รอบถัดไปเป็นมิลลิวินาที: รอบที่ตั้งไว้ × ถอยหลัง แล้วสุ่มบวก/ลบตาม jitter
-  function nextDelayMs(pin, captchaCount, random) {
-    const rnd = typeof random === 'function' ? random : Math.random;
-    const base = pin.intervalSec * 1000 * backoffMultiplier(captchaCount);
-    const pct = clampInt(pin.jitterPct, 0, 50, 0) / 100;
-    if (!pct) return Math.round(base);
-    const factor = 1 + (rnd() * 2 - 1) * pct;
-    return Math.max(15000, Math.round(base * factor));
   }
 
   const api = {
@@ -498,7 +463,7 @@
     commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,
-    backoffMultiplier, nextDelayMs, withinClickBudget,
+    withinClickBudget,
   };
 
   root.TTLH = Object.assign(root.TTLH || {}, { core: api });
