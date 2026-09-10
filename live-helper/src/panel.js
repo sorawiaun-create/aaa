@@ -24,6 +24,7 @@
       <b>ผู้ช่วยไลฟ์ · ปักหมุด + AI ตอบคอมเมนต์</b>
       <button data-act="min" title="ย่อ/ขยาย">–</button>
     </div>
+    <div class="ttlh-alert" data-alert hidden></div>
     <div class="ttlh-tabs">
       <button data-tab="pin" class="on">ปักหมุด</button>
       <button data-tab="ai">AI ตอบแชท</button>
@@ -48,6 +49,7 @@
             <option value="wait">รอจนหมุดหมดอายุเอง</option>
           </select>
         </div>
+        <div class="ttlh-row"><label>สุ่มจังหวะ ± (%)</label><input type="number" min="0" max="50" step="5" data-k="pin.jitterPct"></div>
         <label class="ttlh-check"><input type="checkbox" data-k="pin.dryRun"> โหมดซ้อม (ไม่คลิกจริง)</label>
         <div class="ttlh-row">
           <button class="ttlh-btn main" data-act="pin-toggle">เริ่มปักหมุดอัตโนมัติ</button>
@@ -242,9 +244,15 @@
     });
   }
 
+  // ---------- เฝ้าหน้ายืนยันตัวตน (จิ๊กซอว์) ----------
+  // เจอเมื่อไหร่ = TikTok บอกว่าเรากดถี่เกินไป ต้องหยุดให้คนมาแก้เอง ห้ามแก้แทน
+  const runtime = { captchaCount: 0, paused: null, clearedAt: 0 };
+  const baseTitle = document.title;
+
   const autoPin = createAutoPin({
     getSettings,
     log,
+    getCaptchaCount: () => runtime.captchaCount,
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
@@ -270,6 +278,56 @@
     const btn = $(selector);
     btn.textContent = running ? offText : onText;
     btn.classList.toggle('stop', running);
+  }
+
+  function showAlert(text) {
+    const el = $('[data-alert]');
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  function captchaGuard() {
+    const found = dom.captchaEl();
+
+    if (found && !runtime.paused) {
+      runtime.paused = { pin: autoPin.isRunning(), ai: autoReply.isRunning() };
+      runtime.captchaCount += 1;
+      runtime.clearedAt = 0;
+      if (runtime.paused.pin) autoPin.stop();
+      if (runtime.paused.ai) autoReply.stop();
+      syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
+      syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
+      showAlert('⚠️ TikTok ขอให้ยืนยันตัวตน — แก้จิ๊กซอว์ในหน้าเว็บก่อน ระบบหยุดรออยู่ แล้วจะทำงานต่อเอง');
+      document.title = '⚠️ ยืนยันตัวตน · ' + baseTitle;
+      dom.beep(3);
+      log('err', 'พบหน้ายืนยันตัวตน (ครั้งที่ ' + runtime.captchaCount + ') — หยุดทุกระบบแล้ว'
+        + ' กรุณาแก้จิ๊กซอว์เอง ระบบจะไม่แตะต้องหน้านี้');
+      return;
+    }
+
+    if (!found && runtime.paused) {
+      if (!runtime.clearedAt) { runtime.clearedAt = Date.now(); return; }
+      if (Date.now() - runtime.clearedAt < 5000) return; // รอหน้าเว็บนิ่งก่อน
+
+      const was = runtime.paused;
+      runtime.paused = null;
+      runtime.clearedAt = 0;
+      showAlert('');
+      document.title = baseTitle;
+
+      const slower = core.backoffMultiplier(runtime.captchaCount).toFixed(1);
+      if (was.pin) {
+        settings.pin.enabled = true;
+        autoPin.start();
+        syncToggle('[data-act="pin-toggle"]', true, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
+      }
+      if (was.ai) {
+        settings.ai.enabled = true;
+        autoReply.start();
+        syncToggle('[data-act="ai-toggle"]', true, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
+      }
+      log('ok', 'ยืนยันผ่านแล้ว — ทำงานต่อ และยืดรอบปักหมุดเป็น ' + slower + ' เท่า เพื่อลดโอกาสเจอซ้ำ');
+    }
   }
 
   // ---------- ปุ่มต่าง ๆ ----------
@@ -472,6 +530,8 @@
     fillFields();
     bindFields();
     renderProducts();
+
+    setInterval(captchaGuard, 1500);
 
     // หน้าคอนโซลเป็น SPA กว่าจะวาดเสร็จอาจกินเวลา จึงตรวจซ้ำได้ถึง 30 วินาที
     let tries = 0;

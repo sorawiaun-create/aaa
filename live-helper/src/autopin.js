@@ -3,14 +3,21 @@
   'use strict';
   const { core, dom } = root.TTLH;
 
-  function createAutoPin({ getSettings, log, onStatus }) {
-    const state = { lastActionAt: null, pinned: false, timer: null, lastWarnAt: 0 };
+  function createAutoPin({ getSettings, log, onStatus, getCaptchaCount }) {
+    const state = { lastActionAt: null, nextDelayMs: 0, pinned: false, timer: null, lastWarnAt: 0 };
+
+    // เรียกทุกครั้งหลังลงมือ เพื่อสุ่มรอบถัดไป (และยืดออกถ้าเคยเจอจิ๊กซอว์)
+    function scheduleNext() {
+      const count = getCaptchaCount ? getCaptchaCount() : 0;
+      state.nextDelayMs = core.nextDelayMs(getSettings().pin, count, Math.random);
+    }
 
     function status(extra) {
       if (!onStatus) return;
       const pin = getSettings().pin;
+      const wait = state.nextDelayMs || pin.intervalSec * 1000;
       const next = state.lastActionAt == null ? 0
-        : Math.max(0, Math.ceil((state.lastActionAt + pin.intervalSec * 1000 - Date.now()) / 1000));
+        : Math.max(0, Math.ceil((state.lastActionAt + wait - Date.now()) / 1000));
       onStatus(Object.assign({ running: !!state.timer, pinned: state.pinned, nextIn: next }, extra));
     }
 
@@ -44,6 +51,7 @@
           return;
         }
         state.lastActionAt = Date.now();
+        scheduleNext();
         if (pin.dryRun) {
           log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักใหม่ · ' + label(pin.basket));
           status();
@@ -73,6 +81,7 @@
         if (pin.dryRun) log('info', '[ซ้อม] จะกดต่อเวลาหมุด (+วินาที)');
         else { dom.realClick(btn); log('ok', 'ต่อเวลาหมุด · ' + label(pin.basket)); }
         state.lastActionAt = Date.now();
+        scheduleNext();
         status();
         return;
       }
@@ -90,6 +99,7 @@
         log('ok', 'ปักหมุดแล้ว · ' + label(pin.basket));
       }
       state.lastActionAt = Date.now();
+      scheduleNext();
       status();
     }
 
@@ -97,6 +107,7 @@
       start() {
         if (state.timer) return;
         state.lastActionAt = null; // เริ่มปุ๊บปักหมุดทันที
+        scheduleNext();
         state.timer = setInterval(tick, 1000);
         log('ok', 'เริ่มระบบปักหมุดอัตโนมัติ (ทุก ' + getSettings().pin.intervalSec + ' วินาที)');
         tick();

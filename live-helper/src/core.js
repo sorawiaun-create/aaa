@@ -19,6 +19,7 @@
       //   extend = กด "+30 วินาที" ต่อเวลา (หมุดค้างไว้เฉย ๆ ไม่เด้งใหม่)
       //   wait   = ปล่อยไว้จนหมุดหมดอายุเอง
       whenPinned: 'repin',
+      jitterPct: 15,        // สุ่มบวก/ลบรอบละกี่ % ไม่ให้กดตรงเป๊ะทุกครั้ง
       repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
@@ -98,6 +99,7 @@
     pin.dryRun = !!pin.dryRun;
     if (!['repin', 'extend', 'wait'].includes(pin.whenPinned)) pin.whenPinned = 'repin';
     pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
+    pin.jitterPct = clampInt(pin.jitterPct, 0, 50, DEFAULT_SETTINGS.pin.jitterPct);
     pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
     // ต่ำกว่า 15 วิ เสี่ยงโดนระบบมองว่าสแปม จึงล็อกขั้นต่ำไว้
     pin.intervalSec = clampInt(pin.intervalSec, 15, 3600, DEFAULT_SETTINGS.pin.intervalSec);
@@ -434,13 +436,31 @@
     if (!pin.enabled) return 'off';
     const st = pinState || {};
     const last = st.lastActionAt;
-    if (last != null && now - last < pin.intervalSec * 1000) return 'wait';
+    // nextDelayMs = รอบที่คำนวณไว้จริง (รวมการสุ่มจังหวะและการถอยหลังเจอจิ๊กซอว์)
+    const wait = st.nextDelayMs || pin.intervalSec * 1000;
+    if (last != null && now - last < wait) return 'wait';
     if (st.pinned) {
       if (pin.whenPinned === 'repin') return 'repin';
       if (pin.whenPinned === 'extend') return 'extend';
       return 'wait';
     }
     return 'pin';
+  }
+
+  // เจอหน้ายืนยันตัวตน (จิ๊กซอว์) แปลว่าเรากดถี่เกินไป — ยืดรอบออกทุกครั้งที่เจอ
+  function backoffMultiplier(captchaCount) {
+    const n = clampInt(captchaCount, 0, 20, 0);
+    return Math.min(4, 1 + n * 0.5);
+  }
+
+  // รอบถัดไปเป็นมิลลิวินาที: รอบที่ตั้งไว้ × ถอยหลัง แล้วสุ่มบวก/ลบตาม jitter
+  function nextDelayMs(pin, captchaCount, random) {
+    const rnd = typeof random === 'function' ? random : Math.random;
+    const base = pin.intervalSec * 1000 * backoffMultiplier(captchaCount);
+    const pct = clampInt(pin.jitterPct, 0, 50, 0) / 100;
+    if (!pct) return Math.round(base);
+    const factor = 1 + (rnd() * 2 - 1) * pct;
+    return Math.max(15000, Math.round(base * factor));
   }
 
   const api = {
@@ -450,6 +470,7 @@
     commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,
+    backoffMultiplier, nextDelayMs,
   };
 
   root.TTLH = Object.assign(root.TTLH || {}, { core: api });

@@ -217,6 +217,45 @@
     return true;
   }
 
+  // หน้ายืนยันตัวตนของ TikTok (จิ๊กซอว์) — ถ้าโผล่มาต้องหยุดทุกอย่างให้คนมาแก้เอง
+  const CAPTCHA_TEXT = /(verify to continue|drag the puzzle|puzzle piece|ยืนยันเพื่อดำเนินการต่อ|ลากชิ้นส่วน|เลื่อนจิ๊กซอว์|ยืนยันตัวตน|verification)/i;
+
+  function captchaEl() {
+    const direct = document.querySelector(
+      '#captcha_container, .captcha_verify_container, [class*="captcha_verify"], [id*="captcha-verify"]'
+    );
+    if (direct && visible(direct)) return direct;
+
+    const dialogs = document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="Modal"], [class*="dialog"]');
+    for (const dialog of dialogs) {
+      if (visible(dialog) && CAPTCHA_TEXT.test(textOf(dialog))) return dialog;
+    }
+    return null;
+  }
+
+  // เสียงเตือนสั้น ๆ เผื่อกำลังไลฟ์อยู่แล้วไม่ได้จ้องหน้าจอ
+  function beep(times) {
+    let left = times || 2;
+    const play = () => {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.value = 0.08;
+        osc.start();
+        setTimeout(() => { osc.stop(); ctx.close(); }, 320);
+      } catch (err) { /* บางเบราว์เซอร์ห้ามเล่นเสียงก่อนผู้ใช้คลิก — ข้ามไป */ }
+      left -= 1;
+      if (left > 0) setTimeout(play, 500);
+    };
+    play();
+  }
+
   // กะพริบกรอบให้เห็นว่าระบบเล็งการ์ดใบไหนอยู่
   function flash(el) {
     if (!el) return;
@@ -335,7 +374,7 @@
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
-      targetName, flash, pinButton, unpinButton,
+      targetName, flash, captchaEl, beep, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
       typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,

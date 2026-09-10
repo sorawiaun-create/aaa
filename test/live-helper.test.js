@@ -324,6 +324,38 @@ test('normalizeProducts: ค่าเริ่มต้นเป็นลิส�
   assert.equal(core.normalizeSettings(null).products.length, 0);
 });
 
+// --- ถอยจังหวะเมื่อเจอหน้ายืนยันตัวตน ---
+test('backoffMultiplier: ยิ่งเจอจิ๊กซอว์บ่อย ยิ่งยืดรอบ แต่ไม่เกิน 4 เท่า', () => {
+  assert.equal(core.backoffMultiplier(0), 1);
+  assert.equal(core.backoffMultiplier(1), 1.5);
+  assert.equal(core.backoffMultiplier(4), 3);
+  assert.equal(core.backoffMultiplier(20), 4);
+});
+
+test('nextDelayMs: ไม่ใส่ jitter = ตรงตามรอบที่ตั้ง', () => {
+  const pin = { intervalSec: 60, jitterPct: 0 };
+  assert.equal(core.nextDelayMs(pin, 0, () => 0.5), 60000);
+  assert.equal(core.nextDelayMs(pin, 2, () => 0.5), 120000);  // ถอย 2 เท่า
+});
+
+test('nextDelayMs: jitter สุ่มอยู่ในกรอบ ±% ที่ตั้งไว้', () => {
+  const pin = { intervalSec: 60, jitterPct: 20 };
+  assert.equal(core.nextDelayMs(pin, 0, () => 0), 48000);    // -20%
+  assert.equal(core.nextDelayMs(pin, 0, () => 1), 72000);    // +20%
+  assert.equal(core.nextDelayMs(pin, 0, () => 0.5), 60000);  // กลาง ๆ
+});
+
+test('nextDelayMs: ไม่ต่ำกว่า 15 วินาทีไม่ว่าสุ่มได้เท่าไหร่', () => {
+  assert.ok(core.nextDelayMs({ intervalSec: 15, jitterPct: 50 }, 0, () => 0) >= 15000);
+});
+
+test('nextPinAction: ใช้รอบที่คำนวณไว้ (nextDelayMs) แทนค่าดิบเมื่อมี', () => {
+  const pin = { enabled: true, intervalSec: 30, whenPinned: 'repin' };
+  const state = { lastActionAt: 0, pinned: false, nextDelayMs: 90000 };
+  assert.equal(core.nextPinAction(state, pin, 60000), 'wait');   // ยังไม่ถึง 90 วิ
+  assert.equal(core.nextPinAction(state, pin, 95000), 'pin');
+});
+
 // --- จังหวะปักหมุด ---
 test('nextPinAction: ปิดอยู่ = off', () => {
   assert.equal(core.nextPinAction({}, { enabled: false, intervalSec: 30 }, 0), 'off');
