@@ -257,6 +257,13 @@
     getSettings,
     log,
     getCaptchaCount: () => runtime.captchaCount,
+    onHalt() {
+      settings.pin.enabled = false;
+      save();
+      syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
+      showAlert('⚠️ หยุดปักหมุดอัตโนมัติเพราะกดถี่ผิดปกติ — ดูรายละเอียดในแท็บ "บันทึก"');
+      dom.beep(2);
+    },
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }

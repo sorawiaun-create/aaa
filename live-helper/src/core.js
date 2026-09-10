@@ -9,7 +9,10 @@
     'ได้ซื้อสินค้า', 'ได้แชร์ LIVE', 'ถูกใจ LIVE', 'joined', 'shared',
   ];
 
+  const SETTINGS_VERSION = 2;
+
   const DEFAULT_SETTINGS = {
+    version: SETTINGS_VERSION,
     pin: {
       enabled: false,
       basket: 1,            // ปักหมุด "ตะกร้าที่เท่าไหร่"
@@ -21,6 +24,7 @@
       //   wait   = ปักครั้งเดียวแล้วปล่อย
       whenPinned: 'extend',
       jitterPct: 15,        // สุ่มบวก/ลบรอบละกี่ % ไม่ให้กดตรงเป๊ะทุกครั้ง
+      maxClicksPerMin: 8,   // เพดานกันระบบรวน ถ้าเกินนี้ให้หยุดตัวเองทันที
       repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
@@ -93,6 +97,8 @@
   function normalizeSettings(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
     const pin = Object.assign({}, DEFAULT_SETTINGS.pin, src.pin);
+    // ค่าที่บันทึกไว้ตั้งแต่เวอร์ชันก่อน: ย้ายมาใช้วิธีกดปุ่ม "+30 วินาที" ซึ่งปลอดภัยกว่า
+    if (src.version !== SETTINGS_VERSION && src.pin) pin.whenPinned = 'extend';
     const ai = Object.assign({}, DEFAULT_SETTINGS.ai, src.ai);
     const selectors = Object.assign({}, DEFAULT_SETTINGS.selectors, src.selectors);
 
@@ -101,6 +107,7 @@
     if (!['repin', 'extend', 'wait'].includes(pin.whenPinned)) pin.whenPinned = 'extend';
     pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
     pin.jitterPct = clampInt(pin.jitterPct, 0, 50, DEFAULT_SETTINGS.pin.jitterPct);
+    pin.maxClicksPerMin = clampInt(pin.maxClicksPerMin, 2, 30, DEFAULT_SETTINGS.pin.maxClicksPerMin);
     pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
     // ต่ำกว่า 15 วิ เสี่ยงโดนระบบมองว่าสแปม จึงล็อกขั้นต่ำไว้
     pin.intervalSec = clampInt(pin.intervalSec, 15, 3600, DEFAULT_SETTINGS.pin.intervalSec);
@@ -125,7 +132,7 @@
 
     for (const key of Object.keys(selectors)) selectors[key] = String(selectors[key] || '').trim();
 
-    return { pin, ai, products: normalizeProducts(src.products), selectors };
+    return { version: SETTINGS_VERSION, pin, ai, products: normalizeProducts(src.products), selectors };
   }
 
   // ---------- แยกแยะการ์ดในหน้าคอนโซล ----------
@@ -459,6 +466,11 @@
     return 'pin';
   }
 
+  // เพดานคลิก: ถ้าโค้ดรวนแล้วกดรัว ต้องหยุดตัวเองก่อนที่ TikTok จะมาหยุดให้
+  function withinClickBudget(times, now, maxPerMin) {
+    return pruneTimestamps(times, now, 60000).length < clampInt(maxPerMin, 2, 30, 8);
+  }
+
   // เจอหน้ายืนยันตัวตน (จิ๊กซอว์) แปลว่าเรากดถี่เกินไป — ยืดรอบออกทุกครั้งที่เจอ
   function backoffMultiplier(captchaCount) {
     const n = clampInt(captchaCount, 0, 20, 0);
@@ -482,7 +494,7 @@
     commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     supportsEffort, buildRequestBody, extractText, nextPinAction,
-    backoffMultiplier, nextDelayMs,
+    backoffMultiplier, nextDelayMs, withinClickBudget,
   };
 
   root.TTLH = Object.assign(root.TTLH || {}, { core: api });

@@ -3,12 +3,34 @@
   'use strict';
   const { core, dom } = root.TTLH;
 
-  function createAutoPin({ getSettings, log, onStatus, getCaptchaCount }) {
+  function createAutoPin({ getSettings, log, onStatus, getCaptchaCount, onHalt }) {
     const state = {
       lastActionAt: null, lastExtendAt: null, nextDelayMs: 0,
       pinned: false, extendAvailable: false, extends: 0,
-      timer: null, lastWarnAt: 0,
+      clicks: [], timer: null, lastWarnAt: 0,
     };
+
+    function stopTimer() {
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+    }
+
+    // ทุกการคลิกต้องผ่านตรงนี้ ถ้ากดเกินเพดานต่อนาที = ระบบรวน ให้หยุดตัวเองทันที
+    function click(el) {
+      const now = Date.now();
+      const max = getSettings().pin.maxClicksPerMin;
+      state.clicks = core.pruneTimestamps(state.clicks, now, 60000);
+      if (!core.withinClickBudget(state.clicks, now, max)) {
+        stopTimer();
+        log('err', 'กดถี่ผิดปกติ (เกิน ' + max + ' ครั้ง/นาที) — หยุดระบบปักหมุดไว้ก่อน'
+          + ' กรุณาเช็กว่าเล็งปุ่มถูกใบไหม แล้วค่อยกดเริ่มใหม่');
+        if (onHalt) onHalt();
+        return false;
+      }
+      state.clicks.push(now);
+      dom.realClick(el);
+      return true;
+    }
 
     // เรียกทุกครั้งหลังลงมือ เพื่อสุ่มรอบถัดไป (และยืดออกถ้าเคยเจอจิ๊กซอว์)
     function scheduleNext() {
@@ -70,16 +92,16 @@
           status();
           return;
         }
-        dom.realClick(unpin);
+        if (!click(unpin)) return;
         // รอให้หน้าเว็บอัปเดตปุ่มกลับเป็น "ปักหมุด" ก่อนค่อยกดซ้ำ
         setTimeout(() => {
           const again = dom.pinButton(pin.basket, settings.selectors.pinButton);
           if (!again) {
-            warn('ยกเลิกหมุดแล้วแต่หาปุ่มปักหมุดใหม่ไม่เจอ — รอบหน้าจะลองอีกครั้ง');
-            state.lastActionAt = null; // ให้ลองใหม่ทันทีในรอบถัดไป
+            // อย่ารีเซ็ตเวลาเป็น null เด็ดขาด ไม่งั้นจะวนกดใหม่ทันทีทุกวินาที
+            warn('ยกเลิกหมุดแล้วแต่หาปุ่มปักหมุดใหม่ไม่เจอ — จะลองอีกครั้งรอบหน้า');
             return;
           }
-          dom.realClick(again);
+          if (!click(again)) return;
           state.lastActionAt = Date.now();
           log('ok', 'ปักหมุดใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ) · ' + label(pin.basket));
           status();
@@ -94,7 +116,7 @@
         if (pin.dryRun) {
           log('info', '[ซ้อม] จะกดต่อเวลาหมุด ' + dom.textOf(extendBtn));
         } else {
-          dom.realClick(extendBtn);
+          if (!click(extendBtn)) return;
           state.extends += 1;
           log('ok', 'ต่อเวลาหมุดแล้ว (ครั้งที่ ' + state.extends + ') · ' + label(pin.basket));
         }
@@ -111,7 +133,7 @@
       if (pin.dryRun) {
         log('info', '[ซ้อม] จะกดปักหมุด · ' + label(pin.basket));
       } else {
-        dom.realClick(btn);
+        if (!click(btn)) return;
         log('ok', 'ปักหมุดแล้ว · ' + label(pin.basket));
       }
       state.lastActionAt = Date.now();
@@ -129,8 +151,7 @@
         tick();
       },
       stop() {
-        if (state.timer) clearInterval(state.timer);
-        state.timer = null;
+        stopTimer();
         log('info', 'หยุดระบบปักหมุดอัตโนมัติ');
         status();
       },

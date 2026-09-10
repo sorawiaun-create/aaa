@@ -324,6 +324,33 @@ test('normalizeProducts: ค่าเริ่มต้นเป็นลิส�
   assert.equal(core.normalizeSettings(null).products.length, 0);
 });
 
+// --- เพดานคลิกกันระบบรวน ---
+test('withinClickBudget: เกินเพดานต่อนาทีแล้วต้องไม่ให้กดต่อ', () => {
+  const now = 100000;
+  const many = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => now - i * 1000);
+  assert.equal(core.withinClickBudget(many, now, 8), false);
+  assert.equal(core.withinClickBudget(many.slice(0, 7), now, 8), true);
+});
+
+test('withinClickBudget: คลิกที่เก่ากว่า 1 นาทีไม่นับ', () => {
+  const now = 100000;
+  const old = [61000, 62000, 63000, 64000, 65000, 66000, 67000, 68000].map((d) => now - d);
+  assert.equal(core.withinClickBudget(old, now, 8), true);
+});
+
+// --- ย้ายค่าที่บันทึกไว้จากเวอร์ชันก่อน ---
+test('normalizeSettings: ค่าเก่าที่ตั้ง repin ไว้ ถูกย้ายมาเป็น extend', () => {
+  const migrated = core.normalizeSettings({ pin: { whenPinned: 'repin', basket: 2 } });
+  assert.equal(migrated.pin.whenPinned, 'extend');
+  assert.equal(migrated.pin.basket, 2);   // ค่าอื่นต้องไม่หาย
+  assert.equal(migrated.version, 2);
+});
+
+test('normalizeSettings: ค่าที่บันทึกด้วยเวอร์ชันปัจจุบัน เลือก repin เองได้ตามเดิม', () => {
+  const kept = core.normalizeSettings({ version: 2, pin: { whenPinned: 'repin' } });
+  assert.equal(kept.pin.whenPinned, 'repin');
+});
+
 // --- ถอยจังหวะเมื่อเจอหน้ายืนยันตัวตน ---
 test('backoffMultiplier: ยิ่งเจอจิ๊กซอว์บ่อย ยิ่งยืดรอบ แต่ไม่เกิน 4 เท่า', () => {
   assert.equal(core.backoffMultiplier(0), 1);
@@ -413,6 +440,6 @@ test('nextPinAction: ครบรอบและปักค้างอยู�
 });
 
 test('normalizeSettings: กันค่ารอบยกเลิก-ปักใหม่ที่สั้นเกินไป', () => {
-  assert.equal(core.normalizeSettings({ pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
-  assert.equal(core.normalizeSettings({ pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
+  assert.equal(core.normalizeSettings({ version: 2, pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
+  assert.equal(core.normalizeSettings({ version: 2, pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
 });

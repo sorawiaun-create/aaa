@@ -217,14 +217,13 @@
     return true;
   }
 
+  // กดครั้งเดียวเท่านั้น
+  // ของเดิมยิง pointerdown/mousedown/up แล้วยัง .click() ต่อ ปุ่มที่ฟังหลายอีเวนต์
+  // เลยถูกสั่งงานสองรอบ กลายเป็น "ปัก แล้วยกเลิกทันที"
   function realClick(el) {
     if (!el) return false;
-    const opts = { bubbles: true, cancelable: true, view: window };
-    el.dispatchEvent(new PointerEvent('pointerdown', opts));
-    el.dispatchEvent(new MouseEvent('mousedown', opts));
-    el.dispatchEvent(new PointerEvent('pointerup', opts));
-    el.dispatchEvent(new MouseEvent('mouseup', opts));
-    el.click();
+    if (typeof el.click === 'function') { el.click(); return true; }
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
     return true;
   }
 
