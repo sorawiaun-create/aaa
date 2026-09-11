@@ -9,6 +9,7 @@
       handled: {},       // id คอมเมนต์ที่ตัดสินใจ/ตอบไปแล้ว -> เวลา
       lastByUser: {},    // ผู้ใช้ -> เวลาที่ตอบล่าสุด
       replyTimes: [],    // เวลาที่ตอบไป (ใช้จำกัดจำนวนต่อนาที)
+      sentLog: [],       // เวลาที่ส่งแชทจริง เก็บไว้ 10 นาที ไว้ดูสถิติกิจกรรม
       ownTexts: [],      // ข้อความที่เราส่งเอง กันตอบตัวเอง
       recent: [],        // คอมเมนต์ล่าสุดไว้เป็นบริบท
       queue: [],
@@ -75,6 +76,8 @@
       else dom.pressEnter(input);
       state.ownTexts.push(text);
       if (state.ownTexts.length > 20) state.ownTexts.shift();
+      state.sentLog = core.pruneTimestamps(state.sentLog, Date.now(), 600000);
+      state.sentLog.push(Date.now());
       return true;
     }
 

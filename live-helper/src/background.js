@@ -54,6 +54,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     callClaude({ system: message.system, user: message.user }).then(sendResponse);
     return true; // ตอบแบบ async
   }
+  if (message.type === 'ttlh:notify') {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: '/icons/icon128.png',
+      title: message.title || 'ผู้ช่วยไลฟ์ TikTok',
+      message: message.body || '',
+      priority: 2,
+      requireInteraction: true,
+    });
+    sendResponse({ ok: true });
+    return false;
+  }
   if (message.type === 'ttlh:test') {
     callClaude({
       system: 'ตอบสั้นที่สุด',

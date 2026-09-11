@@ -132,7 +132,11 @@
       </div>
 
       <div class="ttlh-tab" data-pane="log">
-        <div class="ttlh-row"><button class="ttlh-btn" data-act="clear-log">ล้างบันทึก</button></div>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-act="stats">ดูสถิติกิจกรรม</button>
+          <button class="ttlh-btn" data-act="clear-log">ล้างบันทึก</button>
+        </div>
+        <div class="ttlh-row"><button class="ttlh-btn main stop" data-act="stop-all">หยุดทุกระบบเดี๋ยวนี้</button></div>
         <ul class="ttlh-log" data-log></ul>
       </div>
     </div>`;
@@ -246,7 +250,34 @@
 
   // ---------- เฝ้าหน้ายืนยันตัวตน (จิ๊กซอว์) ----------
   // เจอเมื่อไหร่ = TikTok บอกว่าเรากดถี่เกินไป ต้องหยุดให้คนมาแก้เอง ห้ามแก้แทน
-  const runtime = { captchaCount: 0, paused: null, clearedAt: 0 };
+  const runtime = { captchaCount: 0, paused: null, clearedAt: 0, alarm: null };
+
+  // สรุปว่าก่อนหน้านี้ระบบทำอะไรไปบ้าง ใช้ดูว่าจิ๊กซอว์เกี่ยวกับเราจริงไหม
+  function activitySummary(windowMs) {
+    const now = Date.now();
+    const clicks = core.pruneTimestamps(autoPin.state.clicks, now, windowMs).length;
+    const chats = core.pruneTimestamps(autoReply.state.sentLog, now, windowMs).length;
+    const minutes = Math.round(windowMs / 60000);
+    return 'ใน ' + minutes + ' นาทีก่อนหน้า ระบบกดปุ่มไป ' + clicks + ' ครั้ง'
+      + ' และส่งแชทไป ' + chats + ' ข้อความ';
+  }
+
+  function startAlarm() {
+    if (runtime.alarm) return;
+    dom.beep(3);
+    runtime.alarm = setInterval(() => dom.beep(2), 6000);
+  }
+
+  function stopAlarm() {
+    if (runtime.alarm) clearInterval(runtime.alarm);
+    runtime.alarm = null;
+  }
+
+  function notify(title, body) {
+    try {
+      chrome.runtime.sendMessage({ type: 'ttlh:notify', title, body }, () => void chrome.runtime.lastError);
+    } catch (err) { /* ส่วนขยายเพิ่งรีโหลด — ข้ามไป */ }
+  }
   const baseTitle = document.title;
 
   const autoPin = createAutoPin({
@@ -308,9 +339,10 @@
       syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
       showAlert('⚠️ TikTok ขอให้ยืนยันตัวตน — แก้จิ๊กซอว์ในหน้าเว็บก่อน ระบบหยุดรออยู่ แล้วจะทำงานต่อเอง');
       document.title = '⚠️ ยืนยันตัวตน · ' + baseTitle;
-      dom.beep(3);
-      log('err', 'พบหน้ายืนยันตัวตน (ครั้งที่ ' + runtime.captchaCount + ') — หยุดทุกระบบแล้ว'
-        + ' กรุณาแก้จิ๊กซอว์เอง ระบบจะไม่แตะต้องหน้านี้');
+      startAlarm();
+      notify('ต้องยืนยันตัวตน (จิ๊กซอว์)', 'ระบบหยุดรออยู่ — กลับไปแก้ที่หน้าคอนโซล LIVE');
+      log('err', 'พบหน้ายืนยันตัวตน (ครั้งที่ ' + runtime.captchaCount + ') — หยุดทุกระบบแล้ว');
+      log('info', 'สถิติก่อนเจอจิ๊กซอว์ · ' + activitySummary(300000));
       return;
     }
 
@@ -322,6 +354,7 @@
       runtime.paused = null;
       runtime.clearedAt = 0;
       showAlert('');
+      stopAlarm();
       document.title = baseTitle;
 
       if (was.pin) {
@@ -464,6 +497,21 @@
       }
       case 'ai-test':
         autoReply.test($('[data-test-input]').value);
+        break;
+      case 'stats':
+        log('info', 'สถิติ 5 นาทีล่าสุด · ' + activitySummary(300000));
+        log('info', 'สถิติ 10 นาทีล่าสุด · ' + activitySummary(600000));
+        log('info', 'เจอจิ๊กซอว์ไปแล้ว ' + runtime.captchaCount + ' ครั้งตั้งแต่เปิดหน้านี้');
+        break;
+      case 'stop-all':
+        settings.pin.enabled = false;
+        settings.ai.enabled = false;
+        autoPin.stop();
+        autoReply.stop();
+        save();
+        syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
+        syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
+        log('info', 'หยุดทุกระบบแล้ว');
         break;
       case 'clear-log':
         logEl.innerHTML = '';
