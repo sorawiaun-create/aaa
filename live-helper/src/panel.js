@@ -24,7 +24,10 @@
       <b>ผู้ช่วยไลฟ์ · ปักหมุด + AI ตอบคอมเมนต์</b>
       <button data-act="min" title="ย่อ/ขยาย">–</button>
     </div>
-    <div class="ttlh-alert" data-alert hidden></div>
+    <div class="ttlh-alert" data-alert hidden>
+      <span data-alert-text></span>
+      <button data-act="goto-captcha">พาไปที่จิ๊กซอว์</button>
+    </div>
     <div class="ttlh-tabs">
       <button data-tab="pin" class="on">ปักหมุด</button>
       <button data-tab="ai">AI ตอบแชท</button>
@@ -287,7 +290,7 @@
       settings.pin.enabled = false;
       save();
       syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
-      showAlert('⚠️ หยุดปักหมุดอัตโนมัติเพราะกดถี่ผิดปกติ — ดูรายละเอียดในแท็บ "บันทึก"');
+      showAlert('⚠️ หยุดปักหมุดอัตโนมัติเพราะกดถี่ผิดปกติ — ดูรายละเอียดในแท็บ "บันทึก"', false);
       dom.beep(2);
     },
     onStatus(state) {
@@ -320,9 +323,10 @@
     btn.classList.toggle('stop', running);
   }
 
-  function showAlert(text) {
+  function showAlert(text, withButton) {
     const el = $('[data-alert]');
-    el.textContent = text || '';
+    $('[data-alert-text]').textContent = text || '';
+    $('[data-act="goto-captcha"]').hidden = !withButton;
     el.hidden = !text;
   }
 
@@ -337,7 +341,8 @@
       if (runtime.paused.ai) autoReply.stop();
       syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
       syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
-      showAlert('⚠️ TikTok ขอให้ยืนยันตัวตน — แก้จิ๊กซอว์ในหน้าเว็บก่อน ระบบหยุดรออยู่ แล้วจะทำงานต่อเอง');
+      showAlert('⚠️ ต้องยืนยันตัวตน — ลากจิ๊กซอว์ให้เข้าที่ แล้วระบบจะทำงานต่อเอง', true);
+      dom.spotlightCaptcha(found);   // เลื่อนจอไปหาและตีกรอบให้เห็นทันที
       document.title = '⚠️ ยืนยันตัวตน · ' + baseTitle;
       startAlarm();
       notify('ต้องยืนยันตัวตน (จิ๊กซอว์)', 'ระบบหยุดรออยู่ — กลับไปแก้ที่หน้าคอนโซล LIVE');
@@ -354,6 +359,7 @@
       runtime.paused = null;
       runtime.clearedAt = 0;
       showAlert('');
+      dom.clearSpotlight();
       stopAlarm();
       document.title = baseTitle;
 
@@ -498,6 +504,12 @@
       case 'ai-test':
         autoReply.test($('[data-test-input]').value);
         break;
+      case 'goto-captcha': {
+        const found = dom.captchaEl();
+        if (found) dom.spotlightCaptcha(found);
+        else log('info', 'ตอนนี้ไม่มีหน้ายืนยันตัวตนค้างอยู่แล้ว');
+        break;
+      }
       case 'stats':
         log('info', 'สถิติ 5 นาทีล่าสุด · ' + activitySummary(300000));
         log('info', 'สถิติ 10 นาทีล่าสุด · ' + activitySummary(600000));

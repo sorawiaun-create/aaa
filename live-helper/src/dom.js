@@ -242,6 +242,20 @@
     return null;
   }
 
+  // พาสายตาไปที่หน้ายืนยันตัวตนให้เร็วที่สุด: ดึงหน้าต่างขึ้นมา เลื่อนจอไปหา แล้วตีกรอบกะพริบ
+  // (เป็นแค่การเลื่อนจอกับไฮไลต์ ตัวจิ๊กซอว์ยังต้องลากเองเหมือนเดิม)
+  function spotlightCaptcha(el) {
+    if (!el) return false;
+    try { window.focus(); } catch (err) { /* บางเบราว์เซอร์ไม่ให้ดึงโฟกัส */ }
+    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err) { el.scrollIntoView(); }
+    el.classList.add('ttlh-spot');
+    return true;
+  }
+
+  function clearSpotlight() {
+    document.querySelectorAll('.ttlh-spot').forEach((el) => el.classList.remove('ttlh-spot'));
+  }
+
   // เสียงเตือนสั้น ๆ เผื่อกำลังไลฟ์อยู่แล้วไม่ได้จ้องหน้าจอ
   function beep(times) {
     let left = times || 2;
@@ -383,7 +397,7 @@
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
-      targetName, flash, captchaEl, beep, pinButton,
+      targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
       typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,
