@@ -10,7 +10,7 @@
     "default_popup": "popup.html",
     "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
   },
-  "host_permissions": ["https://api.anthropic.com/*"],
+  "host_permissions": ["https://api.anthropic.com/*", "https://api.openai.com/*"],
   "background": { "service_worker": "src/background.js" },
   "content_scripts": [
     {

@@ -17,7 +17,8 @@ test('normalizeSettings: เติมค่าเริ่มต้นให้�
   const s = core.normalizeSettings({ pin: { basket: 3 } });
   assert.equal(s.pin.basket, 3);
   assert.equal(s.pin.extendEverySec, 31);
-  assert.equal(s.ai.model, 'claude-opus-5');
+  assert.equal(s.ai.provider, 'claude');
+  assert.equal(s.ai.models.claude, 'claude-opus-5');
   assert.equal(s.ai.maxChars, 100);
 });
 
@@ -28,7 +29,8 @@ test('normalizeSettings: รับคำต้องห้ามเป็นข�
 });
 
 test('normalizeSettings: ตัด / ท้าย API base ออก', () => {
-  assert.equal(core.normalizeSettings({ ai: { apiBase: 'https://x.dev///' } }).ai.apiBase, 'https://x.dev');
+  const ai = core.normalizeSettings({ ai: { bases: { openai: 'https://x.dev///' } } }).ai;
+  assert.equal(ai.bases.openai, 'https://x.dev');
 });
 
 // --- แยกการ์ดสินค้าออกจากคูปอง/การแจกรางวัล (ข้อความจริงจากหน้าคอนโซล) ---
@@ -258,18 +260,70 @@ test('isSkip: รู้ว่าควรข้าม', () => {
   assert.equal(core.isSkip('มีค่ะ'), false);
 });
 
-test('buildRequestBody: รุ่นปกติใส่ effort, Haiku ไม่ใส่', () => {
-  const opus = core.buildRequestBody({ model: 'claude-opus-5', system: 's', user: 'u' });
+test('buildRequestBody (Claude): รุ่นปกติใส่ effort, Haiku ไม่ใส่', () => {
+  const opus = core.buildRequestBody('claude', { model: 'claude-opus-5', system: 's', user: 'u' });
   assert.equal(opus.output_config.effort, 'low');
   assert.equal(opus.messages[0].role, 'user');
-  const haiku = core.buildRequestBody({ model: 'claude-haiku-4-5', system: 's', user: 'u' });
+  assert.equal(opus.system, 's');
+  const haiku = core.buildRequestBody('claude', { model: 'claude-haiku-4-5', system: 's', user: 'u' });
   assert.equal(haiku.output_config, undefined);
 });
 
-test('extractText: รวมเฉพาะบล็อกข้อความ', () => {
-  const res = { content: [{ type: 'thinking', thinking: '...' }, { type: 'text', text: ' มีค่ะ ' }] };
-  assert.equal(core.extractText(res), 'มีค่ะ');
-  assert.equal(core.extractText(null), '');
+test('buildRequestBody (OpenAI): system ไปอยู่ใน messages ตามรูปแบบ chat completions', () => {
+  const body = core.buildRequestBody('openai', { model: 'gpt-4o-mini', system: 's', user: 'u' });
+  assert.equal(body.model, 'gpt-4o-mini');
+  assert.equal(body.messages.length, 2);
+  assert.equal(body.messages[0].role, 'system');
+  assert.equal(body.messages[0].content, 's');
+  assert.equal(body.messages[1].role, 'user');
+  assert.equal(body.system, undefined);
+  assert.equal(body.output_config, undefined);
+});
+
+test('extractText: อ่านคำตอบได้ทั้งสองค่าย', () => {
+  const claude = { content: [{ type: 'thinking', thinking: '...' }, { type: 'text', text: ' มีค่ะ ' }] };
+  assert.equal(core.extractText('claude', claude), 'มีค่ะ');
+  assert.equal(core.extractText('claude', null), '');
+
+  const openai = { choices: [{ message: { role: 'assistant', content: ' มีค่ะ ' } }] };
+  assert.equal(core.extractText('openai', openai), 'มีค่ะ');
+  assert.equal(core.extractText('openai', { choices: [] }), '');
+});
+
+// --- เลือกค่าย AI ได้ ---
+test('activeProvider: คืนคีย์/รุ่น/ปลายทางของค่ายที่เลือกอยู่', () => {
+  const ai = core.normalizeSettings({
+    ai: { provider: 'openai', keys: { openai: 'sk-test', claude: 'sk-ant-x' } },
+  }).ai;
+  const p = core.activeProvider(ai);
+  assert.equal(p.name, 'openai');
+  assert.equal(p.key, 'sk-test');
+  assert.equal(p.url, 'https://api.openai.com/v1/chat/completions');
+});
+
+test('activeProvider: ค่าย Claude ยิงไปที่ /v1/messages', () => {
+  const p = core.activeProvider(core.normalizeSettings(null).ai);
+  assert.equal(p.name, 'claude');
+  assert.equal(p.url, 'https://api.anthropic.com/v1/messages');
+});
+
+test('normalizeSettings: ค่ายที่ไม่รู้จัก ตกกลับมาเป็น claude', () => {
+  assert.equal(core.normalizeSettings({ ai: { provider: 'มั่ว' } }).ai.provider, 'claude');
+});
+
+test('normalizeSettings: เก็บคีย์แยกกันสองค่าย สลับไปมาไม่ต้องกรอกใหม่', () => {
+  const ai = core.normalizeSettings({
+    ai: { provider: 'claude', keys: { claude: 'sk-ant-1', openai: 'sk-oa-1' } },
+  }).ai;
+  assert.equal(ai.keys.claude, 'sk-ant-1');
+  assert.equal(ai.keys.openai, 'sk-oa-1');
+});
+
+test('normalizeSettings: ย้ายคีย์เวอร์ชันเก่า (ai.apiKey) มาไว้ช่องของ Claude', () => {
+  const ai = core.normalizeSettings({ ai: { apiKey: 'sk-ant-เก่า', model: 'claude-sonnet-5' } }).ai;
+  assert.equal(ai.keys.claude, 'sk-ant-เก่า');
+  assert.equal(ai.models.claude, 'claude-sonnet-5');
+  assert.equal(ai.apiKey, undefined);
 });
 
 test('buildSystemPrompt: ใส่ลิมิตตัวอักษรและรายการสินค้าที่เห็นในไลฟ์', () => {
@@ -341,7 +395,7 @@ test('normalizeSettings: อัปเกรดแล้วล้างตำแ�
   assert.equal(migrated.selectors.pinButton, '');   // ปุ่มนี้อาจกลายเป็น "ยกเลิกการปักหมุด" ไปแล้ว
   assert.equal(migrated.selectors.chatInput, 'textarea'); // ของแชทไม่เกี่ยว เก็บไว้
   assert.equal(migrated.pin.basket, 2);
-  assert.equal(migrated.version, 4);
+  assert.equal(migrated.version, 5);
 });
 
 

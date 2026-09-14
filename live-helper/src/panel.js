@@ -117,16 +117,37 @@
       </div>
 
       <div class="ttlh-tab" data-pane="cfg">
-        <div class="ttlh-row"><label>Claude API key</label><input type="password" data-k="ai.apiKey" placeholder="sk-ant-..."></div>
-        <div class="ttlh-row"><label>โมเดล</label>
-          <select data-k="ai.model">
-            <option value="claude-opus-5">Opus 5 (ฉลาดสุด)</option>
-            <option value="claude-sonnet-5">Sonnet 5 (สมดุล)</option>
-            <option value="claude-haiku-4-5">Haiku 4.5 (เร็ว/ถูก)</option>
+        <div class="ttlh-row"><label>ใช้ AI ของ</label>
+          <select data-k="ai.provider">
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">GPT (OpenAI)</option>
           </select>
         </div>
+
+        <div data-prov="claude">
+          <div class="ttlh-row"><label>Claude API key</label><input type="password" data-k="ai.keys.claude" placeholder="sk-ant-..."></div>
+          <div class="ttlh-row"><label>รุ่น</label><input type="text" data-k="ai.models.claude" list="ttlh-models-claude"></div>
+          <datalist id="ttlh-models-claude">
+            <option value="claude-opus-5">ฉลาดสุด</option>
+            <option value="claude-sonnet-5">สมดุล</option>
+            <option value="claude-haiku-4-5">เร็ว/ถูกสุด</option>
+          </datalist>
+          <div class="ttlh-row"><label>API base</label><input type="text" data-k="ai.bases.claude"></div>
+        </div>
+
+        <div data-prov="openai">
+          <div class="ttlh-row"><label>OpenAI API key</label><input type="password" data-k="ai.keys.openai" placeholder="sk-..."></div>
+          <div class="ttlh-row"><label>รุ่น</label><input type="text" data-k="ai.models.openai" list="ttlh-models-openai"></div>
+          <datalist id="ttlh-models-openai">
+            <option value="gpt-4o-mini">เล็ก/ถูก</option>
+            <option value="gpt-4o">ใหญ่กว่า</option>
+            <option value="gpt-4.1-mini">เล็ก รุ่นใหม่กว่า</option>
+          </datalist>
+          <div class="ttlh-row"><label>API base</label><input type="text" data-k="ai.bases.openai"></div>
+          <p class="ttlh-note">พิมพ์ชื่อรุ่นเองได้ ถ้าใส่ผิดจะขึ้นว่า “ไม่พบรุ่น …” ตอนกดทดสอบ</p>
+        </div>
+
         <div class="ttlh-row"><label>ชื่อร้าน</label><input type="text" data-k="ai.shopName"></div>
-        <div class="ttlh-row"><label>API base</label><input type="text" data-k="ai.apiBase"></div>
         <div class="ttlh-row">
           <button class="ttlh-btn main" data-act="test">ทดสอบการเชื่อมต่อ</button>
           <button class="ttlh-btn" data-act="reset">ล้างค่าทั้งหมด</button>
@@ -169,6 +190,13 @@
     target[last] = value;
   }
 
+  // โชว์เฉพาะช่องของค่าย AI ที่เลือกอยู่ (คีย์/รุ่น/ปลายทางเก็บแยกกันทั้งสองค่าย)
+  function syncProviderRows() {
+    panel.querySelectorAll('[data-prov]').forEach((el) => {
+      el.hidden = el.dataset.prov !== settings.ai.provider;
+    });
+  }
+
   function fillFields() {
     panel.querySelectorAll('[data-k]').forEach((el) => {
       const value = readPath(el.dataset.k);
@@ -176,6 +204,7 @@
       else if (Array.isArray(value)) el.value = value.join(', ');
       else el.value = value == null ? '' : value;
     });
+    syncProviderRows();
   }
 
   function bindFields() {
@@ -189,6 +218,10 @@
         else value = el.value;
         writePath(path, value);
         settings = core.normalizeSettings(settings);
+        if (path === 'ai.provider') {
+          syncProviderRows();
+          log('info', 'สลับไปใช้ ' + core.activeProvider(settings.ai).label + ' แล้ว');
+        }
         save();
       };
       el.addEventListener('change', handler);
@@ -449,14 +482,16 @@
         if (autoReply.isRunning()) { settings.ai.enabled = false; autoReply.stop(); }
         else {
           settings.ai.enabled = true;
-          if (!settings.ai.apiKey) log('warn', 'ยังไม่ได้ใส่ API key — ไปที่แท็บ "ตั้งค่า" ก่อน');
+          const provider = core.activeProvider(settings.ai);
+          if (!provider.key) log('warn', 'ยังไม่ได้ใส่ API key ของ ' + provider.label + ' — ไปที่แท็บ "ตั้งค่า" ก่อน');
           autoReply.start();
         }
         save();
         syncToggle('[data-act="ai-toggle"]', autoReply.isRunning(), 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
         break;
       case 'test': {
-        log('info', 'กำลังทดสอบการเชื่อมต่อ...');
+        const provider = core.activeProvider(settings.ai);
+        log('info', 'กำลังทดสอบ ' + provider.label + ' รุ่น ' + provider.model + '...');
         const res = await askAI({ system: 'ตอบสั้นที่สุด', user: 'ตอบกลับคำว่า พร้อมใช้งาน เฉย ๆ' });
         if (res.ok) log('ok', 'เชื่อมต่อสำเร็จ: ' + core.sanitizeReply(res.text, 100));
         else log('err', 'เชื่อมต่อไม่สำเร็จ: ' + res.error);

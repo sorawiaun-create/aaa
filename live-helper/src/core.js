@@ -9,7 +9,25 @@
     'ได้ซื้อสินค้า', 'ได้แชร์ LIVE', 'ถูกใจ LIVE', 'joined', 'shared',
   ];
 
-  const SETTINGS_VERSION = 4;
+  const SETTINGS_VERSION = 5;
+
+  // ผู้ให้บริการ AI ที่รองรับ — เก็บคีย์/รุ่น/ปลายทางแยกกัน จะได้สลับไปมาได้โดยไม่ต้องกรอกใหม่
+  const PROVIDERS = {
+    claude: {
+      label: 'Claude (Anthropic)',
+      base: 'https://api.anthropic.com',
+      path: '/v1/messages',
+      model: 'claude-opus-5',
+      keyHint: 'sk-ant-...',
+    },
+    openai: {
+      label: 'GPT (OpenAI)',
+      base: 'https://api.openai.com',
+      path: '/v1/chat/completions',
+      model: 'gpt-4o-mini',
+      keyHint: 'sk-...',
+    },
+  };
 
   const DEFAULT_SETTINGS = {
     version: SETTINGS_VERSION,
@@ -22,9 +40,10 @@
     },
     ai: {
       enabled: false,
-      model: 'claude-opus-5',
-      apiBase: 'https://api.anthropic.com',
-      apiKey: '',
+      provider: 'claude',   // claude | openai
+      models: { claude: PROVIDERS.claude.model, openai: PROVIDERS.openai.model },
+      keys: { claude: '', openai: '' },
+      bases: { claude: PROVIDERS.claude.base, openai: PROVIDERS.openai.base },
       shopName: '',
       tone: 'เป็นกันเอง สุภาพ กระชับ เหมือนแม่ค้าไลฟ์คนไทย ลงท้ายด้วยค่ะ',
       extraRules: '',
@@ -105,9 +124,20 @@
     ai.pullBackToMain = !!ai.pullBackToMain;
     if (!['all', 'questions'].includes(ai.replyScope)) ai.replyScope = 'all';
     if (!['answer', 'brief', 'skip'].includes(ai.otherBasketMode)) ai.otherBasketMode = 'answer';
-    ai.model = String(ai.model || DEFAULT_SETTINGS.ai.model).trim() || DEFAULT_SETTINGS.ai.model;
-    ai.apiBase = String(ai.apiBase || DEFAULT_SETTINGS.ai.apiBase).trim().replace(/\/+$/, '');
-    ai.apiKey = String(ai.apiKey || '').trim();
+    if (!PROVIDERS[ai.provider]) ai.provider = 'claude';
+    ai.models = Object.assign({}, DEFAULT_SETTINGS.ai.models, ai.models);
+    ai.keys = Object.assign({}, DEFAULT_SETTINGS.ai.keys, ai.keys);
+    ai.bases = Object.assign({}, DEFAULT_SETTINGS.ai.bases, ai.bases);
+    // ค่าเวอร์ชันเก่าเก็บคีย์/รุ่นไว้แบบเดี่ยว ๆ ย้ายมาไว้ช่องของ Claude
+    if (src.ai && src.ai.apiKey && !ai.keys.claude) ai.keys.claude = String(src.ai.apiKey).trim();
+    if (src.ai && src.ai.model && src.ai.model.startsWith('claude')) ai.models.claude = src.ai.model;
+    delete ai.apiKey; delete ai.model; delete ai.apiBase;
+    for (const name of Object.keys(PROVIDERS)) {
+      ai.models[name] = String(ai.models[name] || PROVIDERS[name].model).trim() || PROVIDERS[name].model;
+      ai.keys[name] = String(ai.keys[name] || '').trim();
+      ai.bases[name] = String(ai.bases[name] || PROVIDERS[name].base).trim().replace(/\/+$/, '')
+        || PROVIDERS[name].base;
+    }
     ai.shopName = String(ai.shopName || '').trim();
     ai.tone = String(ai.tone || DEFAULT_SETTINGS.ai.tone).trim();
     ai.extraRules = String(ai.extraRules || '').trim();
@@ -403,7 +433,30 @@
     return !/^claude-haiku/i.test(String(model || ''));
   }
 
-  function buildRequestBody({ model, system, user }) {
+  // ค่าที่ใช้จริงของค่ายที่เลือกอยู่
+  function activeProvider(ai) {
+    const name = PROVIDERS[ai.provider] ? ai.provider : 'claude';
+    return {
+      name,
+      label: PROVIDERS[name].label,
+      model: ai.models[name],
+      key: ai.keys[name],
+      base: ai.bases[name],
+      url: ai.bases[name] + PROVIDERS[name].path,
+    };
+  }
+
+  function buildRequestBody(provider, { model, system, user }) {
+    if (provider === 'openai') {
+      return {
+        model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        max_tokens: 300,
+      };
+    }
     const body = {
       model,
       // เผื่อโควตาให้ thinking ด้วย ไม่งั้นคำตอบสั้น ๆ อาจถูกตัดกลางทาง
@@ -415,8 +468,12 @@
     return body;
   }
 
-  // ดึงข้อความจากผลลัพธ์ /v1/messages
-  function extractText(response) {
+  function extractText(provider, response) {
+    if (provider === 'openai') {
+      const choice = response && response.choices && response.choices[0];
+      const text = choice && choice.message && choice.message.content;
+      return String(text == null ? '' : text).trim();
+    }
     const blocks = (response && response.content) || [];
     return blocks
       .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
@@ -462,7 +519,7 @@
     hasPrice, isProductCardText, cardIndexFromText, cardNameFromText,
     commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
-    supportsEffort, buildRequestBody, extractText, nextPinAction,
+    PROVIDERS, activeProvider, supportsEffort, buildRequestBody, extractText, nextPinAction,
     withinClickBudget,
   };
 
