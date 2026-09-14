@@ -37,10 +37,11 @@ function defaultSettings() {
     },
     scaling: {
       enabled: false,
-      mode: "percent", // time | percent | order
+      mode: "percent", // time | percent | order | spend
       scaleType: "fixed", // percent | fixed (how much to add)
       whenUsedPercent: 50,
       amount: 100,
+      spendGap: 100, // "spend" mode: keep budget this many ฿ ahead of spend (constant gap)
       intervalMin: 15,
       cap: 10000,
     },
@@ -921,16 +922,22 @@ function renderSettings() {
         <label class="switch"><input type="checkbox" id="scEn" ${s.scaling.enabled ? "checked" : ""}><span class="slider"></span></label></div>
       <div class="muted" style="margin-top:4px">ตัวอย่าง: ใช้งบครบ ${s.scaling.whenUsedPercent}% → เพิ่มอีก ${s.scaling.amount}${s.scaling.scaleType === "percent" ? "%" : "฿"}</div>
       <div class="tabs" id="scMode" style="margin-top:8px">
-        ${["time:ตามเวลา", "percent:ตาม %", "order:ตามออเดอร์"].map((x) => { const [k, l] = x.split(":"); return `<button data-m="${k}" class="${s.scaling.mode === k ? "on" : ""}">${l}</button>`; }).join("")}
+        ${["time:ตามเวลา", "percent:ตาม %", "order:ตามออเดอร์", "spend:ระยะห่างงบ"].map((x) => { const [k, l] = x.split(":"); return `<button data-m="${k}" class="${s.scaling.mode === k ? "on" : ""}">${l}</button>`; }).join("")}
       </div>
-      <div class="row" style="margin-top:8px"><label>เมื่อใช้งบครบ (%)</label><input type="number" id="scWhen" value="${s.scaling.whenUsedPercent}"></div>
-      <div class="row" style="margin-top:6px"><label>วิธีเพิ่มงบ</label>
-        <div class="tabs" id="scType">
-          ${["fixed:คงที่ (฿)", "percent:เปอร์เซ็นต์ (%)"].map((x) => { const [k, l] = x.split(":"); return `<button data-t="${k}" class="${s.scaling.scaleType === k ? "on" : ""}">${l}</button>`; }).join("")}
+      <div id="scSpendBox" ${s.scaling.mode === "spend" ? "" : "hidden"}>
+        <div class="row" style="margin-top:8px"><label>ระยะห่างงบ (฿)</label><input type="number" id="scGap" value="${s.scaling.spendGap ?? 100}"></div>
+        <div class="muted" style="margin-top:4px"><b>งบจะนำหน้ายอดใช้จ่ายเท่านี้เสมอ</b> — ทุกครั้งที่ใช้เพิ่มอีก ${s.scaling.spendGap ?? 100}฿ ก็เพิ่มงบอีก ${s.scaling.spendGap ?? 100}฿ · ระยะห่างคงที่ไม่ว่างบจะโตแค่ไหน (แก้ปัญหา % ที่ห่างขึ้นเรื่อยๆ)</div>
+      </div>
+      <div id="scPctBox" ${s.scaling.mode === "spend" ? "hidden" : ""}>
+        <div class="row" style="margin-top:8px"><label>เมื่อใช้งบครบ (%)</label><input type="number" id="scWhen" value="${s.scaling.whenUsedPercent}"></div>
+        <div class="row" style="margin-top:6px"><label>วิธีเพิ่มงบ</label>
+          <div class="tabs" id="scType">
+            ${["fixed:คงที่ (฿)", "percent:เปอร์เซ็นต์ (%)"].map((x) => { const [k, l] = x.split(":"); return `<button data-t="${k}" class="${s.scaling.scaleType === k ? "on" : ""}">${l}</button>`; }).join("")}
+          </div>
         </div>
+        <div class="row" style="margin-top:6px"><label>จำนวนที่เพิ่ม</label><input type="number" id="scAmt" value="${s.scaling.amount}"></div>
+        <div class="row" style="margin-top:6px"><label>สเกลทุกๆ</label><select id="scIv">${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${s.scaling.intervalMin === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select></div>
       </div>
-      <div class="row" style="margin-top:6px"><label>จำนวนที่เพิ่ม</label><input type="number" id="scAmt" value="${s.scaling.amount}"></div>
-      <div class="row" style="margin-top:6px"><label>สเกลทุกๆ</label><select id="scIv">${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${s.scaling.intervalMin === m ? "selected" : ""}>${m} นาที</option>`).join("")}</select></div>
       <div class="row" style="margin-top:6px"><label>เพดานงบสูงสุด/แคมเปญ (฿)</label><input type="number" id="scCap" value="${s.scaling.cap}"></div>
     </div>
 
@@ -944,6 +951,11 @@ function renderSettings() {
       mode = b.getAttribute("data-m");
       app.querySelectorAll("#scMode button").forEach((x) => x.classList.remove("on"));
       b.classList.add("on");
+      // Show the fields for the chosen mode ("spend" uses a fixed gap; the rest
+      // use the %/amount/interval controls).
+      const spend = mode === "spend";
+      if ($("scSpendBox")) $("scSpendBox").hidden = !spend;
+      if ($("scPctBox")) $("scPctBox").hidden = spend;
     })
   );
   let scaleType = s.scaling.scaleType || "fixed";
@@ -1021,6 +1033,7 @@ function renderSettings() {
         scaleType,
         whenUsedPercent: Number($("scWhen").value),
         amount: Number($("scAmt").value),
+        spendGap: Number($("scGap")?.value) || Number(s.scaling.spendGap) || 100,
         intervalMin: Number($("scIv").value),
         cap: Number($("scCap").value),
       },

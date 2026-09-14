@@ -16,6 +16,7 @@ const KEYS = {
   createdTs: {}, // channelId -> ts of last auto-create (rate-limit new campaigns)
   createRoiState: {}, // channelId -> {roi, date}: escalating create-ROI per day
   scaledTs: {}, // campaignId -> ts of last budget scale-up
+  scaledSpend: {}, // campaignId -> spend at last constant-gap scale-up
   roiTs: {}, // campaignId -> ts of last ROI-target adjust
   history: {}, // campaignId -> [{ts, roi, cost, gmv}] rolling performance
   channelMemory: {}, // channelId -> { 'YYYY-MM-DD': {gmv,cost,roi,profit,mode,liveGpm} }
@@ -809,6 +810,7 @@ async function runRules() {
   const createdTs = s.createdTs || {};
   const createRoiState = s.createRoiState || {};
   const scaledTs = s.scaledTs || {};
+  const scaledSpend = s.scaledSpend || {};
   const roiTs = s.roiTs || {};
   const now = Date.now();
   const actions = [];
@@ -952,6 +954,31 @@ async function runRules() {
     for (const c of camps) {
       const budget = c.budget || 0;
       if (budget <= 0) continue;
+
+      // "spend" mode = constant-gap scaling: keep the budget a FIXED amount
+      // ("spacing") ahead of spend regardless of how big the budget grows. Each
+      // time spend advances by the spacing since the last scale, add the spacing
+      // to the budget. The gap between scale-ups stays constant (unlike % mode,
+      // where 50% of a bigger budget means a bigger and bigger real gap).
+      if (sc.mode === "spend") {
+        const gap = Number(sc.spendGap) || Number(sc.amount) || 0;
+        if (gap <= 0) continue;
+        const base = scaledSpend[c.id];
+        if (base == null) { scaledSpend[c.id] = c.cost || 0; continue; } // first sight: start counting from here
+        if ((c.cost || 0) - base < gap) continue; // spend hasn't advanced a full spacing yet
+        let next = budget + gap;
+        if (sc.cap && sc.cap > 0) next = Math.min(next, sc.cap);
+        if (next <= budget) { scaledSpend[c.id] = c.cost || 0; continue; } // at cap
+        const r = await execBudget(c.id, c.name, next);
+        if (r && r.ok) { scaledTs[c.id] = now; scaledSpend[c.id] = c.cost || 0; }
+        actions.push({
+          ok: r && r.ok,
+          name: `↗ เพิ่มงบ ${c.name}`,
+          reason: r && r.ok ? `${budget} → ${next} ฿ (ระยะห่าง ${gap}฿ · ใช้ไป ${Math.round(c.cost || 0)}฿)` : `ไม่สำเร็จ: ${(r && (r.error || r.msg)) || "?"}`,
+        });
+        continue;
+      }
+
       const intervalMs = (sc.intervalMin || 15) * 60 * 1000;
       if (scaledTs[c.id] && now - scaledTs[c.id] < intervalMs) continue;
       const usedPct = (c.cost / budget) * 100;
@@ -1122,7 +1149,7 @@ async function runRules() {
   }
 
   await chrome.storage.local.set({
-    actedIds: acted, createdTs, createRoiState, scaledTs, roiTs, history, channelMemory,
+    actedIds: acted, createdTs, createRoiState, scaledTs, scaledSpend, roiTs, history, channelMemory,
     aiTs: s.aiTs || {}, aiAnalysis: s.aiAnalysis || {}, lastRun: now,
     pauseDiag: nextDiag, lastScan: scan, lastScanTs: now,
   });
