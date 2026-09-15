@@ -1,5 +1,5 @@
 /* eslint-env serviceworker */
-// Service worker: เป็นตัวเดียวที่คุยกับ AI (Claude หรือ OpenAI)
+// Service worker: เป็นตัวเดียวที่คุยกับ AI (Claude หรือ GPT ของ OpenAI)
 // (คีย์เก็บใน chrome.storage ของส่วนขยาย ไม่ถูกส่งเข้าไปในหน้าเว็บ TikTok)
 importScripts('/src/core.js');
 
@@ -12,13 +12,13 @@ async function loadAi() {
   return core.normalizeSettings(stored[SETTINGS_KEY]).ai;
 }
 
-function headersFor(provider, key) {
+function headersFor(provider) {
   if (provider.name === 'openai') {
-    return { 'content-type': 'application/json', authorization: 'Bearer ' + key };
+    return { 'content-type': 'application/json', authorization: 'Bearer ' + provider.key };
   }
   return {
     'content-type': 'application/json',
-    'x-api-key': key,
+    'x-api-key': provider.key,
     'anthropic-version': ANTHROPIC_VERSION,
     'anthropic-dangerous-direct-browser-access': 'true',
   };
@@ -45,10 +45,8 @@ async function askAI({ system, user }) {
     return { ok: false, error: 'ยังไม่ได้ใส่ API key ของ ' + provider.label + ' (ไปที่แท็บ "ตั้งค่า")' };
   }
 
-  const headers = headersFor(provider, provider.key);
-  const body = core.buildRequestBody(provider.name, {
-    model: provider.model, system, user,
-  });
+  const headers = headersFor(provider);
+  const body = core.buildRequestBody(provider.name, { model: provider.model, system, user });
 
   let result;
   try {
@@ -87,18 +85,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'ttlh:ai') {
     askAI({ system: message.system, user: message.user }).then(sendResponse);
     return true; // ตอบแบบ async
-  }
-  if (message.type === 'ttlh:notify') {
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: '/icons/icon128.png',
-      title: message.title || 'ผู้ช่วยไลฟ์ TikTok',
-      message: message.body || '',
-      priority: 2,
-      requireInteraction: true,
-    });
-    sendResponse({ ok: true });
-    return false;
   }
   if (message.type === 'ttlh:test') {
     askAI({ system: 'ตอบสั้นที่สุด', user: 'ตอบกลับคำว่า พร้อมใช้งาน เฉย ๆ' }).then(sendResponse);

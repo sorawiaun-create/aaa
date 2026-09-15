@@ -9,14 +9,12 @@
       handled: {},       // id คอมเมนต์ที่ตัดสินใจ/ตอบไปแล้ว -> เวลา
       lastByUser: {},    // ผู้ใช้ -> เวลาที่ตอบล่าสุด
       replyTimes: [],    // เวลาที่ตอบไป (ใช้จำกัดจำนวนต่อนาที)
-      sentLog: [],       // เวลาที่ส่งแชทจริง เก็บไว้ 10 นาที ไว้ดูสถิติกิจกรรม
       ownTexts: [],      // ข้อความที่เราส่งเอง กันตอบตัวเอง
       recent: [],        // คอมเมนต์ล่าสุดไว้เป็นบริบท
       queue: [],
       busy: false,
+      observer: null,
       timer: null,
-      scanTimer: null,
-      emptyScans: 0,
       replied: 0,
       skipped: 0,
       otherBasket: 0,   // จำนวนคำถามที่พูดถึงตะกร้าอื่น (แม่ค้าอาจอยากตอบเอง)
@@ -26,7 +24,7 @@
     function status() {
       if (!onStatus) return;
       onStatus({
-        running: !!state.timer,
+        running: !!state.observer,
         queue: state.queue.length,
         replied: state.replied,
         skipped: state.skipped,
@@ -51,68 +49,32 @@
 
     function collect(comment) {
       const id = core.commentId(comment);
-      if (state.seen[id]) return false;
+      if (state.seen[id]) return;
       remember(comment);
       state.queue.push(comment);
       if (state.queue.length > 30) state.queue.shift(); // คอมเมนต์เก่าเกินไปก็ไม่ต้องตอบแล้ว
       status();
-      return true;
     }
 
-    /**
-     * กวาดอ่านคอมเมนต์ทั้งกล่องหนึ่งรอบ
-     * markOnly = true ใช้ตอนเริ่มระบบ: จำว่าเห็นแล้วเฉย ๆ จะได้ไม่ย้อนไปตอบของเก่า
-     */
-    function scan(markOnly) {
-      const settings = getSettings();
-      const list = dom.chatList(settings.selectors.chatList);
-      if (!list) {
-        state.emptyScans += 1;
-        warn('หากล่องรายการแชทไม่เจอ — เปิดแท็บ "แชท" ค้างไว้ หรือกด "จิ้มเลือกกล่องแชท"');
-        return 0;
-      }
-
-      const rows = dom.commentRows(list);
-      let fresh = 0;
-      for (const row of rows) {
-        const comment = dom.parseCommentNode(row);
-        if (!comment) continue;
-        if (markOnly) { state.seen[core.commentId(comment)] = Date.now(); continue; }
-        if (collect(comment)) fresh += 1;
-      }
-
-      if (settings.ai.debug) {
-        log('mute', '[debug] กวาดแชท: เจอ ' + rows.length + ' แถว · ใหม่ ' + fresh + ' ข้อความ'
-          + (rows[0] ? ' · ตัวอย่าง: ' + dom.textOf(rows[0]).slice(0, 60) : ''));
-      }
-
-      // ไม่เจออะไรเลยติดกันหลายรอบ = จับกล่องผิดที่ ต้องบอกให้รู้
-      if (!rows.length) {
-        state.emptyScans += 1;
-        if (state.emptyScans === 10) {
-          warn('กวาดแชทมา 10 รอบแล้วยังไม่เจอคอมเมนต์เลย — ถ้ามีคอมเมนต์ในจอจริง'
-            + ' ให้กด "จิ้มเลือกกล่องแชท" แล้วคลิกที่ "ตัวข้อความคอมเมนต์" ตรง ๆ'
-            + ' หรือเปิด "บันทึกละเอียด" เพื่อดูว่าระบบเห็นอะไร');
-        }
-      } else {
-        state.emptyScans = 0;
-      }
-      return fresh;
+    // อ่านได้เป็นคอมเมนต์แล้วหยุดที่ชั้นนั้น ถ้ายังอ่านไม่ได้ค่อยไล่ลงชั้นลูก
+    // (บางทีหน้าเว็บยัดมาทั้งก้อน บางทีมาทีละรายการ)
+    function collectTree(node, depth) {
+      if (!node || node.nodeType !== 1 || depth > 4) return;
+      const comment = dom.parseCommentNode(node);
+      if (comment) { collect(comment); return; }
+      for (const child of Array.from(node.children)) collectTree(child, depth + 1);
     }
 
-    // พิมพ์ข้อความลงช่องแชทแล้วส่ง (เผลอลบฟังก์ชันนี้ไปตอนแก้รอบก่อน จนขึ้น send is not defined)
     function send(text) {
       const settings = getSettings();
       const input = dom.chatInput(settings.selectors.chatInput);
-      if (!input) { warn('หาช่องพิมพ์แชทไม่เจอ — กด "จิ้มเลือกช่องพิมพ์" ช่วยได้'); return false; }
+      if (!input) { warn('หาช่องพิมพ์แชทไม่เจอ — ใช้ปุ่ม "จิ้มเลือกเอง" ช่วยได้'); return false; }
       dom.typeInto(input, text);
       const btn = dom.sendButton(settings.selectors.sendButton, input);
       if (btn) dom.realClick(btn);
       else dom.pressEnter(input);
       state.ownTexts.push(text);
       if (state.ownTexts.length > 20) state.ownTexts.shift();
-      state.sentLog = core.pruneTimestamps(state.sentLog, Date.now(), 600000);
-      state.sentLog.push(Date.now());
       return true;
     }
 
@@ -186,72 +148,46 @@
       }
     }
 
+    function attachObserver() {
+      const settings = getSettings();
+      const list = dom.chatList(settings.selectors.chatList);
+      if (!list) {
+        warn('หากล่องรายการแชทไม่เจอ — เปิดแท็บ "แชท" ค้างไว้ หรือใช้ปุ่ม "จิ้มเลือกเอง"');
+        return false;
+      }
+      // คอมเมนต์ที่มีอยู่ก่อนกดเริ่ม ถือว่าอ่านแล้ว จะได้ไม่ย้อนไปตอบของเก่า
+      list.querySelectorAll('*').forEach((node) => {
+        const comment = dom.parseCommentNode(node);
+        if (comment) state.seen[core.commentId(comment)] = Date.now();
+      });
+
+      state.observer = new MutationObserver((records) => {
+        for (const record of records) {
+          record.addedNodes.forEach((node) => collectTree(node, 0));
+        }
+      });
+      state.observer.observe(list, { childList: true, subtree: true });
+      return true;
+    }
+
     return {
       start() {
-        if (state.timer) return;
-        const settings = getSettings();
-        const list = dom.chatList(settings.selectors.chatList);
-        if (!list) {
-          log('err', 'เริ่มไม่ได้ — หากล่องรายการแชทไม่เจอ'
-            + ' ให้เปิดแท็บ "แชท" ในหน้าคอนโซลค้างไว้ แล้วกด "จิ้มเลือกกล่องแชท"');
-          return;
-        }
-        state.emptyScans = 0;
-        scan(true); // คอมเมนต์ที่มีอยู่ก่อนกดเริ่ม ถือว่าอ่านแล้ว
-        log('info', 'เห็นคอมเมนต์เดิมในกล่อง ' + Object.keys(state.seen).length + ' ข้อความ (จะไม่ย้อนไปตอบ)');
-        state.scanTimer = setInterval(() => scan(false), 1200);
+        if (state.observer) return;
+        if (!attachObserver()) return;
         state.timer = setInterval(processOne, 1500);
-        log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์');
-        if (getSettings().ai.dryRun) {
-          log('warn', '⚠️ "โหมดร่าง" เปิดอยู่ — AI จะคิดคำตอบให้ดูแต่ไม่ส่งเข้าแชทจริง'
-            + ' ถ้าต้องการให้ส่งจริง ให้เอาเครื่องหมายถูกหน้า "โหมดร่าง" ออก');
-        }
+        log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์' + (getSettings().ai.dryRun ? ' (โหมดร่าง ไม่ส่งจริง)' : ''));
         status();
       },
-
-      // ไล่เช็กทีละขั้นว่าติดตรงไหน เวลา AI ไม่ตอบ
-      diagnose() {
-        const settings = getSettings();
-        const list = dom.chatList(settings.selectors.chatList);
-        const input = dom.chatInput(settings.selectors.chatInput);
-        const sendBtn = dom.sendButton(settings.selectors.sendButton, input);
-        const provider = core.activeProvider(settings.ai);
-
-        const rows = list ? dom.commentRows(list) : [];
-        log('info', '1) กล่องแชท: ' + (list ? 'เจอแล้ว · อ่านคอมเมนต์ในกล่องได้ ' + rows.length + ' แถว'
-          : 'ไม่เจอ — กด "จิ้มเลือกกล่องแชท"'));
-        if (list && !rows.length) {
-          log('warn', '   เจอกล่องแต่อ่านคอมเมนต์ไม่ออก — ลองกด "จิ้มเลือกกล่องแชท"'
-            + ' แล้วคลิกที่ตัวข้อความคอมเมนต์ตรง ๆ');
-        }
-        if (rows[0]) log('info', '   ตัวอย่างแถวแรก: ' + dom.textOf(rows[0]).slice(0, 80));
-        log('info', '2) ช่องพิมพ์: ' + (input ? 'เจอแล้ว' : 'ไม่เจอ — กด "จิ้มเลือกช่องพิมพ์"')
-          + ' · ปุ่มส่ง: ' + (sendBtn ? 'เจอแล้ว' : 'ไม่เจอ (จะใช้ปุ่ม Enter แทน)'));
-        log('info', '3) AI: ' + provider.label + ' รุ่น ' + provider.model
-          + ' · คีย์: ' + (provider.key ? 'ใส่แล้ว' : 'ยังไม่ได้ใส่'));
-        log('info', '4) โหมดร่าง: ' + (settings.ai.dryRun ? 'เปิดอยู่ (จะไม่ส่งจริง)' : 'ปิดอยู่ (ส่งจริง)')
-          + ' · ระบบทำงานอยู่: ' + (state.timer ? 'ใช่' : 'ไม่'));
-        log('info', '5) อ่านคอมเมนต์มาแล้ว ' + Object.keys(state.seen).length + ' ข้อความ'
-          + ' · รอตอบในคิว ' + state.queue.length
-          + ' · ตอบไปแล้ว ' + state.replied + ' · ข้าม ' + state.skipped);
-        if (list) dom.flash(list);
-      },
-
-      // ส่งข้อความจริงเข้าแชทหนึ่งครั้ง เพื่อพิสูจน์ว่าเส้นทางการส่งใช้ได้
-      sendTest(text) {
-        const message = core.sanitizeReply(text || 'ทดสอบระบบค่ะ', getSettings().ai.maxChars);
-        if (send(message)) log('ok', 'ส่งข้อความทดสอบเข้าแชทแล้ว: ' + message);
-      },
       stop() {
-        if (state.scanTimer) clearInterval(state.scanTimer);
+        if (state.observer) state.observer.disconnect();
         if (state.timer) clearInterval(state.timer);
-        state.scanTimer = null;
+        state.observer = null;
         state.timer = null;
         state.queue.length = 0;
         log('info', 'หยุดระบบ AI ตอบคอมเมนต์');
         status();
       },
-      isRunning() { return !!state.timer; },
+      isRunning() { return !!state.observer; },
       // ทดสอบว่าเส้นทาง AI ใช้ได้ไหม โดยไม่ต้องรอลูกค้าคอมเมนต์จริง
       async test(text) {
         const settings = getSettings();

@@ -9,23 +9,21 @@
     'ได้ซื้อสินค้า', 'ได้แชร์ LIVE', 'ถูกใจ LIVE', 'joined', 'shared',
   ];
 
-  const SETTINGS_VERSION = 5;
+  const SETTINGS_VERSION = 4;
 
-  // ผู้ให้บริการ AI ที่รองรับ — เก็บคีย์/รุ่น/ปลายทางแยกกัน จะได้สลับไปมาได้โดยไม่ต้องกรอกใหม่
+  // ค่าย AI ที่รองรับ — เก็บคีย์/รุ่น/ปลายทางแยกกัน สลับไปมาได้โดยไม่ต้องกรอกใหม่
   const PROVIDERS = {
     claude: {
       label: 'Claude (Anthropic)',
       base: 'https://api.anthropic.com',
       path: '/v1/messages',
       model: 'claude-opus-5',
-      keyHint: 'sk-ant-...',
     },
     openai: {
       label: 'GPT (OpenAI)',
       base: 'https://api.openai.com',
       path: '/v1/chat/completions',
       model: 'gpt-4o-mini',
-      keyHint: 'sk-...',
     },
   };
 
@@ -34,14 +32,16 @@
     pin: {
       enabled: false,
       basket: 1,            // ปักหมุด "ตะกร้าที่เท่าไหร่"
-      // วิธีคงหมุดไว้
-      //   extend = ปักครั้งเดียว แล้วกด "+30 วินาที" ทุกรอบ (คลิกน้อยสุด) ← ค่าเริ่มต้น
-      //   repin  = ยกเลิกหมุดแล้วปักใหม่ทุกรอบ (การ์ดเด้งขึ้นจอผู้ชมอีกครั้ง แต่คลิกมากกว่า)
-      mode: 'extend',
-      extendEverySec: 31,   // กดปุ่ม "+30 วินาที" ทุกกี่วินาที (หมุดนับถอยหลัง 30 วิ)
-      repinEverySec: 60,    // โหมด repin: ยกเลิกแล้วปักใหม่ทุกกี่วินาที
-      repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
+      intervalSec: 30,      // ทุกกี่วินาที (30 / 60 / ตั้งเอง)
+      // วิธีทำให้หมุดอยู่ต่อเนื่อง
+      //   extend = ปักครั้งเดียว แล้วกดปุ่ม "+30 วินาที" ทุกครั้งที่มันโผล่ ← ค่าเริ่มต้น
+      //            (คลิกน้อยที่สุด ใช้ปุ่มที่ TikTok เตรียมไว้ให้ตรง ๆ)
+      //   repin  = ยกเลิกหมุดแล้วปักใหม่ทุกรอบ (การ์ดเด้งขึ้นจอผู้ชมอีกครั้ง แต่คลิกถี่กว่า)
+      //   wait   = ปักครั้งเดียวแล้วปล่อย
+      whenPinned: 'extend',
+      jitterPct: 15,        // สุ่มบวก/ลบรอบละกี่ % ไม่ให้กดตรงเป๊ะทุกครั้ง
       maxClicksPerMin: 8,   // เพดานกันระบบรวน ถ้าเกินนี้ให้หยุดตัวเองทันที
+      repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
     ai: {
@@ -68,7 +68,6 @@
       ignoreWords: DEFAULT_IGNORE.slice(),
       blockWords: [],       // เจอคำเหล่านี้ = ไม่ตอบเด็ดขาด
       dryRun: true,         // เริ่มต้นให้ "ร่างอย่างเดียว ไม่ส่ง" กันพลาด
-      debug: false,         // บันทึกละเอียด: บอกทุกรอบว่ากวาดแชทแล้วเห็นอะไร
     },
     // คลังข้อมูลสินค้าที่เจ้าของร้านกรอกเอง — AI ใช้ตอบลูกค้า
     // [{ basket, name, price, info }]
@@ -117,32 +116,32 @@
     const pin = Object.assign({}, DEFAULT_SETTINGS.pin, src.pin);
     // ค่าที่บันทึกไว้ตั้งแต่เวอร์ชันก่อน: ย้ายมาใช้วิธีกดปุ่ม "+30 วินาที" ซึ่งปลอดภัยกว่า
     const migrating = src.version !== SETTINGS_VERSION && !!src.pin;
+    if (migrating) pin.whenPinned = 'extend';
     const ai = Object.assign({}, DEFAULT_SETTINGS.ai, src.ai);
     const selectors = Object.assign({}, DEFAULT_SETTINGS.selectors, src.selectors);
 
     pin.enabled = !!pin.enabled;
     pin.dryRun = !!pin.dryRun;
-    pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
-    if (!['extend', 'repin'].includes(pin.mode)) pin.mode = 'extend';
-    pin.extendEverySec = clampInt(pin.extendEverySec, 20, 120, DEFAULT_SETTINGS.pin.extendEverySec);
-    // ต่ำกว่า 30 วิ = ยกเลิก+ปัก 4 คลิก/นาที ถี่เกินไป
-    pin.repinEverySec = clampInt(pin.repinEverySec, 30, 600, DEFAULT_SETTINGS.pin.repinEverySec);
+    if (!['repin', 'extend', 'wait'].includes(pin.whenPinned)) pin.whenPinned = 'extend';
     pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
+    pin.jitterPct = clampInt(pin.jitterPct, 0, 50, DEFAULT_SETTINGS.pin.jitterPct);
     pin.maxClicksPerMin = clampInt(pin.maxClicksPerMin, 2, 30, DEFAULT_SETTINGS.pin.maxClicksPerMin);
+    pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
+    // ต่ำกว่า 15 วิ เสี่ยงโดนระบบมองว่าสแปม จึงล็อกขั้นต่ำไว้
+    pin.intervalSec = clampInt(pin.intervalSec, 15, 3600, DEFAULT_SETTINGS.pin.intervalSec);
 
     ai.enabled = !!ai.enabled;
     ai.dryRun = !!ai.dryRun;
     ai.pullBackToMain = !!ai.pullBackToMain;
-    ai.debug = !!ai.debug;
     if (!['all', 'questions'].includes(ai.replyScope)) ai.replyScope = 'all';
     if (!['answer', 'brief', 'skip'].includes(ai.otherBasketMode)) ai.otherBasketMode = 'answer';
     if (!PROVIDERS[ai.provider]) ai.provider = 'claude';
     ai.models = Object.assign({}, DEFAULT_SETTINGS.ai.models, ai.models);
     ai.keys = Object.assign({}, DEFAULT_SETTINGS.ai.keys, ai.keys);
     ai.bases = Object.assign({}, DEFAULT_SETTINGS.ai.bases, ai.bases);
-    // ค่าเวอร์ชันเก่าเก็บคีย์/รุ่นไว้แบบเดี่ยว ๆ ย้ายมาไว้ช่องของ Claude
+    // ค่าเวอร์ชันเก่าเก็บคีย์/รุ่นไว้เดี่ยว ๆ ย้ายมาไว้ช่องของ Claude ให้อัตโนมัติ
     if (src.ai && src.ai.apiKey && !ai.keys.claude) ai.keys.claude = String(src.ai.apiKey).trim();
-    if (src.ai && src.ai.model && src.ai.model.startsWith('claude')) ai.models.claude = src.ai.model;
+    if (src.ai && src.ai.model && String(src.ai.model).startsWith('claude')) ai.models.claude = src.ai.model;
     delete ai.apiKey; delete ai.model; delete ai.apiBase;
     for (const name of Object.keys(PROVIDERS)) {
       ai.models[name] = String(ai.models[name] || PROVIDERS[name].model).trim() || PROVIDERS[name].model;
@@ -198,32 +197,6 @@
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 80);
-  }
-
-  // ---------- แยกคอมเมนต์จริงออกจากข้อความ UI ----------
-  // หัวเว็บ เมนู ป้ายสถิติ ฯลฯ ก็เป็นข้อความสั้น ๆ เหมือนกัน ถ้าไม่คัดออกจะถูกอ่านเป็นคอมเมนต์
-  const UI_NOISE = [
-    'ตัวจัดการ LIVE', 'คอนโซล LIVE', 'กิจกรรม LIVE', 'เครื่องมือ LIVE', 'LIVE แจกรางวัล',
-    'ไฮไลท์ LIVE', 'คูปองไลฟ์', 'คัดสรรสุดพิเศษ', 'โชว์เคส', 'โชว์เคสสินค้า',
-    'ชุดสินค้าสำหรับไลฟ์', 'แคมเปญ LIVE และวิดีโอสั้น', 'การวิเคราะห์', 'การวิเคราะห์ LIVE',
-    'ผลการดำเนินงานของ LIVE', 'ประวัติการ LIVE', 'สถานะบัญชี', 'หน้าแรก', 'แดชบอร์ดของ LIVE',
-    'แฟลชเซล', 'การแจกรางวัล', 'บิลบอร์ด', 'คูปอง', 'สลับโหมด', 'LIVE แบบด่วน', 'เวลาเริ่มต้น',
-    'แชท', 'ทั้งหมด', 'เกี่ยวข้องกับสินค้า', 'กิจกรรม', 'สินค้า', 'เพิ่มสินค้า', 'ยังไม่มีสินค้า',
-    'รายการสินค้าใน LIVE นี้', 'ปักหมุด', 'ปักหมุดแล้ว', 'ยกเลิกการปักหมุด', 'ตัวเลือกโปรด',
-    'ผู้ชมปัจจุบัน', 'GMV ที่ได้', 'ยอดคลิกสินค้า', 'อัตราการแตะผ่าน', 'ระยะเวลาในการดูเฉลี่ย',
-    'คำแนะนำ', 'ความคิดเห็นของผู้ชมจะปรากฏ', 'พิมพ์อะไรสักอย่าง', 'ค้นหารหัสสินค้า',
-    'หมวดหมู่ทั้งหมด', 'สต็อกทั้งหมด', 'Promotion quality points',
-  ];
-
-  function isUiNoise(text) {
-    const raw = normText(text);
-    if (!raw) return true;
-    const hay = raw.toLowerCase();
-    return UI_NOISE.some((label) => {
-      const needle = label.toLowerCase();
-      // ตรงเป๊ะ หรือขึ้นต้นด้วยป้ายนั้น (เช่น "ตัวจัดการ LIVE ไทย")
-      return hay === needle || hay.startsWith(needle);
-    });
   }
 
   // ---------- คอมเมนต์ ----------
@@ -486,6 +459,7 @@
 
   function buildRequestBody(provider, { model, system, user }) {
     if (provider === 'openai') {
+      // OpenAI ใช้ /v1/chat/completions และเอา system ไปไว้ใน messages
       return {
         model,
         messages: [
@@ -522,34 +496,33 @@
 
   // ---------- ตัวจับเวลาปักหมุด ----------
   /**
-   * ตัดสินใจว่ารอบนี้ต้องทำอะไร — แยกเป็นสองงานที่ไม่ยุ่งกัน
-   *   งานที่ 1 ปักหมุด: ถ้ายังไม่ปัก → ปักครั้งเดียว / ถ้าปักอยู่แล้ว → ปล่อยไว้ ไม่แตะอีก
-   *   งานที่ 2 ต่อเวลา: ถึงรอบแล้วและปุ่ม "+30 วินาที" โผล่อยู่ → กด
-   * ระบบนี้ "ไม่กดยกเลิกการปักหมุด" ในทุกกรณี
-   *
-   * pinState = { pinned, extendAvailable, lastPinAt, lastExtendAt }
-   * คืนค่า 'extend' | 'pin' | 'wait' | 'off'
+   * pinState = { lastActionAt: number|null, pinned: boolean }
+   * คืนค่า 'pin' | 'repin' | 'extend' | 'wait' | 'off'
    */
   function nextPinAction(pinState, pin, now) {
     if (!pin.enabled) return 'off';
     const st = pinState || {};
+    const last = st.lastActionAt;
 
-    // โหมดยกเลิกแล้วปักใหม่: ปักอยู่และถึงรอบ → ยกเลิกแล้วปักใหม่ (การ์ดเด้งขึ้นจอผู้ชม)
-    if (pin.mode === 'repin' && st.pinned) {
-      const since = st.lastRepinAt == null ? st.lastPinAt : st.lastRepinAt;
-      if (since != null && now - since < pin.repinEverySec * 1000) return 'wait';
-      return 'repin';
-    }
-
-    // งานที่ 2 มาก่อน: หมุดที่ปักอยู่ต้องไม่ปล่อยให้หมดเวลา
-    if (st.pinned) {
-      const due = st.lastExtendAt == null || now - st.lastExtendAt >= pin.extendEverySec * 1000;
-      if (due && st.extendAvailable) return 'extend';
+    // โหมดต่อเวลา: ไม่ต้องรอรอบ ปุ่ม "+30 วินาที" โผล่เมื่อไหร่กดเลย (คลิกน้อยที่สุด)
+    if (pin.whenPinned === 'extend') {
+      if (st.extendAvailable) {
+        if (st.lastExtendAt != null && now - st.lastExtendAt < 5000) return 'wait';
+        return 'extend';
+      }
+      // หมุดหลุด (หมดเวลาไปแล้ว หรือยังไม่เคยปัก) ค่อยปักใหม่ครั้งเดียว
+      // เว้นอย่างน้อย 20 วินาที กันกรณีอ่านสถานะพลาดแล้ววนกดรัว
+      if (!st.pinned) {
+        if (last != null && now - last < 20000) return 'wait';
+        return 'pin';
+      }
       return 'wait';
     }
 
-    // งานที่ 1: ยังไม่ปัก → ปักครั้งเดียว แล้วเว้นอย่างน้อย 20 วินาทีก่อนลองใหม่
-    if (st.lastPinAt != null && now - st.lastPinAt < 20000) return 'wait';
+    // nextDelayMs = รอบที่คำนวณไว้จริง (รวมการสุ่มจังหวะและการถอยหลังเจอจิ๊กซอว์)
+    const wait = st.nextDelayMs || pin.intervalSec * 1000;
+    if (last != null && now - last < wait) return 'wait';
+    if (st.pinned) return pin.whenPinned === 'repin' ? 'repin' : 'wait';
     return 'pin';
   }
 
@@ -558,14 +531,30 @@
     return pruneTimestamps(times, now, 60000).length < clampInt(maxPerMin, 2, 30, 8);
   }
 
+  // เจอหน้ายืนยันตัวตน (จิ๊กซอว์) แปลว่าเรากดถี่เกินไป — ยืดรอบออกทุกครั้งที่เจอ
+  function backoffMultiplier(captchaCount) {
+    const n = clampInt(captchaCount, 0, 20, 0);
+    return Math.min(4, 1 + n * 0.5);
+  }
+
+  // รอบถัดไปเป็นมิลลิวินาที: รอบที่ตั้งไว้ × ถอยหลัง แล้วสุ่มบวก/ลบตาม jitter
+  function nextDelayMs(pin, captchaCount, random) {
+    const rnd = typeof random === 'function' ? random : Math.random;
+    const base = pin.intervalSec * 1000 * backoffMultiplier(captchaCount);
+    const pct = clampInt(pin.jitterPct, 0, 50, 0) / 100;
+    if (!pct) return Math.round(base);
+    const factor = 1 + (rnd() * 2 - 1) * pct;
+    return Math.max(15000, Math.round(base * factor));
+  }
+
   const api = {
     DEFAULT_SETTINGS, DEFAULT_IGNORE,
     clampInt, toWordList, normalizeSettings, normalizeProducts, normText,
     hasPrice, isProductCardText, cardIndexFromText, cardNameFromText,
-    commentId, containsAny, looksLikeQuestion, isUiNoise, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
+    commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     PROVIDERS, activeProvider, supportsEffort, buildRequestBody, extractText, nextPinAction,
-    withinClickBudget,
+    backoffMultiplier, nextDelayMs, withinClickBudget,
   };
 
   root.TTLH = Object.assign(root.TTLH || {}, { core: api });

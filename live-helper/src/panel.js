@@ -24,10 +24,7 @@
       <b>ผู้ช่วยไลฟ์ · ปักหมุด + AI ตอบคอมเมนต์</b>
       <button data-act="min" title="ย่อ/ขยาย">–</button>
     </div>
-    <div class="ttlh-alert" data-alert hidden>
-      <span data-alert-text></span>
-      <button data-act="goto-captcha">พาไปที่จิ๊กซอว์</button>
-    </div>
+    <div class="ttlh-alert" data-alert hidden></div>
     <div class="ttlh-tabs">
       <button data-tab="pin" class="on">ปักหมุด</button>
       <button data-tab="ai">AI ตอบแชท</button>
@@ -39,46 +36,32 @@
       <div class="ttlh-tab on" data-pane="pin">
         <div class="ttlh-status" data-pin-status>ยังไม่เริ่มทำงาน</div>
         <div class="ttlh-row"><label>ปักหมุดตะกร้าที่</label><input type="number" min="1" max="200" data-k="pin.basket"></div>
-        <div class="ttlh-row"><label>วิธีคงหมุดไว้</label>
-          <select data-k="pin.mode">
-            <option value="extend">กด "+30 วิ" ทุกรอบ (คลิกน้อยสุด)</option>
+        <div class="ttlh-row"><label>ปักซ้ำทุก (วินาที)</label><input type="number" min="15" max="3600" step="5" data-k="pin.intervalSec"></div>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-preset="30">30 วิ</button>
+          <button class="ttlh-btn" data-preset="60">1 นาที</button>
+          <button class="ttlh-btn" data-preset="120">2 นาที</button>
+        </div>
+        <div class="ttlh-row"><label>วิธีทำให้หมุดอยู่ต่อ</label>
+          <select data-k="pin.whenPinned">
+            <option value="extend">กด +30 วิ ทุกครั้งที่โผล่ (คลิกน้อยสุด)</option>
             <option value="repin">ยกเลิกแล้วปักใหม่ (เด้งขึ้นจอผู้ชม)</option>
+            <option value="wait">ปักครั้งเดียวแล้วปล่อย</option>
           </select>
         </div>
-        <div data-mode="extend">
-          <div class="ttlh-row"><label>กด "+30 วิ" ทุก (วินาที)</label><input type="number" min="20" max="120" data-k="pin.extendEverySec"></div>
-          <div class="ttlh-row">
-            <button class="ttlh-btn" data-every="31">31 วิ</button>
-            <button class="ttlh-btn" data-every="33">33 วิ</button>
-            <button class="ttlh-btn" data-every="35">35 วิ</button>
-          </div>
-        </div>
-        <div data-mode="repin">
-          <div class="ttlh-row"><label>ยกเลิก+ปักใหม่ ทุก (วินาที)</label><input type="number" min="30" max="600" step="5" data-k="pin.repinEverySec"></div>
-          <div class="ttlh-row">
-            <button class="ttlh-btn" data-repin="45">45 วิ</button>
-            <button class="ttlh-btn" data-repin="60">1 นาที</button>
-            <button class="ttlh-btn" data-repin="120">2 นาที</button>
-          </div>
-        </div>
-        <div class="ttlh-row"><label>เพดานคลิก (ครั้ง/นาที)</label><input type="number" min="2" max="30" data-k="pin.maxClicksPerMin"></div>
+        <div class="ttlh-row"><label>สุ่มจังหวะ ± (%)</label><input type="number" min="0" max="50" step="5" data-k="pin.jitterPct"></div>
         <label class="ttlh-check"><input type="checkbox" data-k="pin.dryRun"> โหมดซ้อม (ไม่คลิกจริง)</label>
         <div class="ttlh-row">
           <button class="ttlh-btn main" data-act="pin-toggle">เริ่มปักหมุดอัตโนมัติ</button>
-        </div>
-        <div class="ttlh-row">
           <button class="ttlh-btn" data-act="pin-now">ปักเดี๋ยวนี้</button>
-          <button class="ttlh-btn" data-act="extend-now">ต่อเวลาเดี๋ยวนี้</button>
         </div>
-        <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจดูว่าระบบเห็นอะไรอยู่</button></div>
+        <div class="ttlh-row"><button class="ttlh-btn" data-act="pin-preview">ตรวจก่อนปัก — จะปักตัวไหน?</button></div>
         <div class="ttlh-row">
           <button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด"</button>
           <button class="ttlh-btn" data-pick="extendButton">จิ้มเลือกปุ่ม "+30 วิ"</button>
         </div>
-        <p class="ttlh-note">ยังไม่ปัก = ปักให้ครั้งเดียวเสมอ · จากนั้นแล้วแต่โหมด:
-          <b>“+30 วิ”</b> คลิกเดียวต่อรอบ หมุดค้างอยู่เดิม ·
-          <b>“ยกเลิกแล้วปักใหม่”</b> 2 คลิกต่อรอบ แต่การ์ดเด้งขึ้นจอผู้ชมใหม่ทุกครั้ง
-          (ขั้นต่ำ 30 วินาที)</p>
+        <p class="ttlh-note">โหมด “กด +30 วิ” ใช้ปุ่มที่ TikTok เตรียมไว้ให้ — คลิกเดียวต่อ 30 วินาที
+          เสี่ยงเจอจิ๊กซอว์น้อยที่สุด (ช่อง “ปักซ้ำทุก” ใช้เฉพาะโหมดยกเลิกแล้วปักใหม่)</p>
       </div>
 
       <div class="ttlh-tab" data-pane="ai">
@@ -118,13 +101,8 @@
           <input type="text" data-test-input placeholder="ลองพิมพ์คำถามลูกค้า" style="flex:1;width:auto">
           <button class="ttlh-btn" data-act="ai-test">ทดสอบคำตอบ</button>
         </div>
-        <label class="ttlh-check"><input type="checkbox" data-k="ai.debug"> บันทึกละเอียด (ดูว่าระบบกวาดแชทเห็นอะไร)</label>
         <div class="ttlh-row">
-          <button class="ttlh-btn" data-act="ai-diagnose">ทำไมไม่ตอบ? (ไล่เช็กให้)</button>
-          <button class="ttlh-btn" data-act="ai-send-test">ส่งข้อความทดสอบเข้าแชทจริง</button>
-        </div>
-        <div class="ttlh-row">
-          <button class="ttlh-btn" data-act="pick-row">จิ้มที่ "คอมเมนต์" สักอัน</button>
+          <button class="ttlh-btn" data-pick="chatList">จิ้มเลือกกล่องแชท</button>
           <button class="ttlh-btn" data-pick="chatInput">จิ้มเลือกช่องพิมพ์</button>
         </div>
       </div>
@@ -179,11 +157,7 @@
       </div>
 
       <div class="ttlh-tab" data-pane="log">
-        <div class="ttlh-row">
-          <button class="ttlh-btn" data-act="stats">ดูสถิติกิจกรรม</button>
-          <button class="ttlh-btn" data-act="clear-log">ล้างบันทึก</button>
-        </div>
-        <div class="ttlh-row"><button class="ttlh-btn main stop" data-act="stop-all">หยุดทุกระบบเดี๋ยวนี้</button></div>
+        <div class="ttlh-row"><button class="ttlh-btn" data-act="clear-log">ล้างบันทึก</button></div>
         <ul class="ttlh-log" data-log></ul>
       </div>
     </div>`;
@@ -220,13 +194,6 @@
     });
   }
 
-  // โชว์เฉพาะช่องของโหมดปักหมุดที่เลือกอยู่
-  function syncModeRows() {
-    panel.querySelectorAll('[data-mode]').forEach((el) => {
-      el.hidden = el.dataset.mode !== settings.pin.mode;
-    });
-  }
-
   function fillFields() {
     panel.querySelectorAll('[data-k]').forEach((el) => {
       const value = readPath(el.dataset.k);
@@ -235,7 +202,6 @@
       else el.value = value == null ? '' : value;
     });
     syncProviderRows();
-    syncModeRows();
   }
 
   function bindFields() {
@@ -249,12 +215,6 @@
         else value = el.value;
         writePath(path, value);
         settings = core.normalizeSettings(settings);
-        if (path === 'pin.mode') {
-          syncModeRows();
-          log('info', settings.pin.mode === 'repin'
-            ? 'เปลี่ยนเป็นโหมดยกเลิกแล้วปักใหม่ทุก ' + settings.pin.repinEverySec + ' วินาที'
-            : 'เปลี่ยนเป็นโหมดกด "+30 วิ" ทุก ' + settings.pin.extendEverySec + ' วินาที');
-        }
         if (path === 'ai.provider') {
           syncProviderRows();
           log('info', 'สลับไปใช้ ' + core.activeProvider(settings.ai).label + ' แล้ว');
@@ -323,58 +283,30 @@
 
   // ---------- เฝ้าหน้ายืนยันตัวตน (จิ๊กซอว์) ----------
   // เจอเมื่อไหร่ = TikTok บอกว่าเรากดถี่เกินไป ต้องหยุดให้คนมาแก้เอง ห้ามแก้แทน
-  const runtime = { captchaCount: 0, paused: null, clearedAt: 0, alarm: null };
-
-  // สรุปว่าก่อนหน้านี้ระบบทำอะไรไปบ้าง ใช้ดูว่าจิ๊กซอว์เกี่ยวกับเราจริงไหม
-  function activitySummary(windowMs) {
-    const now = Date.now();
-    const clicks = core.pruneTimestamps(autoPin.state.clicks, now, windowMs).length;
-    const chats = core.pruneTimestamps(autoReply.state.sentLog, now, windowMs).length;
-    const minutes = Math.round(windowMs / 60000);
-    return 'ใน ' + minutes + ' นาทีก่อนหน้า ระบบกดปุ่มไป ' + clicks + ' ครั้ง'
-      + ' และส่งแชทไป ' + chats + ' ข้อความ';
-  }
-
-  function startAlarm() {
-    if (runtime.alarm) return;
-    dom.beep(3);
-    runtime.alarm = setInterval(() => dom.beep(2), 6000);
-  }
-
-  function stopAlarm() {
-    if (runtime.alarm) clearInterval(runtime.alarm);
-    runtime.alarm = null;
-  }
-
-  function notify(title, body) {
-    try {
-      chrome.runtime.sendMessage({ type: 'ttlh:notify', title, body }, () => void chrome.runtime.lastError);
-    } catch (err) { /* ส่วนขยายเพิ่งรีโหลด — ข้ามไป */ }
-  }
+  const runtime = { captchaCount: 0, paused: null, clearedAt: 0 };
   const baseTitle = document.title;
 
   const autoPin = createAutoPin({
     getSettings,
     log,
+    getCaptchaCount: () => runtime.captchaCount,
     onHalt() {
       settings.pin.enabled = false;
       save();
       syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
-      showAlert('⚠️ หยุดปักหมุดอัตโนมัติเพราะกดถี่ผิดปกติ — ดูรายละเอียดในแท็บ "บันทึก"', false);
+      showAlert('⚠️ หยุดปักหมุดอัตโนมัติเพราะกดถี่ผิดปกติ — ดูรายละเอียดในแท็บ "บันทึก"');
       dom.beep(2);
     },
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
-      const head = 'ทำงานอยู่ · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
+      const head = 'กำลังทำงาน · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
         + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก');
-      if (state.mode === 'repin') {
-        el.innerHTML = head + ' · ปักไปแล้ว <b>' + state.pins + '</b> ครั้ง · '
-          + (state.pinned ? 'ปักใหม่อีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด');
-      } else {
+      if (state.mode === 'extend') {
         el.innerHTML = head + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
-          + (state.pinned ? 'กดต่อเวลาอีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด')
-          + (state.extendReady ? ' · เห็นปุ่ม +30 วิ แล้ว' : '');
+          + (state.extendReady ? 'ปุ่ม +30 วิ โผล่แล้ว' : 'รอปุ่ม +30 วิ');
+      } else {
+        el.innerHTML = head + ' · รอบถัดไปอีก <b>' + state.nextIn + '</b> วิ';
       }
     },
   });
@@ -398,10 +330,9 @@
     btn.classList.toggle('stop', running);
   }
 
-  function showAlert(text, withButton) {
+  function showAlert(text) {
     const el = $('[data-alert]');
-    $('[data-alert-text]').textContent = text || '';
-    $('[data-act="goto-captcha"]').hidden = !withButton;
+    el.textContent = text || '';
     el.hidden = !text;
   }
 
@@ -416,13 +347,11 @@
       if (runtime.paused.ai) autoReply.stop();
       syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
       syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
-      showAlert('⚠️ ต้องยืนยันตัวตน — ลากจิ๊กซอว์ให้เข้าที่ แล้วระบบจะทำงานต่อเอง', true);
-      dom.spotlightCaptcha(found);   // เลื่อนจอไปหาและตีกรอบให้เห็นทันที
+      showAlert('⚠️ TikTok ขอให้ยืนยันตัวตน — แก้จิ๊กซอว์ในหน้าเว็บก่อน ระบบหยุดรออยู่ แล้วจะทำงานต่อเอง');
       document.title = '⚠️ ยืนยันตัวตน · ' + baseTitle;
-      startAlarm();
-      notify('ต้องยืนยันตัวตน (จิ๊กซอว์)', 'ระบบหยุดรออยู่ — กลับไปแก้ที่หน้าคอนโซล LIVE');
-      log('err', 'พบหน้ายืนยันตัวตน (ครั้งที่ ' + runtime.captchaCount + ') — หยุดทุกระบบแล้ว');
-      log('info', 'สถิติก่อนเจอจิ๊กซอว์ · ' + activitySummary(300000));
+      dom.beep(3);
+      log('err', 'พบหน้ายืนยันตัวตน (ครั้งที่ ' + runtime.captchaCount + ') — หยุดทุกระบบแล้ว'
+        + ' กรุณาแก้จิ๊กซอว์เอง ระบบจะไม่แตะต้องหน้านี้');
       return;
     }
 
@@ -434,10 +363,9 @@
       runtime.paused = null;
       runtime.clearedAt = 0;
       showAlert('');
-      dom.clearSpotlight();
-      stopAlarm();
       document.title = baseTitle;
 
+      const slower = core.backoffMultiplier(runtime.captchaCount).toFixed(1);
       if (was.pin) {
         settings.pin.enabled = true;
         autoPin.start();
@@ -448,14 +376,13 @@
         autoReply.start();
         syncToggle('[data-act="ai-toggle"]', true, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
       }
-      log('ok', 'ยืนยันผ่านแล้ว — ทำงานต่อให้แล้ว (เจอจิ๊กซอว์มา ' + runtime.captchaCount + ' ครั้ง'
-        + ' ถ้ายังเจอบ่อยให้เพิ่มรอบกด "+30 วิ" ขึ้นอีกหน่อย)');
+      log('ok', 'ยืนยันผ่านแล้ว — ทำงานต่อ และยืดรอบปักหมุดเป็น ' + slower + ' เท่า เพื่อลดโอกาสเจอซ้ำ');
     }
   }
 
   // ---------- ปุ่มต่าง ๆ ----------
   panel.addEventListener('click', async (ev) => {
-    const target = ev.target.closest('[data-act], [data-tab], [data-every], [data-repin], [data-speed], [data-pick]');
+    const target = ev.target.closest('[data-act], [data-tab], [data-preset], [data-speed], [data-pick]');
     if (!target) return;
 
     if (target.dataset.tab) {
@@ -477,21 +404,12 @@
       return;
     }
 
-    if (target.dataset.repin) {
-      settings.pin.repinEverySec = Number(target.dataset.repin);
+    if (target.dataset.preset) {
+      settings.pin.intervalSec = Number(target.dataset.preset);
       settings = core.normalizeSettings(settings);
       fillFields();
       save();
-      log('info', 'ตั้งให้ยกเลิก+ปักใหม่ทุก ' + settings.pin.repinEverySec + ' วินาที');
-      return;
-    }
-
-    if (target.dataset.every) {
-      settings.pin.extendEverySec = Number(target.dataset.every);
-      settings = core.normalizeSettings(settings);
-      fillFields();
-      save();
-      log('info', 'ตั้งให้กด "+30 วิ" ทุก ' + settings.pin.extendEverySec + ' วินาที');
+      log('info', 'ตั้งรอบปักหมุดเป็นทุก ' + settings.pin.intervalSec + ' วินาที');
       return;
     }
 
@@ -525,9 +443,6 @@
         break;
       case 'pin-preview':
         autoPin.preview();
-        break;
-      case 'extend-now':
-        autoPin.extendNow();
         break;
       case 'ai-toggle':
         if (autoReply.isRunning()) { settings.ai.enabled = false; autoReply.stop(); }
@@ -589,49 +504,6 @@
       }
       case 'ai-test':
         autoReply.test($('[data-test-input]').value);
-        break;
-      case 'pick-row': {
-        log('info', 'คลิกที่ "ข้อความคอมเมนต์" ของลูกค้าสักอันบนหน้าจอ (กด Esc เพื่อยกเลิก)');
-        panel.style.opacity = '.25';
-        dom.startPicker((selector, el) => {
-          panel.style.opacity = '';
-          if (!selector || !el) { log('warn', 'ยกเลิกการเลือก'); return; }
-          // เก็บ "กล่องที่ครอบคอมเมนต์" ไว้ ไม่ใช่ตัวคอมเมนต์เอง
-          const container = el.parentElement || el;
-          settings.selectors.chatList = dom.cssPath(container);
-          save();
-          const rows = dom.commentRows(container).length;
-          log('ok', 'จำกล่องแชทแล้ว — อ่านคอมเมนต์ในกล่องนี้ได้ ' + rows + ' แถว');
-          if (!rows) log('warn', 'แต่ยังอ่านไม่ออก ลองจิ้มที่ตัวข้อความคอมเมนต์ตรง ๆ อีกครั้ง');
-        });
-        break;
-      }
-      case 'ai-diagnose':
-        autoReply.diagnose();
-        break;
-      case 'ai-send-test':
-        autoReply.sendTest($('[data-test-input]').value);
-        break;
-      case 'goto-captcha': {
-        const found = dom.captchaEl();
-        if (found) dom.spotlightCaptcha(found);
-        else log('info', 'ตอนนี้ไม่มีหน้ายืนยันตัวตนค้างอยู่แล้ว');
-        break;
-      }
-      case 'stats':
-        log('info', 'สถิติ 5 นาทีล่าสุด · ' + activitySummary(300000));
-        log('info', 'สถิติ 10 นาทีล่าสุด · ' + activitySummary(600000));
-        log('info', 'เจอจิ๊กซอว์ไปแล้ว ' + runtime.captchaCount + ' ครั้งตั้งแต่เปิดหน้านี้');
-        break;
-      case 'stop-all':
-        settings.pin.enabled = false;
-        settings.ai.enabled = false;
-        autoPin.stop();
-        autoReply.stop();
-        save();
-        syncToggle('[data-act="pin-toggle"]', false, 'เริ่มปักหมุดอัตโนมัติ', 'หยุดปักหมุด');
-        syncToggle('[data-act="ai-toggle"]', false, 'เริ่ม AI ตอบคอมเมนต์', 'หยุด AI ตอบคอมเมนต์');
-        log('info', 'หยุดทุกระบบแล้ว');
         break;
       case 'clear-log':
         logEl.innerHTML = '';

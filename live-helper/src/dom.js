@@ -106,18 +106,15 @@
     return byLabel(PIN_LABEL, card)[0] || null;
   }
 
-  // ปุ่ม "ยกเลิกการปักหมุด" — ใช้เฉพาะโหมด repin เท่านั้น
-  // ต้องอ่านข้อความบนปุ่มก่อนเสมอ และหาเฉพาะในการ์ดของตะกร้านั้น ๆ
-  function unpinButton(index) {
-    const card = productCard(index);
-    if (!card) return null;
-    return byLabel(UNPIN_LABEL, card)[0] || null;
-  }
-
   // ชื่อสินค้าที่ "กำลังจะถูกปัก" ไว้โชว์ในบันทึกให้ตรวจสอบได้ก่อนกด
   function targetName(index) {
     const card = productCard(index);
     return card ? cardName(card) : '';
+  }
+
+  function unpinButton(index) {
+    const card = productCard(index);
+    return card ? byLabel(UNPIN_LABEL, card)[0] || null : null;
   }
 
   // ปักหมุดอยู่หรือยัง — ดูจากป้าย "ปักหมุดแล้ว" หรือปุ่มที่กลายเป็น "ยกเลิกการปักหมุด"
@@ -144,88 +141,29 @@
     return leaf.closest('button, [role="button"], div[class*="btn"], div[class*="Btn"]') || leaf;
   }
 
-  // แถวคอมเมนต์ในกล่องแชท — อ่านได้ที่ชั้นไหนหยุดชั้นนั้น ไม่งั้นไล่ลงชั้นลูก
-  // (TikTok วาดแชทใหม่ทั้งกล่องบ่อย การกวาดอ่านทั้งกล่องจึงทนกว่าการดักจับ node ใหม่)
-  function commentRows(container, maxDepth) {
-    const rows = [];
-    const limit = maxDepth || 6;
-    (function walk(node, depth) {
-      if (!node || node.nodeType !== 1 || depth > limit || rows.length > 200) return;
-      const kids = Array.from(node.children);
-      // ถ้าลูก ๆ เองก็อ่านเป็นคอมเมนต์ได้ตั้งแต่สองอัน แปลว่า node นี้คือ "กล่องรวม"
-      // ต้องไล่ลงไปอีกชั้น ไม่งั้นจะเหมาเอาคอมเมนต์ทั้งกล่องเป็นข้อความเดียว
-      const commentKids = kids.filter((kid) => parseCommentNode(kid)).length;
-      if (depth > 0 && commentKids < 2 && parseCommentNode(node)) { rows.push(node); return; }
-      for (const child of kids) walk(child, depth + 1);
-    })(container, 0);
-    return rows;
-  }
-
-  // กล่องรายการแชท: ลองหลายทางแล้วเลือกอันที่ "มีคอมเมนต์อยู่ข้างในจริง"
-  // ตำแหน่งที่ผู้ใช้จิ้มเลือกไว้อาจใช้ไม่ได้แล้วหลังหน้าเว็บวาดใหม่ จึงต้องตรวจก่อนใช้
-  function chatListCandidates(selectorOverride) {
-    const list = [];
+  // กล่องรายการแชท: จับจากข้อความ empty state ก่อน ถ้าไม่เจอค่อยเดาจากช่องพิมพ์
+  function chatList(selectorOverride) {
     const manual = bySelector(selectorOverride);
-    if (manual) list.push(manual);
+    if (manual) return manual;
 
     const hint = Array.from(document.querySelectorAll('div, p, span')).find(
       (el) => el.children.length === 0 && /ความคิดเห็นของผู้ชมจะปรากฏ|Viewer comments will appear/i.test(textOf(el))
     );
-    if (hint && hint.parentElement) list.push(hint.parentElement);
+    if (hint && hint.parentElement) return hint.parentElement;
 
     const input = chatInput();
     if (input) {
       let node = input.parentElement;
       for (let depth = 0; node && depth < 6; depth += 1, node = node.parentElement) {
-        Array.from(node.querySelectorAll('div')).forEach((el) => {
-          if (el.contains(input)) return;
+        const scroller = Array.from(node.querySelectorAll('div')).find((el) => {
+          if (el.contains(input)) return false;
           const style = getComputedStyle(el);
-          if (/(auto|scroll)/.test(style.overflowY) && el.clientHeight > 120) list.push(el);
+          return /(auto|scroll)/.test(style.overflowY) && el.clientHeight > 120;
         });
-        if (list.length > 1) break;
+        if (scroller) return scroller;
       }
     }
-    return list;
-  }
-
-  // ถ้าตัวเลือกที่มีอยู่ใช้ไม่ได้เลย ให้กวาดทั้งหน้าหา "กล่องที่มีแถวคอมเมนต์มากที่สุด"
-  // (งานหนัก จึงจำผลไว้ 10 วินาที)
-  let autoListCache = { at: 0, el: null };
-  function autoDetectChatList() {
-    const now = Date.now();
-    if (autoListCache.el && now - autoListCache.at < 10000 && autoListCache.el.isConnected) {
-      return autoListCache.el;
-    }
-    const counts = new Map();
-    const nodes = document.querySelectorAll('div, li');
-    for (const node of nodes) {
-      const raw = node.textContent || '';
-      if (!raw || raw.length > 300) continue;      // กรองหยาบ ๆ ก่อนเพื่อความเร็ว
-      if (!parseCommentNode(node)) continue;
-      const parent = node.parentElement;
-      if (!parent) continue;
-      counts.set(parent, (counts.get(parent) || 0) + 1);
-    }
-    let best = null;
-    let bestCount = 0;
-    counts.forEach((count, parent) => {
-      if (count > bestCount) { best = parent; bestCount = count; }
-    });
-    const found = bestCount >= 2 ? best : null;
-    autoListCache = { at: now, el: found };
-    return found;
-  }
-
-  function chatList(selectorOverride) {
-    const candidates = chatListCandidates(selectorOverride);
-    let best = null;
-    let bestCount = 0;
-    for (const el of candidates) {
-      const count = commentRows(el).length;
-      if (count > bestCount) { best = el; bestCount = count; }
-    }
-    if (best) return best;
-    return autoDetectChatList() || candidates[0] || null;
+    return null;
   }
 
   function chatInput(selectorOverride) {
@@ -309,20 +247,6 @@
     return null;
   }
 
-  // พาสายตาไปที่หน้ายืนยันตัวตนให้เร็วที่สุด: ดึงหน้าต่างขึ้นมา เลื่อนจอไปหา แล้วตีกรอบกะพริบ
-  // (เป็นแค่การเลื่อนจอกับไฮไลต์ ตัวจิ๊กซอว์ยังต้องลากเองเหมือนเดิม)
-  function spotlightCaptcha(el) {
-    if (!el) return false;
-    try { window.focus(); } catch (err) { /* บางเบราว์เซอร์ไม่ให้ดึงโฟกัส */ }
-    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err) { el.scrollIntoView(); }
-    el.classList.add('ttlh-spot');
-    return true;
-  }
-
-  function clearSpotlight() {
-    document.querySelectorAll('.ttlh-spot').forEach((el) => el.classList.remove('ttlh-spot'));
-  }
-
   // เสียงเตือนสั้น ๆ เผื่อกำลังไลฟ์อยู่แล้วไม่ได้จ้องหน้าจอ
   function beep(times) {
     let left = times || 2;
@@ -369,25 +293,10 @@
   }
 
   // อ่านคอมเมนต์จาก node ที่เพิ่งถูกเพิ่มเข้ามาในกล่องแชท
-  // แถวนี้หน้าตาเหมือนคอมเมนต์จริงไหม — กันไม่ให้อ่านหัวเว็บ/เมนู/ปุ่ม มาเป็นคอมเมนต์
-  function looksLikeCommentRow(node, raw) {
-    if (node.closest('header, nav, [role="navigation"], [role="tablist"], button, [role="button"], input, textarea')) {
-      return false;
-    }
-    if (core.isUiNoise(raw)) return false;
-    // คอมเมนต์จริงมักมีรูปโปรไฟล์ หรือแยกเป็นสองก้อน (ชื่อ + ข้อความ)
-    if (node.querySelector('img, [class*="avatar"], [class*="Avatar"]')) return true;
-    if (/[:：]/.test(raw)) return true;
-    const leaves = Array.from(node.querySelectorAll('*'))
-      .filter((el) => el.children.length === 0 && textOf(el)).length;
-    return leaves >= 2;
-  }
-
   function parseCommentNode(node) {
     if (!node || node.nodeType !== 1) return null;
     const raw = textOf(node);
     if (!raw || raw.length > 300) return null;
-    if (!looksLikeCommentRow(node, raw)) return null;
 
     let user = '';
     let text = raw;
@@ -407,7 +316,7 @@
       }
     }
     text = text.replace(/\s+/g, ' ').trim();
-    if (!text || core.isUiNoise(text)) return null;
+    if (!text) return null;
     return { user: user || 'ผู้ชม', text, raw };
   }
 
@@ -465,10 +374,10 @@
       ev.preventDefault();
       ev.stopPropagation();
       stop();
-      onPick(current ? cssPath(current) : '', current || null);
+      onPick(current ? cssPath(current) : '');
     }
     function esc(ev) {
-      if (ev.key === 'Escape') { stop(); onPick('', null); }
+      if (ev.key === 'Escape') { stop(); onPick(''); }
     }
     document.addEventListener('mousemove', move, true);
     document.addEventListener('click', pick, true);
@@ -479,10 +388,9 @@
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
-      targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton, unpinButton,
+      targetName, flash, captchaEl, beep, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
-      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode, commentRows,
-      chatListCandidates, autoDetectChatList,
+      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,
     },
   });
