@@ -118,6 +118,7 @@
           <input type="text" data-test-input placeholder="ลองพิมพ์คำถามลูกค้า" style="flex:1;width:auto">
           <button class="ttlh-btn" data-act="ai-test">ทดสอบคำตอบ</button>
         </div>
+        <label class="ttlh-check"><input type="checkbox" data-k="ai.debug"> บันทึกละเอียด (ดูว่าระบบกวาดแชทเห็นอะไร)</label>
         <div class="ttlh-row">
           <button class="ttlh-btn" data-act="ai-diagnose">ทำไมไม่ตอบ? (ไล่เช็กให้)</button>
           <button class="ttlh-btn" data-act="ai-send-test">ส่งข้อความทดสอบเข้าแชทจริง</button>

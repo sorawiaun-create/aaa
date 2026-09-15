@@ -68,6 +68,7 @@
       ignoreWords: DEFAULT_IGNORE.slice(),
       blockWords: [],       // เจอคำเหล่านี้ = ไม่ตอบเด็ดขาด
       dryRun: true,         // เริ่มต้นให้ "ร่างอย่างเดียว ไม่ส่ง" กันพลาด
+      debug: false,         // บันทึกละเอียด: บอกทุกรอบว่ากวาดแชทแล้วเห็นอะไร
     },
     // คลังข้อมูลสินค้าที่เจ้าของร้านกรอกเอง — AI ใช้ตอบลูกค้า
     // [{ basket, name, price, info }]
@@ -132,6 +133,7 @@
     ai.enabled = !!ai.enabled;
     ai.dryRun = !!ai.dryRun;
     ai.pullBackToMain = !!ai.pullBackToMain;
+    ai.debug = !!ai.debug;
     if (!['all', 'questions'].includes(ai.replyScope)) ai.replyScope = 'all';
     if (!['answer', 'brief', 'skip'].includes(ai.otherBasketMode)) ai.otherBasketMode = 'answer';
     if (!PROVIDERS[ai.provider]) ai.provider = 'claude';

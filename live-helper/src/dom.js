@@ -144,29 +144,50 @@
     return leaf.closest('button, [role="button"], div[class*="btn"], div[class*="Btn"]') || leaf;
   }
 
-  // กล่องรายการแชท: จับจากข้อความ empty state ก่อน ถ้าไม่เจอค่อยเดาจากช่องพิมพ์
-  function chatList(selectorOverride) {
+  // แถวคอมเมนต์ในกล่องแชท — อ่านได้ที่ชั้นไหนหยุดชั้นนั้น ไม่งั้นไล่ลงชั้นลูก
+  // (TikTok วาดแชทใหม่ทั้งกล่องบ่อย การกวาดอ่านทั้งกล่องจึงทนกว่าการดักจับ node ใหม่)
+  function commentRows(container, maxDepth) {
+    const rows = [];
+    const limit = maxDepth || 5;
+    (function walk(node, depth) {
+      if (!node || node.nodeType !== 1 || depth > limit || rows.length > 200) return;
+      if (depth > 0 && parseCommentNode(node)) { rows.push(node); return; }
+      for (const child of Array.from(node.children)) walk(child, depth + 1);
+    })(container, 0);
+    return rows;
+  }
+
+  // กล่องรายการแชท: ลองหลายทางแล้วเลือกอันที่ "มีคอมเมนต์อยู่ข้างในจริง"
+  // ตำแหน่งที่ผู้ใช้จิ้มเลือกไว้อาจใช้ไม่ได้แล้วหลังหน้าเว็บวาดใหม่ จึงต้องตรวจก่อนใช้
+  function chatListCandidates(selectorOverride) {
+    const list = [];
     const manual = bySelector(selectorOverride);
-    if (manual) return manual;
+    if (manual) list.push(manual);
 
     const hint = Array.from(document.querySelectorAll('div, p, span')).find(
       (el) => el.children.length === 0 && /ความคิดเห็นของผู้ชมจะปรากฏ|Viewer comments will appear/i.test(textOf(el))
     );
-    if (hint && hint.parentElement) return hint.parentElement;
+    if (hint && hint.parentElement) list.push(hint.parentElement);
 
     const input = chatInput();
     if (input) {
       let node = input.parentElement;
       for (let depth = 0; node && depth < 6; depth += 1, node = node.parentElement) {
-        const scroller = Array.from(node.querySelectorAll('div')).find((el) => {
-          if (el.contains(input)) return false;
+        Array.from(node.querySelectorAll('div')).forEach((el) => {
+          if (el.contains(input)) return;
           const style = getComputedStyle(el);
-          return /(auto|scroll)/.test(style.overflowY) && el.clientHeight > 120;
+          if (/(auto|scroll)/.test(style.overflowY) && el.clientHeight > 120) list.push(el);
         });
-        if (scroller) return scroller;
+        if (list.length > 1) break;
       }
     }
-    return null;
+    return list;
+  }
+
+  function chatList(selectorOverride) {
+    const candidates = chatListCandidates(selectorOverride);
+    const withRows = candidates.find((el) => commentRows(el).length > 0);
+    return withRows || candidates[0] || null;
   }
 
   function chatInput(selectorOverride) {
@@ -407,7 +428,7 @@
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
       targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
-      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
+      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode, commentRows, chatListCandidates,
       cssPath, startPicker,
     },
   });
