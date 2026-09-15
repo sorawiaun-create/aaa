@@ -13,6 +13,9 @@
       recent: [],        // คอมเมนต์ล่าสุดไว้เป็นบริบท
       queue: [],
       busy: false,
+      busySince: 0,      // เวลาที่เริ่มรอ AI — ถ้าค้างนานเกินไปต้องปลดล็อกเอง
+      sendFails: 0,      // ส่งแล้วข้อความค้างในช่องกี่ครั้งติด (TikTok ไม่รับ)
+      pausedUntil: 0,    // พักชั่วคราวเมื่อ TikTok ไม่รับข้อความ
       observer: null,
       timer: null,
       replied: 0,
@@ -73,13 +76,39 @@
       const btn = dom.sendButton(settings.selectors.sendButton, input);
       if (btn) dom.realClick(btn);
       else dom.pressEnter(input);
+
+      // ส่งสำเร็จ = ช่องพิมพ์ต้องว่าง ถ้าข้อความยังค้างอยู่แปลว่า TikTok ไม่รับ
+      // (มักเกิดตอนส่งถี่เกินลิมิตแชทของแพลตฟอร์ม)
+      setTimeout(() => {
+        const box = dom.chatInput(getSettings().selectors.chatInput);
+        const left = box ? String(box.value || box.textContent || '').trim() : '';
+        if (left && left === text.trim()) {
+          state.sendFails += 1;
+          if (state.sendFails >= 3) {
+            state.pausedUntil = Date.now() + 60000;
+            state.sendFails = 0;
+            log('err', 'ส่งไม่ออก 3 ครั้งติด — TikTok น่าจะจำกัดการส่งแชทอยู่'
+              + ' พักให้ 1 นาทีแล้วลองใหม่ · ถ้าเจอบ่อยให้ลด "ตอบได้ไม่เกิน (ข้อความ/นาที)" ลง');
+          } else {
+            log('warn', 'ข้อความค้างอยู่ในช่องพิมพ์ ไม่ถูกส่งออก (ครั้งที่ ' + state.sendFails + ')');
+          }
+        } else {
+          state.sendFails = 0;
+        }
+      }, 900);
       state.ownTexts.push(text);
       if (state.ownTexts.length > 20) state.ownTexts.shift();
       return true;
     }
 
     async function processOne() {
+      // ปลดล็อกอัตโนมัติถ้ารอ AI นานผิดปกติ (เช่น service worker หลับกลางทาง)
+      if (state.busy && state.busySince && Date.now() - state.busySince > 60000) {
+        state.busy = false;
+        log('warn', 'รอคำตอบจาก AI นานเกิน 1 นาที — ปลดล็อกแล้วทำงานต่อ');
+      }
       if (state.busy || !state.queue.length) return;
+      if (state.pausedUntil && Date.now() < state.pausedUntil) return;
       const settings = getSettings();
       const comment = state.queue.shift();
       const verdict = core.shouldReply(comment, state, settings.ai, Date.now());
@@ -92,6 +121,7 @@
       }
 
       state.busy = true;
+      state.busySince = Date.now();
       status();
       try {
         const focus = settings.pin.basket;

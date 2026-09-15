@@ -275,14 +275,28 @@
 
   // ---------- เครื่องทำงาน ----------
   function askAI(payload) {
+    // ต้องจบเสมอ — ถ้า service worker หลับกลางทาง callback อาจไม่ถูกเรียกเลย
+    // แล้วระบบจะค้างรอตลอดไปจนหยุดตอบทั้งที่ยังเปิดอยู่
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: 'ttlh:ai', system: payload.system, user: payload.user }, (res) => {
-        if (chrome.runtime.lastError) {
-          resolve({ ok: false, error: chrome.runtime.lastError.message });
-          return;
-        }
-        resolve(res || { ok: false, error: 'ไม่มีคำตอบกลับมาจากส่วนขยาย' });
-      });
+      let done = false;
+      const finish = (result) => { if (!done) { done = true; resolve(result); } };
+      const timer = setTimeout(
+        () => finish({ ok: false, error: 'AI ไม่ตอบกลับภายใน 25 วินาที' }),
+        25000
+      );
+      try {
+        chrome.runtime.sendMessage({ type: 'ttlh:ai', system: payload.system, user: payload.user }, (res) => {
+          clearTimeout(timer);
+          if (chrome.runtime.lastError) {
+            finish({ ok: false, error: chrome.runtime.lastError.message });
+            return;
+          }
+          finish(res || { ok: false, error: 'ไม่มีคำตอบกลับมาจากส่วนขยาย' });
+        });
+      } catch (err) {
+        clearTimeout(timer);
+        finish({ ok: false, error: err && err.message ? err.message : String(err) });
+      }
     });
   }
 
