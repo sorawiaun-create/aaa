@@ -184,10 +184,44 @@
     return list;
   }
 
+  // ถ้าตัวเลือกที่มีอยู่ใช้ไม่ได้เลย ให้กวาดทั้งหน้าหา "กล่องที่มีแถวคอมเมนต์มากที่สุด"
+  // (งานหนัก จึงจำผลไว้ 10 วินาที)
+  let autoListCache = { at: 0, el: null };
+  function autoDetectChatList() {
+    const now = Date.now();
+    if (autoListCache.el && now - autoListCache.at < 10000 && autoListCache.el.isConnected) {
+      return autoListCache.el;
+    }
+    const counts = new Map();
+    const nodes = document.querySelectorAll('div, li');
+    for (const node of nodes) {
+      const raw = node.textContent || '';
+      if (!raw || raw.length > 300) continue;      // กรองหยาบ ๆ ก่อนเพื่อความเร็ว
+      if (!parseCommentNode(node)) continue;
+      const parent = node.parentElement;
+      if (!parent) continue;
+      counts.set(parent, (counts.get(parent) || 0) + 1);
+    }
+    let best = null;
+    let bestCount = 0;
+    counts.forEach((count, parent) => {
+      if (count > bestCount) { best = parent; bestCount = count; }
+    });
+    const found = bestCount >= 2 ? best : null;
+    autoListCache = { at: now, el: found };
+    return found;
+  }
+
   function chatList(selectorOverride) {
     const candidates = chatListCandidates(selectorOverride);
-    const withRows = candidates.find((el) => commentRows(el).length > 0);
-    return withRows || candidates[0] || null;
+    let best = null;
+    let bestCount = 0;
+    for (const el of candidates) {
+      const count = commentRows(el).length;
+      if (count > bestCount) { best = el; bestCount = count; }
+    }
+    if (best) return best;
+    return autoDetectChatList() || candidates[0] || null;
   }
 
   function chatInput(selectorOverride) {
@@ -331,10 +365,25 @@
   }
 
   // อ่านคอมเมนต์จาก node ที่เพิ่งถูกเพิ่มเข้ามาในกล่องแชท
+  // แถวนี้หน้าตาเหมือนคอมเมนต์จริงไหม — กันไม่ให้อ่านหัวเว็บ/เมนู/ปุ่ม มาเป็นคอมเมนต์
+  function looksLikeCommentRow(node, raw) {
+    if (node.closest('header, nav, [role="navigation"], [role="tablist"], button, [role="button"], input, textarea')) {
+      return false;
+    }
+    if (core.isUiNoise(raw)) return false;
+    // คอมเมนต์จริงมักมีรูปโปรไฟล์ หรือแยกเป็นสองก้อน (ชื่อ + ข้อความ)
+    if (node.querySelector('img, [class*="avatar"], [class*="Avatar"]')) return true;
+    if (/[:：]/.test(raw)) return true;
+    const leaves = Array.from(node.querySelectorAll('*'))
+      .filter((el) => el.children.length === 0 && textOf(el)).length;
+    return leaves >= 2;
+  }
+
   function parseCommentNode(node) {
     if (!node || node.nodeType !== 1) return null;
     const raw = textOf(node);
     if (!raw || raw.length > 300) return null;
+    if (!looksLikeCommentRow(node, raw)) return null;
 
     let user = '';
     let text = raw;
@@ -354,7 +403,7 @@
       }
     }
     text = text.replace(/\s+/g, ' ').trim();
-    if (!text) return null;
+    if (!text || core.isUiNoise(text)) return null;
     return { user: user || 'ผู้ชม', text, raw };
   }
 
@@ -412,10 +461,10 @@
       ev.preventDefault();
       ev.stopPropagation();
       stop();
-      onPick(current ? cssPath(current) : '');
+      onPick(current ? cssPath(current) : '', current || null);
     }
     function esc(ev) {
-      if (ev.key === 'Escape') { stop(); onPick(''); }
+      if (ev.key === 'Escape') { stop(); onPick('', null); }
     }
     document.addEventListener('mousemove', move, true);
     document.addEventListener('click', pick, true);
@@ -428,7 +477,8 @@
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
       targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
-      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode, commentRows, chatListCandidates,
+      typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode, commentRows,
+      chatListCandidates, autoDetectChatList,
       cssPath, startPicker,
     },
   });

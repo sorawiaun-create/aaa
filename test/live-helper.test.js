@@ -69,6 +69,23 @@ test('cardNameFromText: ตัดเลข ราคา และข้อคว
   assert.ok(!name.includes('ปักหมุด'));
 });
 
+// --- คัดข้อความ UI ออกจากคอมเมนต์ ---
+test('isUiNoise: ข้อความบนหน้าเว็บไม่ใช่คอมเมนต์', () => {
+  assert.equal(core.isUiNoise('ตัวจัดการ LIVE'), true);
+  assert.equal(core.isUiNoise('คอนโซล LIVE'), true);
+  assert.equal(core.isUiNoise('แชท'), true);
+  assert.equal(core.isUiNoise('ทั้งหมด'), true);
+  assert.equal(core.isUiNoise('ปักหมุดแล้ว'), true);
+  assert.equal(core.isUiNoise('ความคิดเห็นของผู้ชมจะปรากฏที่นี่ระหว่าง LIVE ของคุณ'), true);
+  assert.equal(core.isUiNoise(''), true);
+});
+
+test('isUiNoise: คอมเมนต์ลูกค้าต้องผ่าน', () => {
+  assert.equal(core.isUiNoise('ตัวนี้ราคาเท่าไหร่คะ'), false);
+  assert.equal(core.isUiNoise('สวยจัง'), false);
+  assert.equal(core.isUiNoise('หมายเลข14 มีสีดำไหม'), false);
+});
+
 // --- ตัวกรองคอมเมนต์ ---
 test('shouldReply: คอมเมนต์ปกติ = ตอบ', () => {
   const ai = Object.assign(baseAi(), { enabled: true });

@@ -124,7 +124,7 @@
           <button class="ttlh-btn" data-act="ai-send-test">ส่งข้อความทดสอบเข้าแชทจริง</button>
         </div>
         <div class="ttlh-row">
-          <button class="ttlh-btn" data-pick="chatList">จิ้มเลือกกล่องแชท</button>
+          <button class="ttlh-btn" data-act="pick-row">จิ้มที่ "คอมเมนต์" สักอัน</button>
           <button class="ttlh-btn" data-pick="chatInput">จิ้มเลือกช่องพิมพ์</button>
         </div>
       </div>
@@ -590,6 +590,22 @@
       case 'ai-test':
         autoReply.test($('[data-test-input]').value);
         break;
+      case 'pick-row': {
+        log('info', 'คลิกที่ "ข้อความคอมเมนต์" ของลูกค้าสักอันบนหน้าจอ (กด Esc เพื่อยกเลิก)');
+        panel.style.opacity = '.25';
+        dom.startPicker((selector, el) => {
+          panel.style.opacity = '';
+          if (!selector || !el) { log('warn', 'ยกเลิกการเลือก'); return; }
+          // เก็บ "กล่องที่ครอบคอมเมนต์" ไว้ ไม่ใช่ตัวคอมเมนต์เอง
+          const container = el.parentElement || el;
+          settings.selectors.chatList = dom.cssPath(container);
+          save();
+          const rows = dom.commentRows(container).length;
+          log('ok', 'จำกล่องแชทแล้ว — อ่านคอมเมนต์ในกล่องนี้ได้ ' + rows + ' แถว');
+          if (!rows) log('warn', 'แต่ยังอ่านไม่ออก ลองจิ้มที่ตัวข้อความคอมเมนต์ตรง ๆ อีกครั้ง');
+        });
+        break;
+      }
       case 'ai-diagnose':
         autoReply.diagnose();
         break;

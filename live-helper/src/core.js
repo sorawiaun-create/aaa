@@ -200,6 +200,32 @@
       .slice(0, 80);
   }
 
+  // ---------- แยกคอมเมนต์จริงออกจากข้อความ UI ----------
+  // หัวเว็บ เมนู ป้ายสถิติ ฯลฯ ก็เป็นข้อความสั้น ๆ เหมือนกัน ถ้าไม่คัดออกจะถูกอ่านเป็นคอมเมนต์
+  const UI_NOISE = [
+    'ตัวจัดการ LIVE', 'คอนโซล LIVE', 'กิจกรรม LIVE', 'เครื่องมือ LIVE', 'LIVE แจกรางวัล',
+    'ไฮไลท์ LIVE', 'คูปองไลฟ์', 'คัดสรรสุดพิเศษ', 'โชว์เคส', 'โชว์เคสสินค้า',
+    'ชุดสินค้าสำหรับไลฟ์', 'แคมเปญ LIVE และวิดีโอสั้น', 'การวิเคราะห์', 'การวิเคราะห์ LIVE',
+    'ผลการดำเนินงานของ LIVE', 'ประวัติการ LIVE', 'สถานะบัญชี', 'หน้าแรก', 'แดชบอร์ดของ LIVE',
+    'แฟลชเซล', 'การแจกรางวัล', 'บิลบอร์ด', 'คูปอง', 'สลับโหมด', 'LIVE แบบด่วน', 'เวลาเริ่มต้น',
+    'แชท', 'ทั้งหมด', 'เกี่ยวข้องกับสินค้า', 'กิจกรรม', 'สินค้า', 'เพิ่มสินค้า', 'ยังไม่มีสินค้า',
+    'รายการสินค้าใน LIVE นี้', 'ปักหมุด', 'ปักหมุดแล้ว', 'ยกเลิกการปักหมุด', 'ตัวเลือกโปรด',
+    'ผู้ชมปัจจุบัน', 'GMV ที่ได้', 'ยอดคลิกสินค้า', 'อัตราการแตะผ่าน', 'ระยะเวลาในการดูเฉลี่ย',
+    'คำแนะนำ', 'ความคิดเห็นของผู้ชมจะปรากฏ', 'พิมพ์อะไรสักอย่าง', 'ค้นหารหัสสินค้า',
+    'หมวดหมู่ทั้งหมด', 'สต็อกทั้งหมด', 'Promotion quality points',
+  ];
+
+  function isUiNoise(text) {
+    const raw = normText(text);
+    if (!raw) return true;
+    const hay = raw.toLowerCase();
+    return UI_NOISE.some((label) => {
+      const needle = label.toLowerCase();
+      // ตรงเป๊ะ หรือขึ้นต้นด้วยป้ายนั้น (เช่น "ตัวจัดการ LIVE ไทย")
+      return hay === needle || hay.startsWith(needle);
+    });
+  }
+
   // ---------- คอมเมนต์ ----------
   function normText(text) {
     return String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
@@ -536,7 +562,7 @@
     DEFAULT_SETTINGS, DEFAULT_IGNORE,
     clampInt, toWordList, normalizeSettings, normalizeProducts, normText,
     hasPrice, isProductCardText, cardIndexFromText, cardNameFromText,
-    commentId, containsAny, looksLikeQuestion, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
+    commentId, containsAny, looksLikeQuestion, isUiNoise, detectBasket, resolveProduct, pruneTimestamps, shouldReply,
     isSkip, sanitizeReply, buildSystemPrompt, buildUserPrompt,
     PROVIDERS, activeProvider, supportsEffort, buildRequestBody, extractText, nextPinAction,
     withinClickBudget,
