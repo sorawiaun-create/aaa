@@ -100,6 +100,22 @@
       return fresh;
     }
 
+    // พิมพ์ข้อความลงช่องแชทแล้วส่ง (เผลอลบฟังก์ชันนี้ไปตอนแก้รอบก่อน จนขึ้น send is not defined)
+    function send(text) {
+      const settings = getSettings();
+      const input = dom.chatInput(settings.selectors.chatInput);
+      if (!input) { warn('หาช่องพิมพ์แชทไม่เจอ — กด "จิ้มเลือกช่องพิมพ์" ช่วยได้'); return false; }
+      dom.typeInto(input, text);
+      const btn = dom.sendButton(settings.selectors.sendButton, input);
+      if (btn) dom.realClick(btn);
+      else dom.pressEnter(input);
+      state.ownTexts.push(text);
+      if (state.ownTexts.length > 20) state.ownTexts.shift();
+      state.sentLog = core.pruneTimestamps(state.sentLog, Date.now(), 600000);
+      state.sentLog.push(Date.now());
+      return true;
+    }
+
     async function processOne() {
       if (state.busy || !state.queue.length) return;
       const settings = getSettings();

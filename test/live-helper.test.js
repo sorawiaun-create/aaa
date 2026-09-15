@@ -516,3 +516,32 @@ test('normalizeSettings: รอบกดต่อเวลาอยู่ใน�
 
 
 
+
+// --- กันพลาดแบบ "ลบฟังก์ชันทิ้งตอนแก้โค้ด" ---
+// ไฟล์ในส่วนขยายต้องมี DOM จริงถึงจะรันได้ จึงตรวจแบบอ่านซอร์สว่าฟังก์ชันภายในยังอยู่ครบ
+const readSrc = (name) => readFileSync(new URL('../live-helper/src/' + name, import.meta.url), 'utf8');
+
+test('chat.js: ฟังก์ชันภายในที่ถูกเรียกใช้ ต้องถูกประกาศไว้จริง', () => {
+  const src = readSrc('chat.js');
+  for (const fn of ['send', 'scan', 'collect', 'remember', 'processOne', 'status', 'warn']) {
+    assert.ok(src.includes('function ' + fn + '('), 'ไม่พบ function ' + fn + '() ใน chat.js');
+  }
+});
+
+test('autopin.js: ฟังก์ชันภายในที่ถูกเรียกใช้ ต้องถูกประกาศไว้จริง', () => {
+  const src = readSrc('autopin.js');
+  for (const fn of ['click', 'doPin', 'doExtend', 'doRepin', 'tick', 'status', 'label', 'warn']) {
+    assert.ok(src.includes('function ' + fn + '('), 'ไม่พบ function ' + fn + '() ใน autopin.js');
+  }
+});
+
+test('dom.js: ฟังก์ชันที่ไฟล์อื่นเรียกใช้ ต้องถูก export ออกมา', () => {
+  const src = readSrc('dom.js');
+  for (const fn of ['chatList', 'chatInput', 'sendButton', 'commentRows', 'parseCommentNode',
+    'pinButton', 'unpinButton', 'extendButton', 'isPinned', 'productCard', 'productCards',
+    'targetName', 'flash', 'captchaEl', 'spotlightCaptcha', 'clearSpotlight', 'beep',
+    'typeInto', 'pressEnter', 'realClick', 'scrapeProducts', 'cssPath', 'startPicker', 'textOf']) {
+    assert.ok(new RegExp('\\b' + fn + '\\b').test(src.split('root.TTLH')[1] || ''),
+      'dom.js ไม่ได้ export ' + fn);
+  }
+});

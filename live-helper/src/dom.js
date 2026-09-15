@@ -148,11 +148,15 @@
   // (TikTok วาดแชทใหม่ทั้งกล่องบ่อย การกวาดอ่านทั้งกล่องจึงทนกว่าการดักจับ node ใหม่)
   function commentRows(container, maxDepth) {
     const rows = [];
-    const limit = maxDepth || 5;
+    const limit = maxDepth || 6;
     (function walk(node, depth) {
       if (!node || node.nodeType !== 1 || depth > limit || rows.length > 200) return;
-      if (depth > 0 && parseCommentNode(node)) { rows.push(node); return; }
-      for (const child of Array.from(node.children)) walk(child, depth + 1);
+      const kids = Array.from(node.children);
+      // ถ้าลูก ๆ เองก็อ่านเป็นคอมเมนต์ได้ตั้งแต่สองอัน แปลว่า node นี้คือ "กล่องรวม"
+      // ต้องไล่ลงไปอีกชั้น ไม่งั้นจะเหมาเอาคอมเมนต์ทั้งกล่องเป็นข้อความเดียว
+      const commentKids = kids.filter((kid) => parseCommentNode(kid)).length;
+      if (depth > 0 && commentKids < 2 && parseCommentNode(node)) { rows.push(node); return; }
+      for (const child of kids) walk(child, depth + 1);
     })(container, 0);
     return rows;
   }
