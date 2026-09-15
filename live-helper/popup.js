@@ -1,5 +1,6 @@
 // หน้าต่างเล็กที่เด้งขึ้นเมื่อกดไอคอนส่วนขยายบนแถบเครื่องมือ
 const statusEl = document.getElementById('status');
+try { document.getElementById('ver').textContent = 'v' + chrome.runtime.getManifest().version; } catch (err) { /* ข้าม */ }
 const toggleBtn = document.getElementById('toggle');
 const rememberBtn = document.getElementById('remember');
 const openBtn = document.getElementById('open');

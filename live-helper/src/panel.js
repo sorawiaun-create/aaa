@@ -3,6 +3,10 @@
   'use strict';
   const { core, dom, createAutoPin, createAutoReply } = root.TTLH;
   const SETTINGS_KEY = 'ttlh:settings';
+  // เวอร์ชันจาก manifest — ไว้เช็กว่าเบราว์เซอร์นี้รันตัวไหนอยู่ (กันสับสนเวลาลงหลายเบราว์เซอร์)
+  const VERSION = (() => {
+    try { return chrome.runtime.getManifest().version; } catch (err) { return '?'; }
+  })();
 
   let settings = core.normalizeSettings(null);
   let saveTimer = null;
@@ -22,6 +26,7 @@
   panel.innerHTML = `
     <div class="ttlh-head" data-drag>
       <b>ผู้ช่วยไลฟ์ · ปักหมุด + AI ตอบคอมเมนต์</b>
+      <span class="ttlh-ver" data-version></span>
       <button data-act="min" title="ย่อ/ขยาย">–</button>
     </div>
     <div class="ttlh-alert" data-alert hidden></div>
@@ -591,7 +596,8 @@
       if (mounted) return;
       if (looksLikeLiveConsole()) {
         mount();
-        log('info', 'พร้อมใช้งาน — เปิดคอนโซล LIVE ค้างไว้ แล้วกดเริ่มได้เลย');
+        $('[data-version]').textContent = 'v' + VERSION;
+    log('info', 'พร้อมใช้งาน เวอร์ชัน ' + VERSION + ' — เปิดคอนโซล LIVE ค้างไว้ แล้วกดเริ่มได้เลย');
         return;
       }
       if (tries < 30) { tries += 1; setTimeout(autoMount, 1000); }
