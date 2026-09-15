@@ -449,6 +449,39 @@ test('งานที่ 2 — ถึงรอบแล้วแต่ปุ่�
   assert.equal(core.nextPinAction(st, PIN, 99999), 'wait');
 });
 
+// --- โหมดยกเลิกแล้วปักใหม่ ---
+test('โหมด repin — ปักอยู่และครบรอบ = ยกเลิกแล้วปักใหม่', () => {
+  const pin = { enabled: true, mode: 'repin', repinEverySec: 60, extendEverySec: 31 };
+  assert.equal(core.nextPinAction({ pinned: true, lastPinAt: 0 }, pin, 30000), 'wait');
+  assert.equal(core.nextPinAction({ pinned: true, lastPinAt: 0 }, pin, 61000), 'repin');
+});
+
+test('โหมด repin — นับรอบถัดไปจากครั้งล่าสุดที่ปักใหม่', () => {
+  const pin = { enabled: true, mode: 'repin', repinEverySec: 60, extendEverySec: 31 };
+  const st = { pinned: true, lastPinAt: 0, lastRepinAt: 60000 };
+  assert.equal(core.nextPinAction(st, pin, 90000), 'wait');
+  assert.equal(core.nextPinAction(st, pin, 121000), 'repin');
+});
+
+test('โหมด repin — ยังไม่ปัก = ปักก่อน ไม่ใช่ยกเลิก', () => {
+  const pin = { enabled: true, mode: 'repin', repinEverySec: 60, extendEverySec: 31 };
+  assert.equal(core.nextPinAction({ pinned: false, lastPinAt: null }, pin, 0), 'pin');
+});
+
+test('โหมด repin — ไม่ยุ่งกับปุ่มต่อเวลา แม้ปุ่มจะโผล่อยู่', () => {
+  const pin = { enabled: true, mode: 'repin', repinEverySec: 60, extendEverySec: 31 };
+  const st = { pinned: true, lastPinAt: 0, extendAvailable: true };
+  assert.equal(core.nextPinAction(st, pin, 10000), 'wait');
+});
+
+test('normalizeSettings: โหมดปักหมุด ค่าเริ่มต้น extend และรอบ repin ขั้นต่ำ 30 วินาที', () => {
+  assert.equal(core.normalizeSettings(null).pin.mode, 'extend');
+  assert.equal(core.normalizeSettings({ pin: { mode: 'มั่ว' } }).pin.mode, 'extend');
+  assert.equal(core.normalizeSettings({ pin: { mode: 'repin' } }).pin.mode, 'repin');
+  assert.equal(core.normalizeSettings({ pin: { repinEverySec: 5 } }).pin.repinEverySec, 30);
+  assert.equal(core.normalizeSettings({ pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
+});
+
 test('normalizeSettings: รอบกดต่อเวลาอยู่ในกรอบ 20-120 วินาที', () => {
   assert.equal(core.normalizeSettings(null).pin.extendEverySec, 31);
   assert.equal(core.normalizeSettings({ pin: { extendEverySec: 5 } }).pin.extendEverySec, 20);

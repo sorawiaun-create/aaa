@@ -39,11 +39,27 @@
       <div class="ttlh-tab on" data-pane="pin">
         <div class="ttlh-status" data-pin-status>ยังไม่เริ่มทำงาน</div>
         <div class="ttlh-row"><label>ปักหมุดตะกร้าที่</label><input type="number" min="1" max="200" data-k="pin.basket"></div>
-        <div class="ttlh-row"><label>กด "+30 วิ" ทุก (วินาที)</label><input type="number" min="20" max="120" data-k="pin.extendEverySec"></div>
-        <div class="ttlh-row">
-          <button class="ttlh-btn" data-every="31">31 วิ</button>
-          <button class="ttlh-btn" data-every="33">33 วิ</button>
-          <button class="ttlh-btn" data-every="35">35 วิ</button>
+        <div class="ttlh-row"><label>วิธีคงหมุดไว้</label>
+          <select data-k="pin.mode">
+            <option value="extend">กด "+30 วิ" ทุกรอบ (คลิกน้อยสุด)</option>
+            <option value="repin">ยกเลิกแล้วปักใหม่ (เด้งขึ้นจอผู้ชม)</option>
+          </select>
+        </div>
+        <div data-mode="extend">
+          <div class="ttlh-row"><label>กด "+30 วิ" ทุก (วินาที)</label><input type="number" min="20" max="120" data-k="pin.extendEverySec"></div>
+          <div class="ttlh-row">
+            <button class="ttlh-btn" data-every="31">31 วิ</button>
+            <button class="ttlh-btn" data-every="33">33 วิ</button>
+            <button class="ttlh-btn" data-every="35">35 วิ</button>
+          </div>
+        </div>
+        <div data-mode="repin">
+          <div class="ttlh-row"><label>ยกเลิก+ปักใหม่ ทุก (วินาที)</label><input type="number" min="30" max="600" step="5" data-k="pin.repinEverySec"></div>
+          <div class="ttlh-row">
+            <button class="ttlh-btn" data-repin="45">45 วิ</button>
+            <button class="ttlh-btn" data-repin="60">1 นาที</button>
+            <button class="ttlh-btn" data-repin="120">2 นาที</button>
+          </div>
         </div>
         <div class="ttlh-row"><label>เพดานคลิก (ครั้ง/นาที)</label><input type="number" min="2" max="30" data-k="pin.maxClicksPerMin"></div>
         <label class="ttlh-check"><input type="checkbox" data-k="pin.dryRun"> โหมดซ้อม (ไม่คลิกจริง)</label>
@@ -59,8 +75,10 @@
           <button class="ttlh-btn" data-pick="pinButton">จิ้มเลือกปุ่ม "ปักหมุด"</button>
           <button class="ttlh-btn" data-pick="extendButton">จิ้มเลือกปุ่ม "+30 วิ"</button>
         </div>
-        <p class="ttlh-note">ทำงานสองอย่างแยกกัน — ยังไม่ปักก็ปักให้ครั้งเดียว จากนั้นกดปุ่ม
-          “+30 วินาที” ทุก ๆ รอบที่ตั้งไว้ · ระบบนี้ไม่กด “ยกเลิกการปักหมุด” เลย</p>
+        <p class="ttlh-note">ยังไม่ปัก = ปักให้ครั้งเดียวเสมอ · จากนั้นแล้วแต่โหมด:
+          <b>“+30 วิ”</b> คลิกเดียวต่อรอบ หมุดค้างอยู่เดิม ·
+          <b>“ยกเลิกแล้วปักใหม่”</b> 2 คลิกต่อรอบ แต่การ์ดเด้งขึ้นจอผู้ชมใหม่ทุกครั้ง
+          (ขั้นต่ำ 30 วินาที)</p>
       </div>
 
       <div class="ttlh-tab" data-pane="ai">
@@ -99,6 +117,10 @@
         <div class="ttlh-row">
           <input type="text" data-test-input placeholder="ลองพิมพ์คำถามลูกค้า" style="flex:1;width:auto">
           <button class="ttlh-btn" data-act="ai-test">ทดสอบคำตอบ</button>
+        </div>
+        <div class="ttlh-row">
+          <button class="ttlh-btn" data-act="ai-diagnose">ทำไมไม่ตอบ? (ไล่เช็กให้)</button>
+          <button class="ttlh-btn" data-act="ai-send-test">ส่งข้อความทดสอบเข้าแชทจริง</button>
         </div>
         <div class="ttlh-row">
           <button class="ttlh-btn" data-pick="chatList">จิ้มเลือกกล่องแชท</button>
@@ -197,6 +219,13 @@
     });
   }
 
+  // โชว์เฉพาะช่องของโหมดปักหมุดที่เลือกอยู่
+  function syncModeRows() {
+    panel.querySelectorAll('[data-mode]').forEach((el) => {
+      el.hidden = el.dataset.mode !== settings.pin.mode;
+    });
+  }
+
   function fillFields() {
     panel.querySelectorAll('[data-k]').forEach((el) => {
       const value = readPath(el.dataset.k);
@@ -205,6 +234,7 @@
       else el.value = value == null ? '' : value;
     });
     syncProviderRows();
+    syncModeRows();
   }
 
   function bindFields() {
@@ -218,6 +248,12 @@
         else value = el.value;
         writePath(path, value);
         settings = core.normalizeSettings(settings);
+        if (path === 'pin.mode') {
+          syncModeRows();
+          log('info', settings.pin.mode === 'repin'
+            ? 'เปลี่ยนเป็นโหมดยกเลิกแล้วปักใหม่ทุก ' + settings.pin.repinEverySec + ' วินาที'
+            : 'เปลี่ยนเป็นโหมดกด "+30 วิ" ทุก ' + settings.pin.extendEverySec + ' วินาที');
+        }
         if (path === 'ai.provider') {
           syncProviderRows();
           log('info', 'สลับไปใช้ ' + core.activeProvider(settings.ai).label + ' แล้ว');
@@ -329,11 +365,16 @@
     onStatus(state) {
       const el = $('[data-pin-status]');
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
-      el.innerHTML = 'ทำงานอยู่ · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
-        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก')
-        + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
-        + (state.pinned ? 'กดต่อเวลาอีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด')
-        + (state.extendReady ? ' · เห็นปุ่ม +30 วิ แล้ว' : '');
+      const head = 'ทำงานอยู่ · สินค้าที่ <b>' + settings.pin.basket + '</b> · '
+        + (state.pinned ? 'ปักหมุดอยู่' : 'ยังไม่ปัก');
+      if (state.mode === 'repin') {
+        el.innerHTML = head + ' · ปักไปแล้ว <b>' + state.pins + '</b> ครั้ง · '
+          + (state.pinned ? 'ปักใหม่อีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด');
+      } else {
+        el.innerHTML = head + ' · ต่อเวลาไปแล้ว <b>' + state.extends + '</b> ครั้ง · '
+          + (state.pinned ? 'กดต่อเวลาอีกใน <b>' + state.nextIn + '</b> วิ' : 'กำลังจะปักหมุด')
+          + (state.extendReady ? ' · เห็นปุ่ม +30 วิ แล้ว' : '');
+      }
     },
   });
 
@@ -413,7 +454,7 @@
 
   // ---------- ปุ่มต่าง ๆ ----------
   panel.addEventListener('click', async (ev) => {
-    const target = ev.target.closest('[data-act], [data-tab], [data-every], [data-speed], [data-pick]');
+    const target = ev.target.closest('[data-act], [data-tab], [data-every], [data-repin], [data-speed], [data-pick]');
     if (!target) return;
 
     if (target.dataset.tab) {
@@ -432,6 +473,15 @@
       log('info', fast
         ? 'ตั้งเป็นตอบถี่: 25 ข้อความ/นาที · คนเดิมเว้น 5 วิ'
         : 'ตั้งเป็นตอบพอประมาณ: 10 ข้อความ/นาที · คนเดิมเว้น 45 วิ');
+      return;
+    }
+
+    if (target.dataset.repin) {
+      settings.pin.repinEverySec = Number(target.dataset.repin);
+      settings = core.normalizeSettings(settings);
+      fillFields();
+      save();
+      log('info', 'ตั้งให้ยกเลิก+ปักใหม่ทุก ' + settings.pin.repinEverySec + ' วินาที');
       return;
     }
 
@@ -538,6 +588,12 @@
       }
       case 'ai-test':
         autoReply.test($('[data-test-input]').value);
+        break;
+      case 'ai-diagnose':
+        autoReply.diagnose();
+        break;
+      case 'ai-send-test':
+        autoReply.sendTest($('[data-test-input]').value);
         break;
       case 'goto-captcha': {
         const found = dom.captchaEl();

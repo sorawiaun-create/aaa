@@ -106,6 +106,14 @@
     return byLabel(PIN_LABEL, card)[0] || null;
   }
 
+  // ปุ่ม "ยกเลิกการปักหมุด" — ใช้เฉพาะโหมด repin เท่านั้น
+  // ต้องอ่านข้อความบนปุ่มก่อนเสมอ และหาเฉพาะในการ์ดของตะกร้านั้น ๆ
+  function unpinButton(index) {
+    const card = productCard(index);
+    if (!card) return null;
+    return byLabel(UNPIN_LABEL, card)[0] || null;
+  }
+
   // ชื่อสินค้าที่ "กำลังจะถูกปัก" ไว้โชว์ในบันทึกให้ตรวจสอบได้ก่อนกด
   function targetName(index) {
     const card = productCard(index);
@@ -397,7 +405,7 @@
     dom: {
       PIN_LABEL, UNPIN_LABEL, EXTEND_LABEL,
       textOf, visible, byLabel, bySelector, productCards, productCard, cardIndex, cardName,
-      targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton,
+      targetName, flash, captchaEl, spotlightCaptcha, clearSpotlight, beep, pinButton, unpinButton,
       isPinned, extendButton, chatList, chatInput, sendButton,
       typeInto, pressEnter, realClick, scrapeProducts, parseCommentNode,
       cssPath, startPicker,

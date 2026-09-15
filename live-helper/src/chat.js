@@ -178,8 +178,39 @@
         if (state.observer) return;
         if (!attachObserver()) return;
         state.timer = setInterval(processOne, 1500);
-        log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์' + (getSettings().ai.dryRun ? ' (โหมดร่าง ไม่ส่งจริง)' : ''));
+        log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์');
+        if (getSettings().ai.dryRun) {
+          log('warn', '⚠️ "โหมดร่าง" เปิดอยู่ — AI จะคิดคำตอบให้ดูแต่ไม่ส่งเข้าแชทจริง'
+            + ' ถ้าต้องการให้ส่งจริง ให้เอาเครื่องหมายถูกหน้า "โหมดร่าง" ออก');
+        }
         status();
+      },
+
+      // ไล่เช็กทีละขั้นว่าติดตรงไหน เวลา AI ไม่ตอบ
+      diagnose() {
+        const settings = getSettings();
+        const list = dom.chatList(settings.selectors.chatList);
+        const input = dom.chatInput(settings.selectors.chatInput);
+        const sendBtn = dom.sendButton(settings.selectors.sendButton, input);
+        const provider = core.activeProvider(settings.ai);
+
+        log('info', '1) กล่องแชท: ' + (list ? 'เจอแล้ว' : 'ไม่เจอ — กด "จิ้มเลือกกล่องแชท"'));
+        log('info', '2) ช่องพิมพ์: ' + (input ? 'เจอแล้ว' : 'ไม่เจอ — กด "จิ้มเลือกช่องพิมพ์"')
+          + ' · ปุ่มส่ง: ' + (sendBtn ? 'เจอแล้ว' : 'ไม่เจอ (จะใช้ปุ่ม Enter แทน)'));
+        log('info', '3) AI: ' + provider.label + ' รุ่น ' + provider.model
+          + ' · คีย์: ' + (provider.key ? 'ใส่แล้ว' : 'ยังไม่ได้ใส่'));
+        log('info', '4) โหมดร่าง: ' + (settings.ai.dryRun ? 'เปิดอยู่ (จะไม่ส่งจริง)' : 'ปิดอยู่ (ส่งจริง)')
+          + ' · ระบบทำงานอยู่: ' + (state.observer ? 'ใช่' : 'ไม่'));
+        log('info', '5) อ่านคอมเมนต์มาแล้ว ' + Object.keys(state.seen).length + ' ข้อความ'
+          + ' · รอตอบในคิว ' + state.queue.length
+          + ' · ตอบไปแล้ว ' + state.replied + ' · ข้าม ' + state.skipped);
+        if (list) dom.flash(list);
+      },
+
+      // ส่งข้อความจริงเข้าแชทหนึ่งครั้ง เพื่อพิสูจน์ว่าเส้นทางการส่งใช้ได้
+      sendTest(text) {
+        const message = core.sanitizeReply(text || 'ทดสอบระบบค่ะ', getSettings().ai.maxChars);
+        if (send(message)) log('ok', 'ส่งข้อความทดสอบเข้าแชทแล้ว: ' + message);
       },
       stop() {
         if (state.observer) state.observer.disconnect();

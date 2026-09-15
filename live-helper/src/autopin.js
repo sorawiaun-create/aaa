@@ -16,6 +16,7 @@
       extendAvailable: false,
       lastPinAt: null,
       lastExtendAt: null,
+      lastRepinAt: null,
       assumePinnedUntil: 0,
       pins: 0,
       extends: 0,
@@ -42,9 +43,14 @@
     function status() {
       if (!onStatus) return;
       const pin = getSettings().pin;
-      const nextIn = state.lastExtendAt == null ? 0
-        : Math.max(0, Math.ceil((state.lastExtendAt + pin.extendEverySec * 1000 - Date.now()) / 1000));
+      const since = pin.mode === 'repin'
+        ? (state.lastRepinAt == null ? state.lastPinAt : state.lastRepinAt)
+        : state.lastExtendAt;
+      const every = pin.mode === 'repin' ? pin.repinEverySec : pin.extendEverySec;
+      const nextIn = since == null ? 0
+        : Math.max(0, Math.ceil((since + every * 1000 - Date.now()) / 1000));
       onStatus({
+        mode: pin.mode,
         running: !!state.timer,
         pinned: state.pinned,
         extendReady: state.extendAvailable,
@@ -85,6 +91,38 @@
       log('ok', 'กดต่อเวลา +30 วิ แล้ว (ครั้งที่ ' + state.extends + ')');
     }
 
+    // โหมด repin: ยกเลิกหมุด แล้วเว้นช่วงให้หน้าเว็บอัปเดตปุ่มก่อนค่อยปักใหม่
+    // (ทุกคลิกอ่านข้อความบนปุ่มก่อน และผ่านเพดานคลิกเหมือนกันหมด)
+    function doRepin(settings, pin) {
+      const unpin = dom.unpinButton(pin.basket);
+      if (!unpin) {
+        warn('หาปุ่ม "ยกเลิกการปักหมุด" ของตะกร้าที่ ' + pin.basket + ' ไม่เจอ — รอบหน้าจะลองใหม่');
+        return;
+      }
+      const now = Date.now();
+      state.lastRepinAt = now;   // จองรอบไว้ก่อนเสมอ กันวนกดซ้ำถ้าขั้นตอนหลังพลาด
+      if (pin.dryRun) {
+        log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักใหม่ · ' + label(pin.basket));
+        return;
+      }
+      if (!click(unpin)) return;
+      log('info', 'ยกเลิกหมุดแล้ว กำลังปักใหม่...');
+      setTimeout(() => {
+        const again = dom.pinButton(pin.basket, settings.selectors.pinButton);
+        if (!again) {
+          warn('ยกเลิกแล้วแต่หาปุ่ม "ปักหมุด" ไม่เจอ — จะลองใหม่รอบหน้า');
+          return;
+        }
+        if (!click(again)) return;
+        state.lastPinAt = Date.now();
+        state.lastExtendAt = Date.now();
+        state.assumePinnedUntil = Date.now() + ASSUME_PINNED_MS;
+        state.pins += 1;
+        log('ok', 'ปักหมุดใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ) · ' + label(pin.basket));
+        status();
+      }, pin.repinGapMs);
+    }
+
     // งานที่ 1: ปักหมุดครั้งเดียวตอนที่ยังไม่ได้ปัก
     function doPin(settings, pin) {
       const button = dom.pinButton(pin.basket, settings.selectors.pinButton);
@@ -119,6 +157,7 @@
 
       const action = core.nextPinAction(state, pin, now);
       if (action === 'extend') doExtend(extendBtn, pin);
+      else if (action === 'repin') doRepin(settings, pin);
       else if (action === 'pin') doPin(settings, pin);
       else if (action === 'wait' && state.pinned && !state.extendAvailable
         && state.lastExtendAt != null && now - state.lastExtendAt > (pin.extendEverySec + 15) * 1000) {
@@ -135,11 +174,14 @@
         // เริ่มใหม่ทุกครั้ง: ลืมประวัติเก่าให้หมด จะได้ไม่เอาเวลาค้างมาคำนวณผิด
         state.lastPinAt = null;
         state.lastExtendAt = null;
+        state.lastRepinAt = null;
         state.assumePinnedUntil = 0;
         state.clicks = [];
         state.timer = setInterval(tick, 1000);
-        log('ok', 'เริ่มทำงาน — ปักหมุดถ้ายังไม่ปัก แล้วกด +30 วิ ทุก '
-          + getSettings().pin.extendEverySec + ' วินาที');
+        const pin = getSettings().pin;
+        log('ok', pin.mode === 'repin'
+          ? 'เริ่มทำงาน — ปักหมุดถ้ายังไม่ปัก แล้วยกเลิก+ปักใหม่ทุก ' + pin.repinEverySec + ' วินาที'
+          : 'เริ่มทำงาน — ปักหมุดถ้ายังไม่ปัก แล้วกด +30 วิ ทุก ' + pin.extendEverySec + ' วินาที');
         tick();
       },
       stop() {

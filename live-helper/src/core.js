@@ -34,7 +34,13 @@
     pin: {
       enabled: false,
       basket: 1,            // ปักหมุด "ตะกร้าที่เท่าไหร่"
+      // วิธีคงหมุดไว้
+      //   extend = ปักครั้งเดียว แล้วกด "+30 วินาที" ทุกรอบ (คลิกน้อยสุด) ← ค่าเริ่มต้น
+      //   repin  = ยกเลิกหมุดแล้วปักใหม่ทุกรอบ (การ์ดเด้งขึ้นจอผู้ชมอีกครั้ง แต่คลิกมากกว่า)
+      mode: 'extend',
       extendEverySec: 31,   // กดปุ่ม "+30 วินาที" ทุกกี่วินาที (หมุดนับถอยหลัง 30 วิ)
+      repinEverySec: 60,    // โหมด repin: ยกเลิกแล้วปักใหม่ทุกกี่วินาที
+      repinGapMs: 900,      // เว้นระหว่าง "ยกเลิก" กับ "ปักใหม่" ให้หน้าเว็บอัปเดตทัน
       maxClicksPerMin: 8,   // เพดานกันระบบรวน ถ้าเกินนี้ให้หยุดตัวเองทันที
       dryRun: false,        // โหมดซ้อม: ไม่คลิกจริง แค่ลงบันทึก
     },
@@ -116,7 +122,11 @@
     pin.enabled = !!pin.enabled;
     pin.dryRun = !!pin.dryRun;
     pin.basket = clampInt(pin.basket, 1, 200, DEFAULT_SETTINGS.pin.basket);
+    if (!['extend', 'repin'].includes(pin.mode)) pin.mode = 'extend';
     pin.extendEverySec = clampInt(pin.extendEverySec, 20, 120, DEFAULT_SETTINGS.pin.extendEverySec);
+    // ต่ำกว่า 30 วิ = ยกเลิก+ปัก 4 คลิก/นาที ถี่เกินไป
+    pin.repinEverySec = clampInt(pin.repinEverySec, 30, 600, DEFAULT_SETTINGS.pin.repinEverySec);
+    pin.repinGapMs = clampInt(pin.repinGapMs, 300, 5000, DEFAULT_SETTINGS.pin.repinGapMs);
     pin.maxClicksPerMin = clampInt(pin.maxClicksPerMin, 2, 30, DEFAULT_SETTINGS.pin.maxClicksPerMin);
 
     ai.enabled = !!ai.enabled;
@@ -495,6 +505,13 @@
   function nextPinAction(pinState, pin, now) {
     if (!pin.enabled) return 'off';
     const st = pinState || {};
+
+    // โหมดยกเลิกแล้วปักใหม่: ปักอยู่และถึงรอบ → ยกเลิกแล้วปักใหม่ (การ์ดเด้งขึ้นจอผู้ชม)
+    if (pin.mode === 'repin' && st.pinned) {
+      const since = st.lastRepinAt == null ? st.lastPinAt : st.lastRepinAt;
+      if (since != null && now - since < pin.repinEverySec * 1000) return 'wait';
+      return 'repin';
+    }
 
     // งานที่ 2 มาก่อน: หมุดที่ปักอยู่ต้องไม่ปล่อยให้หมดเวลา
     if (st.pinned) {
