@@ -340,6 +340,8 @@
       if (!state.running) { el.textContent = 'ปิดอยู่'; return; }
       el.innerHTML = 'กำลังฟังแชท · คิว <b>' + state.queue + '</b> · ตอบแล้ว <b>' + state.replied
         + '</b> · ข้าม <b>' + state.skipped + '</b> · ถามตะกร้าอื่น <b>' + state.otherBasket + '</b>'
+        // เห็นคอมเมนต์ล่าสุดเมื่อไหร่ — ถ้าเลขนี้ขึ้นเรื่อย ๆ แปลว่าอ่านแชทไม่เห็นแล้ว
+        + ' · เห็นคอมเมนต์ล่าสุด <b>' + state.quietSec + '</b> วิที่แล้ว'
         + (settings.ai.dryRun ? ' · โหมดร่าง' : '');
     },
   });

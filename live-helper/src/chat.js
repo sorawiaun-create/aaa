@@ -17,6 +17,10 @@
       sendFails: 0,      // ส่งแล้วข้อความค้างในช่องกี่ครั้งติด (TikTok ไม่รับ)
       pausedUntil: 0,    // พักชั่วคราวเมื่อ TikTok ไม่รับข้อความ
       observer: null,
+      listEl: null,        // กล่องแชทที่กำลังเฝ้าอยู่ — ถ้า TikTok วาดใหม่ อันนี้จะหลุดจากหน้า
+      guardTimer: null,
+      lastSeenAt: 0,       // เห็นคอมเมนต์ใหม่ล่าสุดเมื่อไหร่
+      reattaches: 0,
       timer: null,
       replied: 0,
       skipped: 0,
@@ -31,6 +35,7 @@
         queue: state.queue.length,
         replied: state.replied,
         skipped: state.skipped,
+        quietSec: state.lastSeenAt ? Math.round((Date.now() - state.lastSeenAt) / 1000) : 0,
         otherBasket: state.otherBasket,
       });
     }
@@ -53,6 +58,7 @@
     function collect(comment) {
       const id = core.commentId(comment);
       if (state.seen[id]) return;
+      state.lastSeenAt = Date.now();
       remember(comment);
       state.queue.push(comment);
       if (state.queue.length > 30) state.queue.shift(); // คอมเมนต์เก่าเกินไปก็ไม่ต้องตอบแล้ว
@@ -189,14 +195,20 @@
       }
     }
 
-    function attachObserver() {
+    // ต่อระบบอ่านคอมเมนต์เข้ากับกล่องแชท
+    // TikTok วาดหน้าแชทใหม่เป็นระยะ ทำให้กล่องเดิมหลุดออกจากหน้า (isConnected = false)
+    // ถ้าไม่ต่อใหม่ ตัวเฝ้าจะเฝ้ากล่องที่ไม่มีอยู่แล้ว = เงียบไปเลยทั้งที่ระบบยังเปิดอยู่
+    function attachObserver(quiet) {
       const settings = getSettings();
       const list = dom.chatList(settings.selectors.chatList);
       if (!list) {
         warn('หากล่องรายการแชทไม่เจอ — เปิดแท็บ "แชท" ค้างไว้ หรือใช้ปุ่ม "จิ้มเลือกเอง"');
         return false;
       }
-      // คอมเมนต์ที่มีอยู่ก่อนกดเริ่ม ถือว่าอ่านแล้ว จะได้ไม่ย้อนไปตอบของเก่า
+
+      if (state.observer) state.observer.disconnect();
+
+      // คอมเมนต์ที่มีอยู่ตอนนี้ ถือว่าอ่านแล้ว จะได้ไม่ย้อนไปตอบของเก่ารัว ๆ
       list.querySelectorAll('*').forEach((node) => {
         const comment = dom.parseCommentNode(node);
         if (comment) state.seen[core.commentId(comment)] = Date.now();
@@ -208,13 +220,44 @@
         }
       });
       state.observer.observe(list, { childList: true, subtree: true });
+      state.listEl = list;
+      state.lastSeenAt = Date.now();
+      if (!quiet) log('info', 'ต่อระบบอ่านคอมเมนต์เข้ากับกล่องแชทแล้ว');
       return true;
+    }
+
+    // ยามเฝ้า: เช็กทุก 5 วินาทีว่ายังอ่านคอมเมนต์อยู่จริงไหม
+    function guard() {
+      if (!state.observer) return;
+      const settings = getSettings();
+      const list = dom.chatList(settings.selectors.chatList);
+      const lost = !state.listEl || !state.listEl.isConnected;
+      const swapped = list && list !== state.listEl;
+
+      if (lost || swapped) {
+        state.reattaches += 1;
+        attachObserver(true);
+        log('warn', 'กล่องแชทถูกวาดใหม่ — ต่อระบบอ่านคอมเมนต์ใหม่ให้แล้ว (ครั้งที่ '
+          + state.reattaches + ')');
+        return;
+      }
+
+      // ยังต่ออยู่แต่ไม่เห็นคอมเมนต์ใหม่เลยนาน ๆ ทั้งที่ในกล่องมีคอมเมนต์อยู่ = ตัวเฝ้าน่าจะตายแล้ว
+      const quietFor = Date.now() - (state.lastSeenAt || 0);
+      if (quietFor > 120000 && state.listEl.children.length > 0) {
+        state.reattaches += 1;
+        attachObserver(true);
+        log('warn', 'ไม่เห็นคอมเมนต์ใหม่มา 2 นาที — ต่อระบบอ่านใหม่ให้แล้ว (ครั้งที่ '
+          + state.reattaches + ')');
+      }
     }
 
     return {
       start() {
         if (state.observer) return;
         if (!attachObserver()) return;
+        state.reattaches = 0;
+        state.guardTimer = setInterval(guard, 5000);
         state.timer = setInterval(processOne, 1500);
         log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์' + (getSettings().ai.dryRun ? ' (โหมดร่าง ไม่ส่งจริง)' : ''));
         status();
@@ -222,8 +265,11 @@
       stop() {
         if (state.observer) state.observer.disconnect();
         if (state.timer) clearInterval(state.timer);
+        if (state.guardTimer) clearInterval(state.guardTimer);
         state.observer = null;
         state.timer = null;
+        state.guardTimer = null;
+        state.listEl = null;
         state.queue.length = 0;
         log('info', 'หยุดระบบ AI ตอบคอมเมนต์');
         status();
