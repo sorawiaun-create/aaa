@@ -57,6 +57,7 @@
       minCommentChars: 2,
       replyPerMin: 15,      // ตอบได้ไม่เกินกี่ข้อความต่อนาที
       userCooldownSec: 20,  // คนเดิมเว้นกี่วินาทีถึงตอบอีกครั้ง
+      minGapSec: 5,         // เว้นระหว่าง "ข้อความของเราเอง" อย่างน้อยกี่วินาที (กันส่งรัวจนโดนบล็อก)
       // ขอบเขตการตอบ: all = ตอบทุกคอมเมนต์ (รวมทักทาย/คำชม) · questions = เฉพาะคำถาม
       replyScope: 'all',
       // ลูกค้าถามถึงสินค้าตะกร้าอื่นที่ไม่ใช่ตัวหลัก จะเอายังไง
@@ -156,6 +157,7 @@
     ai.minCommentChars = clampInt(ai.minCommentChars, 1, 50, DEFAULT_SETTINGS.ai.minCommentChars);
     ai.replyPerMin = clampInt(ai.replyPerMin, 1, 30, DEFAULT_SETTINGS.ai.replyPerMin);
     ai.userCooldownSec = clampInt(ai.userCooldownSec, 0, 3600, DEFAULT_SETTINGS.ai.userCooldownSec);
+    ai.minGapSec = clampInt(ai.minGapSec, 0, 60, DEFAULT_SETTINGS.ai.minGapSec);
     ai.ignoreWords = toWordList(ai.ignoreWords);
     ai.blockWords = toWordList(ai.blockWords);
 
@@ -297,6 +299,14 @@
 
     const recent = pruneTimestamps(st.replyTimes, now, 60000);
     if (recent.length >= ai.replyPerMin) return { ok: false, reason: 'ตอบครบโควตาต่อนาทีแล้ว' };
+
+    // เว้นจังหวะระหว่างข้อความของเราเอง — ส่งรัวติด ๆ กันคือสาเหตุหลักที่ TikTok ไม่รับข้อความ
+    if (ai.minGapSec && recent.length) {
+      const lastReply = Math.max.apply(null, recent);
+      if (now - lastReply < ai.minGapSec * 1000) {
+        return { ok: false, reason: 'เพิ่งตอบไปเมื่อกี้ รอให้ครบ ' + ai.minGapSec + ' วินาทีก่อน' };
+      }
+    }
 
     return { ok: true, reason: '' };
   }

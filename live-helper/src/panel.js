@@ -91,6 +91,7 @@
           <button class="ttlh-btn" data-speed="fast">ตอบถี่ (คนเยอะ)</button>
           <button class="ttlh-btn" data-speed="calm">ตอบพอประมาณ</button>
         </div>
+        <div class="ttlh-row"><label>เว้นระหว่างข้อความ (วินาที)</label><input type="number" min="0" max="60" data-k="ai.minGapSec"></div>
         <div class="ttlh-row"><label>คนเดิมเว้น (วินาที)</label><input type="number" min="0" max="3600" step="10" data-k="ai.userCooldownSec"></div>
         <div class="ttlh-row"><label>ความยาวคำตอบไม่เกิน</label><input type="number" min="20" max="100" data-k="ai.maxChars"></div>
         <label>โทนการพูด</label>
@@ -412,14 +413,15 @@
 
     if (target.dataset.speed) {
       const fast = target.dataset.speed === 'fast';
-      settings.ai.replyPerMin = fast ? 25 : 10;
-      settings.ai.userCooldownSec = fast ? 5 : 45;
+      settings.ai.replyPerMin = fast ? 12 : 6;
+      settings.ai.minGapSec = fast ? 4 : 10;
+      settings.ai.userCooldownSec = fast ? 15 : 45;
       settings = core.normalizeSettings(settings);
       fillFields();
       save();
       log('info', fast
-        ? 'ตั้งเป็นตอบถี่: 25 ข้อความ/นาที · คนเดิมเว้น 5 วิ'
-        : 'ตั้งเป็นตอบพอประมาณ: 10 ข้อความ/นาที · คนเดิมเว้น 45 วิ');
+        ? 'ตั้งเป็นตอบถี่: 12 ข้อความ/นาที · เว้นระหว่างข้อความ 4 วิ · คนเดิมเว้น 15 วิ'
+        : 'ตั้งเป็นตอบพอประมาณ: 6 ข้อความ/นาที · เว้นระหว่างข้อความ 10 วิ · คนเดิมเว้น 45 วิ');
       return;
     }
 

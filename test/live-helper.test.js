@@ -109,6 +109,21 @@ test('shouldReply: คนเดิมต้องรอครบ cooldown', () =
   assert.equal(core.shouldReply({ user: 'Nene', text: 'ส่งกี่วันคะ' }, state, ai, 120000).ok, true);
 });
 
+test('shouldReply: ต้องเว้นจังหวะระหว่างข้อความของเราเอง', () => {
+  const ai = Object.assign(baseAi(), { enabled: true, minGapSec: 5 });
+  const now = 100000;
+  const state = { replyTimes: [now - 2000] };
+  assert.equal(core.shouldReply({ user: 'a', text: 'ราคาเท่าไหร่' }, state, ai, now).ok, false);
+  const older = { replyTimes: [now - 6000] };
+  assert.equal(core.shouldReply({ user: 'a', text: 'ราคาเท่าไหร่' }, older, ai, now).ok, true);
+});
+
+test('normalizeSettings: เว้นจังหวะค่าเริ่มต้น 5 วินาที และอยู่ในกรอบ 0-60', () => {
+  assert.equal(core.normalizeSettings(null).ai.minGapSec, 5);
+  assert.equal(core.normalizeSettings({ ai: { minGapSec: 999 } }).ai.minGapSec, 60);
+  assert.equal(core.normalizeSettings({ ai: { minGapSec: 0 } }).ai.minGapSec, 0);
+});
+
 test('shouldReply: เกินโควตาต่อนาทีแล้วหยุดตอบ', () => {
   const ai = Object.assign(baseAi(), { enabled: true, replyPerMin: 2 });  // ค่าเริ่มต้นจริงคือ 15
   const now = 100000;

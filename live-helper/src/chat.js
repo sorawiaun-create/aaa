@@ -68,6 +68,17 @@
       for (const child of Array.from(node.children)) collectTree(child, depth + 1);
     }
 
+    // กวาดรายการสินค้าใหม่ทุกครั้งที่ตอบ = อ่าน innerText ทั้งหน้า ทำให้หน้าเว็บกระตุก
+    // สินค้าในไลฟ์ไม่ได้เปลี่ยนบ่อย จึงจำไว้ 60 วินาที
+    let productCache = { at: 0, items: [] };
+    function liveProducts() {
+      const now = Date.now();
+      if (now - productCache.at > 60000) {
+        productCache = { at: now, items: dom.scrapeProducts(8) };
+      }
+      return productCache.items;
+    }
+
     function send(text) {
       const settings = getSettings();
       const input = dom.chatInput(settings.selectors.chatInput);
@@ -126,7 +137,7 @@
       try {
         const focus = settings.pin.basket;
         const context = {
-          scraped: dom.scrapeProducts(8),
+          scraped: liveProducts(),
           knowledge: settings.products,
           focusBasket: focus,
         };
@@ -225,7 +236,7 @@
         if (!comment.text) { log('warn', 'พิมพ์ข้อความที่จะทดสอบก่อน'); return; }
         log('info', 'ทดสอบ: ' + comment.text);
         const system = core.buildSystemPrompt(settings.ai, {
-          scraped: dom.scrapeProducts(8),
+          scraped: liveProducts(),
           knowledge: settings.products,
           focusBasket: settings.pin.basket,
         });
