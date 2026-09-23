@@ -303,7 +303,7 @@
 
   // ---------- เฝ้าหน้ายืนยันตัวตน (จิ๊กซอว์) ----------
   // เจอเมื่อไหร่ = TikTok บอกว่าเรากดถี่เกินไป ต้องหยุดให้คนมาแก้เอง ห้ามแก้แทน
-  const runtime = { captchaCount: 0, paused: null, clearedAt: 0 };
+  const runtime = { captchaCount: 0, paused: null, clearedAt: 0, warnedDuplicate: false };
   const baseTitle = document.title;
 
   const autoPin = createAutoPin({
@@ -356,6 +356,19 @@
     const el = $('[data-alert]');
     el.textContent = text || '';
     el.hidden = !text;
+  }
+
+  // แผงควบคุมอยู่ใน DOM ของหน้าเว็บ ซึ่งมองเห็นข้ามส่วนขยายได้
+  // ถ้าเจอมากกว่าหนึ่งแผง = ลงส่วนขยายซ้ำกันอยู่ ทุกแผงจะตอบแชทของตัวเอง = ข้อความซ้อนกัน
+  function duplicateGuard() {
+    const panels = document.querySelectorAll('.ttlh-panel').length;
+    if (panels > 1 && !runtime.warnedDuplicate) {
+      runtime.warnedDuplicate = true;
+      showAlert('⚠️ พบแผงควบคุมซ้อนกัน ' + panels + ' ตัว — ลบส่วนขยายที่ซ้ำออกก่อน ไม่งั้นจะตอบซ้ำ');
+      log('err', 'พบแผงควบคุม ' + panels + ' ตัวในหน้าเดียว (ลงส่วนขยายซ้ำ หรือเปิดคอนโซล LIVE ซ้อนกัน)'
+        + ' — ทุกตัวจะตอบแชทพร้อมกัน ทำให้ข้อความซ้ำ ให้เหลือไว้ตัวเดียว');
+      dom.beep(2);
+    }
   }
 
   function captchaGuard() {
@@ -607,6 +620,8 @@
     renderProducts();
 
     setInterval(captchaGuard, 1500);
+    setInterval(duplicateGuard, 5000);
+    duplicateGuard();
 
     // หน้าคอนโซลเป็น SPA กว่าจะวาดเสร็จอาจกินเวลา จึงตรวจซ้ำได้ถึง 30 วินาที
     let tries = 0;

@@ -519,3 +519,19 @@ test('normalizeSettings: กันค่ารอบยกเลิก-ปัก
   assert.equal(core.normalizeSettings({ version: 4, pin: { whenPinned: 'repin' } }).pin.whenPinned, 'repin');
   assert.equal(core.normalizeSettings({ version: 4, pin: { repinGapMs: 10 } }).pin.repinGapMs, 300);
 });
+
+// --- กันส่งข้อความซ้ำ ---
+// ช่องแชทที่ดักทั้ง keydown และ keypress จะส่งสองรอบถ้าเรายิงทั้งคู่
+test('dom.js: กด Enter ต้องไม่ยิง keypress ซ้ำกับ keydown', () => {
+  const src = readFileSync(new URL('../live-helper/src/dom.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function pressEnter'), src.indexOf('function realClick'));
+  assert.ok(fn.includes("'keydown'"), 'ต้องยิง keydown');
+  assert.ok(!fn.includes("'keypress'"), 'ต้องไม่ยิง keypress (ทำให้ส่งข้อความซ้ำ)');
+});
+
+test('dom.js: คลิกปุ่มต้องกดครั้งเดียว ไม่ยิง mousedown/pointerdown ซ้อน', () => {
+  const src = readFileSync(new URL('../live-helper/src/dom.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function realClick'), src.indexOf('function scrapeProducts'));
+  assert.ok(!fn.includes('pointerdown'), 'ต้องไม่ยิง pointerdown (ทำให้ปุ่มทำงานสองรอบ)');
+  assert.ok(!fn.includes('mousedown'), 'ต้องไม่ยิง mousedown (ทำให้ปุ่มทำงานสองรอบ)');
+});

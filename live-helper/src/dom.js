@@ -212,11 +212,13 @@
     return true;
   }
 
+  // กด Enter หนึ่งครั้งเท่านั้น
+  // ของเดิมยิงทั้ง keydown และ keypress ช่องแชทที่ดักทั้งสองอีเวนต์จึงส่งข้อความสองรอบ
+  // (keyup ไม่ทำให้ส่ง ใส่ไว้ให้ครบจังหวะการกดปุ่มเฉย ๆ)
   function pressEnter(el) {
     if (!el) return false;
     const init = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
     el.dispatchEvent(new KeyboardEvent('keydown', init));
-    el.dispatchEvent(new KeyboardEvent('keypress', init));
     el.dispatchEvent(new KeyboardEvent('keyup', init));
     return true;
   }
