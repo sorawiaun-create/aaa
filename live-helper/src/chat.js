@@ -1,0 +1,299 @@
+// เครื่องอ่านคอมเมนต์ + ให้ AI ร่างคำตอบ + พิมพ์ส่งกลับในแชทไลฟ์
+(function attach(root) {
+  'use strict';
+  const { core, dom } = root.TTLH;
+
+  function createAutoReply({ getSettings, log, onStatus, askAI }) {
+    const state = {
+      seen: {},          // id คอมเมนต์ที่อ่านเข้าคิวแล้ว -> เวลา (กันเข้าคิวซ้ำ)
+      handled: {},       // id คอมเมนต์ที่ตัดสินใจ/ตอบไปแล้ว -> เวลา
+      lastByUser: {},    // ผู้ใช้ -> เวลาที่ตอบล่าสุด
+      replyTimes: [],    // เวลาที่ตอบไป (ใช้จำกัดจำนวนต่อนาที)
+      ownTexts: [],      // ข้อความที่เราส่งเอง กันตอบตัวเอง
+      recent: [],        // คอมเมนต์ล่าสุดไว้เป็นบริบท
+      queue: [],
+      busy: false,
+      busySince: 0,      // เวลาที่เริ่มรอ AI — ถ้าค้างนานเกินไปต้องปลดล็อกเอง
+      sendFails: 0,      // ส่งแล้วข้อความค้างในช่องกี่ครั้งติด (TikTok ไม่รับ)
+      pausedUntil: 0,    // พักชั่วคราวเมื่อ TikTok ไม่รับข้อความ
+      observer: null,
+      listEl: null,        // กล่องแชทที่กำลังเฝ้าอยู่ — ถ้า TikTok วาดใหม่ อันนี้จะหลุดจากหน้า
+      guardTimer: null,
+      lastSeenAt: 0,       // เห็นคอมเมนต์ใหม่ล่าสุดเมื่อไหร่
+      reattaches: 0,
+      timer: null,
+      replied: 0,
+      skipped: 0,
+      otherBasket: 0,   // จำนวนคำถามที่พูดถึงตะกร้าอื่น (แม่ค้าอาจอยากตอบเอง)
+      lastWarnAt: 0,
+    };
+
+    function status() {
+      if (!onStatus) return;
+      onStatus({
+        running: !!state.observer,
+        queue: state.queue.length,
+        replied: state.replied,
+        skipped: state.skipped,
+        quietSec: state.lastSeenAt ? Math.round((Date.now() - state.lastSeenAt) / 1000) : 0,
+        otherBasket: state.otherBasket,
+      });
+    }
+
+    function warn(message) {
+      const now = Date.now();
+      if (now - state.lastWarnAt < 15000) return;
+      state.lastWarnAt = now;
+      log('warn', message);
+    }
+
+    function remember(comment) {
+      state.seen[core.commentId(comment)] = Date.now();
+      state.recent.push(comment);
+      if (state.recent.length > 20) state.recent.shift();
+      const ids = Object.keys(state.seen);
+      if (ids.length > 500) delete state.seen[ids[0]];
+    }
+
+    function collect(comment) {
+      const id = core.commentId(comment);
+      if (state.seen[id]) return;
+      state.lastSeenAt = Date.now();
+      remember(comment);
+      state.queue.push(comment);
+      if (state.queue.length > 30) state.queue.shift(); // คอมเมนต์เก่าเกินไปก็ไม่ต้องตอบแล้ว
+      status();
+    }
+
+    // อ่านได้เป็นคอมเมนต์แล้วหยุดที่ชั้นนั้น ถ้ายังอ่านไม่ได้ค่อยไล่ลงชั้นลูก
+    // (บางทีหน้าเว็บยัดมาทั้งก้อน บางทีมาทีละรายการ)
+    function collectTree(node, depth) {
+      if (!node || node.nodeType !== 1 || depth > 4) return;
+      const comment = dom.parseCommentNode(node);
+      if (comment) { collect(comment); return; }
+      for (const child of Array.from(node.children)) collectTree(child, depth + 1);
+    }
+
+    // กวาดรายการสินค้าใหม่ทุกครั้งที่ตอบ = อ่าน innerText ทั้งหน้า ทำให้หน้าเว็บกระตุก
+    // สินค้าในไลฟ์ไม่ได้เปลี่ยนบ่อย จึงจำไว้ 60 วินาที
+    let productCache = { at: 0, items: [] };
+    function liveProducts() {
+      const now = Date.now();
+      if (now - productCache.at > 60000) {
+        productCache = { at: now, items: dom.scrapeProducts(8) };
+      }
+      return productCache.items;
+    }
+
+    function send(text) {
+      const settings = getSettings();
+      const input = dom.chatInput(settings.selectors.chatInput);
+      if (!input) { warn('หาช่องพิมพ์แชทไม่เจอ — ใช้ปุ่ม "จิ้มเลือกเอง" ช่วยได้'); return false; }
+      dom.typeInto(input, text);
+      const btn = dom.sendButton(settings.selectors.sendButton, input);
+      if (btn) dom.realClick(btn);
+      else dom.pressEnter(input);
+
+      // ส่งสำเร็จ = ช่องพิมพ์ต้องว่าง ถ้าข้อความยังค้างอยู่แปลว่า TikTok ไม่รับ
+      // (มักเกิดตอนส่งถี่เกินลิมิตแชทของแพลตฟอร์ม)
+      setTimeout(() => {
+        const box = dom.chatInput(getSettings().selectors.chatInput);
+        const left = box ? String(box.value || box.textContent || '').trim() : '';
+        if (left && left === text.trim()) {
+          state.sendFails += 1;
+          if (state.sendFails >= 3) {
+            state.pausedUntil = Date.now() + 60000;
+            state.sendFails = 0;
+            log('err', 'ส่งไม่ออก 3 ครั้งติด — TikTok น่าจะจำกัดการส่งแชทอยู่'
+              + ' พักให้ 1 นาทีแล้วลองใหม่ · ถ้าเจอบ่อยให้ลด "ตอบได้ไม่เกิน (ข้อความ/นาที)" ลง');
+          } else {
+            log('warn', 'ข้อความค้างอยู่ในช่องพิมพ์ ไม่ถูกส่งออก (ครั้งที่ ' + state.sendFails + ')');
+          }
+        } else {
+          state.sendFails = 0;
+        }
+      }, 900);
+      state.ownTexts.push(text);
+      if (state.ownTexts.length > 20) state.ownTexts.shift();
+      return true;
+    }
+
+    async function processOne() {
+      // ปลดล็อกอัตโนมัติถ้ารอ AI นานผิดปกติ (เช่น service worker หลับกลางทาง)
+      if (state.busy && state.busySince && Date.now() - state.busySince > 60000) {
+        state.busy = false;
+        log('warn', 'รอคำตอบจาก AI นานเกิน 1 นาที — ปลดล็อกแล้วทำงานต่อ');
+      }
+      if (state.busy || !state.queue.length) return;
+      if (state.pausedUntil && Date.now() < state.pausedUntil) return;
+      const settings = getSettings();
+      const comment = state.queue.shift();
+      const verdict = core.shouldReply(comment, state, settings.ai, Date.now());
+      state.handled[core.commentId(comment)] = Date.now();
+      if (!verdict.ok) {
+        state.skipped += 1;
+        log('mute', 'ข้าม "' + comment.text + '" — ' + verdict.reason);
+        status();
+        return;
+      }
+
+      state.busy = true;
+      state.busySince = Date.now();
+      status();
+      try {
+        const focus = settings.pin.basket;
+        const context = {
+          scraped: liveProducts(),
+          knowledge: settings.products,
+          focusBasket: focus,
+        };
+
+        // ลูกค้าอ้างสินค้าด้วยเลข เช่น "หมายเลข14" — เช็กว่าเป็นตัวหลักหรือตัวอื่น
+        const basket = core.detectBasket(comment.text);
+        const reference = basket ? core.resolveProduct(basket, context) : null;
+        if (reference && reference.basket !== focus) {
+          state.otherBasket += 1;
+          log('ask', 'ถามถึงตะกร้าที่ ' + reference.basket + ' — ' + comment.user + ': ' + comment.text
+            + (reference.known ? '' : ' (ยังไม่มีข้อมูลตัวนี้)'));
+          if (settings.ai.otherBasketMode === 'skip') {
+            state.skipped += 1;
+            log('mute', 'ไม่ตอบให้ ตามที่ตั้งไว้ว่าให้แม่ค้าตอบเอง');
+            return;
+          }
+        }
+
+        const system = core.buildSystemPrompt(settings.ai, context);
+        const user = core.buildUserPrompt(comment, state.recent, reference, state.ownTexts);
+        const result = await askAI({ system, user });
+        if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
+
+        if (core.isSkip(result.text)) {
+          state.skipped += 1;
+          log('mute', 'AI เลือกไม่ตอบ "' + comment.text + '"');
+          return;
+        }
+        const reply = core.sanitizeReply(result.text, settings.ai.maxChars);
+        if (!reply) { state.skipped += 1; log('mute', 'AI ตอบว่าง เลยข้าม'); return; }
+
+        if (settings.ai.dryRun) {
+          state.ownTexts.push(reply);
+          if (state.ownTexts.length > 20) state.ownTexts.shift();
+          log('info', '[ร่าง ไม่ส่ง] ' + comment.user + ' → ' + reply);
+          return;
+        }
+        if (!send(reply)) return;
+        state.replied += 1;
+        state.replyTimes = core.pruneTimestamps(state.replyTimes, Date.now(), 60000);
+        state.replyTimes.push(Date.now());
+        state.lastByUser[core.normText(comment.user).toLowerCase()] = Date.now();
+        log('ok', 'ตอบ ' + comment.user + ' → ' + reply);
+      } catch (err) {
+        log('err', 'ตอบคอมเมนต์ผิดพลาด: ' + (err && err.message ? err.message : String(err)));
+      } finally {
+        state.busy = false;
+        status();
+      }
+    }
+
+    // ต่อระบบอ่านคอมเมนต์เข้ากับกล่องแชท
+    // TikTok วาดหน้าแชทใหม่เป็นระยะ ทำให้กล่องเดิมหลุดออกจากหน้า (isConnected = false)
+    // ถ้าไม่ต่อใหม่ ตัวเฝ้าจะเฝ้ากล่องที่ไม่มีอยู่แล้ว = เงียบไปเลยทั้งที่ระบบยังเปิดอยู่
+    function attachObserver(quiet) {
+      const settings = getSettings();
+      const list = dom.chatList(settings.selectors.chatList);
+      if (!list) {
+        warn('หากล่องรายการแชทไม่เจอ — เปิดแท็บ "แชท" ค้างไว้ หรือใช้ปุ่ม "จิ้มเลือกเอง"');
+        return false;
+      }
+
+      if (state.observer) state.observer.disconnect();
+
+      // คอมเมนต์ที่มีอยู่ตอนนี้ ถือว่าอ่านแล้ว จะได้ไม่ย้อนไปตอบของเก่ารัว ๆ
+      list.querySelectorAll('*').forEach((node) => {
+        const comment = dom.parseCommentNode(node);
+        if (comment) state.seen[core.commentId(comment)] = Date.now();
+      });
+
+      state.observer = new MutationObserver((records) => {
+        for (const record of records) {
+          record.addedNodes.forEach((node) => collectTree(node, 0));
+        }
+      });
+      state.observer.observe(list, { childList: true, subtree: true });
+      state.listEl = list;
+      state.lastSeenAt = Date.now();
+      if (!quiet) log('info', 'ต่อระบบอ่านคอมเมนต์เข้ากับกล่องแชทแล้ว');
+      return true;
+    }
+
+    // ยามเฝ้า: เช็กทุก 5 วินาทีว่ายังอ่านคอมเมนต์อยู่จริงไหม
+    function guard() {
+      if (!state.observer) return;
+      const settings = getSettings();
+      const list = dom.chatList(settings.selectors.chatList);
+      const lost = !state.listEl || !state.listEl.isConnected;
+      const swapped = list && list !== state.listEl;
+
+      if (lost || swapped) {
+        state.reattaches += 1;
+        attachObserver(true);
+        log('warn', 'กล่องแชทถูกวาดใหม่ — ต่อระบบอ่านคอมเมนต์ใหม่ให้แล้ว (ครั้งที่ '
+          + state.reattaches + ')');
+        return;
+      }
+
+      // ยังต่ออยู่แต่ไม่เห็นคอมเมนต์ใหม่เลยนาน ๆ ทั้งที่ในกล่องมีคอมเมนต์อยู่ = ตัวเฝ้าน่าจะตายแล้ว
+      const quietFor = Date.now() - (state.lastSeenAt || 0);
+      if (quietFor > 120000 && state.listEl.children.length > 0) {
+        state.reattaches += 1;
+        attachObserver(true);
+        log('warn', 'ไม่เห็นคอมเมนต์ใหม่มา 2 นาที — ต่อระบบอ่านใหม่ให้แล้ว (ครั้งที่ '
+          + state.reattaches + ')');
+      }
+    }
+
+    return {
+      start() {
+        if (state.observer) return;
+        if (!attachObserver()) return;
+        state.reattaches = 0;
+        state.guardTimer = setInterval(guard, 5000);
+        state.timer = setInterval(processOne, 1500);
+        log('ok', 'เริ่มระบบ AI ตอบคอมเมนต์' + (getSettings().ai.dryRun ? ' (โหมดร่าง ไม่ส่งจริง)' : ''));
+        status();
+      },
+      stop() {
+        if (state.observer) state.observer.disconnect();
+        if (state.timer) clearInterval(state.timer);
+        if (state.guardTimer) clearInterval(state.guardTimer);
+        state.observer = null;
+        state.timer = null;
+        state.guardTimer = null;
+        state.listEl = null;
+        state.queue.length = 0;
+        log('info', 'หยุดระบบ AI ตอบคอมเมนต์');
+        status();
+      },
+      isRunning() { return !!state.observer; },
+      // ทดสอบว่าเส้นทาง AI ใช้ได้ไหม โดยไม่ต้องรอลูกค้าคอมเมนต์จริง
+      async test(text) {
+        const settings = getSettings();
+        const comment = { user: 'ทดสอบ', text: String(text || '').trim() };
+        if (!comment.text) { log('warn', 'พิมพ์ข้อความที่จะทดสอบก่อน'); return; }
+        log('info', 'ทดสอบ: ' + comment.text);
+        const system = core.buildSystemPrompt(settings.ai, {
+          scraped: liveProducts(),
+          knowledge: settings.products,
+          focusBasket: settings.pin.basket,
+        });
+        const result = await askAI({ system, user: core.buildUserPrompt(comment, [], null, state.ownTexts) });
+        if (!result.ok) { log('err', 'AI ตอบไม่สำเร็จ: ' + result.error); return; }
+        if (core.isSkip(result.text)) { log('mute', 'AI เลือกไม่ตอบข้อความนี้'); return; }
+        log('ok', 'AI ตอบว่า → ' + core.sanitizeReply(result.text, settings.ai.maxChars));
+      },
+      state,
+    };
+  }
+
+  root.TTLH = Object.assign(root.TTLH || {}, { createAutoReply });
+})(typeof window !== 'undefined' ? window : globalThis);

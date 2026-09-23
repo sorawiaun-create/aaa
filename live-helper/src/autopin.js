@@ -1,0 +1,197 @@
+// เครื่องปักหมุดอัตโนมัติ — เดินทุก 1 วินาที แล้วตัดสินใจตามตรรกะใน core.nextPinAction
+(function attach(root) {
+  'use strict';
+  const { core, dom } = root.TTLH;
+
+  function createAutoPin({ getSettings, log, onStatus, getCaptchaCount, onHalt }) {
+    const state = {
+      lastActionAt: null, lastExtendAt: null, nextDelayMs: 0,
+      pinned: false, extendAvailable: false, extends: 0,
+      clicks: [], assumePinnedUntil: 0, pinAttempts: 0, timer: null, lastWarnAt: 0,
+    };
+
+    function stopTimer() {
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+    }
+
+    // ทุกการคลิกต้องผ่านตรงนี้ ถ้ากดเกินเพดานต่อนาที = ระบบรวน ให้หยุดตัวเองทันที
+    function click(el) {
+      const now = Date.now();
+      const max = getSettings().pin.maxClicksPerMin;
+      state.clicks = core.pruneTimestamps(state.clicks, now, 60000);
+      if (!core.withinClickBudget(state.clicks, now, max)) {
+        stopTimer();
+        log('err', 'กดถี่ผิดปกติ (เกิน ' + max + ' ครั้ง/นาที) — หยุดระบบปักหมุดไว้ก่อน'
+          + ' กรุณาเช็กว่าเล็งปุ่มถูกใบไหม แล้วค่อยกดเริ่มใหม่');
+        if (onHalt) onHalt();
+        return false;
+      }
+      state.clicks.push(now);
+      dom.realClick(el);
+      return true;
+    }
+
+    // เรียกทุกครั้งหลังลงมือ เพื่อสุ่มรอบถัดไป (และยืดออกถ้าเคยเจอจิ๊กซอว์)
+    function scheduleNext() {
+      const count = getCaptchaCount ? getCaptchaCount() : 0;
+      state.nextDelayMs = core.nextDelayMs(getSettings().pin, count, Math.random);
+    }
+
+    function status(extra) {
+      if (!onStatus) return;
+      const pin = getSettings().pin;
+      const wait = state.nextDelayMs || pin.intervalSec * 1000;
+      const next = state.lastActionAt == null ? 0
+        : Math.max(0, Math.ceil((state.lastActionAt + wait - Date.now()) / 1000));
+      onStatus(Object.assign({
+        running: !!state.timer,
+        pinned: state.pinned,
+        nextIn: next,
+        mode: pin.whenPinned,
+        extends: state.extends,
+        extendReady: state.extendAvailable,
+      }, extra));
+    }
+
+    // ป้ายกำกับที่อ่านรู้เรื่องว่ากำลังทำอะไรกับสินค้าตัวไหน
+    function label(basket) {
+      const name = dom.targetName(basket);
+      return 'ตะกร้าที่ ' + basket + (name ? ' — ' + name : '');
+    }
+
+    function warn(message) {
+      const now = Date.now();
+      if (now - state.lastWarnAt < 15000) return; // กันบันทึกท่วมจอ
+      state.lastWarnAt = now;
+      log('warn', message);
+    }
+
+    function tick() {
+      const settings = getSettings();
+      const pin = settings.pin;
+      // เชื่อการกระทำของตัวเองด้วย ไม่ใช่เชื่อแต่สิ่งที่อ่านจากหน้าเว็บ:
+      // เพิ่งกดปักไปหมาด ๆ ให้ถือว่าปักแล้ว 25 วินาที กันอ่านสถานะพลาดแล้ววนกดซ้ำ
+      const domPinned = dom.isPinned(pin.basket);
+      state.pinned = domPinned || Date.now() < state.assumePinnedUntil;
+      const extendBtn = dom.extendButton(settings.selectors.extendButton);
+      state.extendAvailable = !!extendBtn;
+      if (domPinned && extendBtn) state.pinAttempts = 0;
+
+      const action = core.nextPinAction(state, pin, Date.now());
+      if (action === 'off' || action === 'wait') { status(); return; }
+
+      // ยกเลิกหมุดแล้วปักใหม่ เพื่อให้การ์ดสินค้าเด้งขึ้นจอผู้ชมอีกรอบ
+      if (action === 'repin') {
+        const unpin = dom.unpinButton(pin.basket);
+        if (!unpin) {
+          warn('หาปุ่ม "ยกเลิกการปักหมุด" ของตะกร้าที่ ' + pin.basket + ' ไม่เจอ');
+          status();
+          return;
+        }
+        state.lastActionAt = Date.now();
+        scheduleNext();
+        if (pin.dryRun) {
+          log('info', '[ซ้อม] จะยกเลิกหมุดแล้วปักใหม่ · ' + label(pin.basket));
+          status();
+          return;
+        }
+        if (!click(unpin)) return;
+        // รอให้หน้าเว็บอัปเดตปุ่มกลับเป็น "ปักหมุด" ก่อนค่อยกดซ้ำ
+        setTimeout(() => {
+          const again = dom.pinButton(pin.basket, settings.selectors.pinButton);
+          if (!again) {
+            // อย่ารีเซ็ตเวลาเป็น null เด็ดขาด ไม่งั้นจะวนกดใหม่ทันทีทุกวินาที
+            warn('ยกเลิกหมุดแล้วแต่หาปุ่มปักหมุดใหม่ไม่เจอ — จะลองอีกครั้งรอบหน้า');
+            return;
+          }
+          if (!click(again)) return;
+          state.lastActionAt = Date.now();
+          log('ok', 'ปักหมุดใหม่แล้ว (เด้งขึ้นจอผู้ชมอีกรอบ) · ' + label(pin.basket));
+          status();
+        }, pin.repinGapMs);
+        status();
+        return;
+      }
+
+      if (action === 'extend') {
+        if (!extendBtn) { status(); return; } // ปุ่มโผล่เฉพาะตอนหมุดใกล้หมด รอรอบหน้า
+        state.lastExtendAt = Date.now();
+        if (pin.dryRun) {
+          log('info', '[ซ้อม] จะกดต่อเวลาหมุด ' + dom.textOf(extendBtn));
+        } else {
+          if (!click(extendBtn)) return;
+          state.extends += 1;
+          state.pinAttempts = 0;
+          state.assumePinnedUntil = Date.now() + 25000;
+          log('ok', 'ต่อเวลาหมุดแล้ว (ครั้งที่ ' + state.extends + ') · ' + label(pin.basket));
+        }
+        status();
+        return;
+      }
+
+      const btn = dom.pinButton(pin.basket, settings.selectors.pinButton);
+      if (!btn) {
+        warn('หาปุ่ม "ปักหมุด" ของตะกร้าที่ ' + pin.basket + ' ไม่เจอ — ลองเลื่อนรายการสินค้าให้เห็นการ์ด หรือใช้ปุ่ม "จิ้มเลือกเอง"');
+        status();
+        return;
+      }
+      if (pin.dryRun) {
+        log('info', '[ซ้อม] จะกดปักหมุด · ' + label(pin.basket));
+      } else {
+        if (!click(btn)) return;
+        state.assumePinnedUntil = Date.now() + 25000;
+        state.pinAttempts += 1;
+        log('ok', 'ปักหมุดแล้ว · ' + label(pin.basket));
+        if (pin.whenPinned === 'extend' && state.pinAttempts >= 3 && state.extends === 0) {
+          warn('ปักไป ' + state.pinAttempts + ' ครั้งแล้วแต่ยังไม่เคยเจอปุ่ม "+30 วินาที" เลย'
+            + ' — ตอนปุ่มโผล่ให้กด "จิ้มเลือกปุ่ม +30 วิ" เพื่อชี้ตำแหน่งให้ระบบ');
+        }
+      }
+      state.lastActionAt = Date.now();
+      scheduleNext();
+      status();
+    }
+
+    return {
+      start() {
+        if (state.timer) return;
+        state.lastActionAt = null; // เริ่มปุ๊บปักหมุดทันที
+        scheduleNext();
+        state.timer = setInterval(tick, 1000);
+        log('ok', 'เริ่มระบบปักหมุดอัตโนมัติ (ทุก ' + getSettings().pin.intervalSec + ' วินาที)');
+        tick();
+      },
+      stop() {
+        stopTimer();
+        log('info', 'หยุดระบบปักหมุดอัตโนมัติ');
+        status();
+      },
+      pinNow() { state.lastActionAt = null; tick(); },
+      // ตรวจก่อนกดจริงว่าระบบเล็งการ์ดใบไหนอยู่ (กันไปกดโดนคูปอง/การแจกรางวัล)
+      preview() {
+        const settings = getSettings();
+        const basket = settings.pin.basket;
+        const card = dom.productCard(basket);
+        if (!card) {
+          log('warn', 'ยังหาการ์ดสินค้าของตะกร้าที่ ' + basket + ' ไม่เจอ — เลื่อนรายการสินค้าให้เห็นการ์ดก่อน');
+          return;
+        }
+        dom.flash(card);
+        log('ok', 'จะปัก: ' + label(basket) + ' (กรอบสีชมพูในหน้าเว็บ)');
+
+        // รายงานสิ่งที่ระบบ "เห็น" จริง ๆ ไว้ไล่ปัญหาเวลาทำงานผิด
+        const pinBtn = dom.pinButton(basket, settings.selectors.pinButton);
+        const extendBtn = dom.extendButton(settings.selectors.extendButton);
+        log('info', 'สถานะที่อ่านได้ · การ์ดทั้งหมด ' + dom.productCards().length + ' ใบ'
+          + ' · ปักหมุดอยู่: ' + (dom.isPinned(basket) ? 'ใช่' : 'ไม่')
+          + ' · ปุ่มปักที่จะกด: ' + (pinBtn ? '"' + dom.textOf(pinBtn) + '"' : 'ไม่มี (ปักอยู่แล้วหรือหาไม่เจอ)')
+          + ' · ปุ่มต่อเวลา: ' + (extendBtn ? '"' + dom.textOf(extendBtn) + '"' : 'ยังไม่โผล่'));
+      },
+      isRunning() { return !!state.timer; },
+      state,
+    };
+  }
+
+  root.TTLH = Object.assign(root.TTLH || {}, { createAutoPin });
+})(typeof window !== 'undefined' ? window : globalThis);
