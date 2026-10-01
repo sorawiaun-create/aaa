@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-10-02T00:13:21.983823+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-10-02T00:03:21.735265+07:00",
       "dry_run": false,
       "summary": {
@@ -895,38 +906,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "งบ 500 → 660 บาท",
           "reason": "จ่าย=311.19 (>40) และ ROAS=5.12 (>3.50) และ ทุนซื้อ=77.80 (<80) และ เวลา=20:19 (>6) และ เวลา=20:19 (>=18) · จ่าย=311.19 (>40) และ ROAS=5.12 (>3) และ ทุนซื้อ=77.80 (<80) และ เวลา=20:19 (>6) และ เวลา=20:19 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-09-10T13:32:13.759385+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 2,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=161.27 (>100) และ ทุนซื้อ=80.64 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "จ่าย 150 ทุนทัก < 40 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=248.70 (>100) และ ทุนทัก=82.90 (>80)",
           "status": "applied",
           "error": null
         }
