@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-10-01T23:52:21.233962+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-10-01T23:42:23.515607+07:00",
       "dry_run": false,
       "summary": {
@@ -927,68 +938,6 @@
           "action": "PAUSE",
           "detail": "เปิด → ปิด",
           "reason": "จ่าย=223.53 (>220) และ ซื้อ=0 (<1)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-09-10T06:32:23.971334+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 5,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "เวลา=6:32 (>5) และ เวลา=6:32 (<7)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "เวลา=6:32 (>5) และ เวลา=6:32 (<7)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "เวลา=6:32 (>5) และ เวลา=6:32 (<7)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ ข้อความ",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "เวลา=6:32 (>5) และ เวลา=6:32 (<7)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ Ai โคตรถูก",
-          "rule": "กฎใหม่",
-          "action": "ACTIVATE",
-          "detail": "ปิด → เปิด · สถานะจริง: กำลังยิง",
-          "reason": "เวลา=6:32 (>5) และ เวลา=6:32 (<7)",
           "status": "applied",
           "error": null
         }
