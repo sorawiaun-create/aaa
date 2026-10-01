@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "t": "2026-10-01T16:17:22.759572+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 1,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": [
+        {
+          "account": "อ่างบัว",
+          "campaign": "อ่างบัว",
+          "rule": "จ่าย 150    ซื้อ 0 ปิด",
+          "action": "PAUSE",
+          "detail": "เปิด → ปิด",
+          "reason": "จ่าย=99.64 (>99) และ ซื้อ=0 (<1)",
+          "status": "applied",
+          "error": null
+        }
+      ]
+    },
+    {
       "t": "2026-10-01T16:06:27.616879+07:00",
       "dry_run": false,
       "summary": {
@@ -1485,28 +1507,6 @@
           "action": "INCREASE_BUDGET",
           "detail": "งบ 396 → 523 บาท",
           "reason": "จ่าย=425.79 (>40) และ ROAS=12.56 (>3.50) และ ทุนซื้อ=47.31 (<80) และ เวลา=20:43 (>6) และ เวลา=20:43 (>=18) · จ่าย=425.79 (>40) และ ROAS=12.56 (>3) และ ทุนซื้อ=47.31 (<80) และ เวลา=20:43 (>6) และ เวลา=20:43 (>=18)",
-          "status": "applied",
-          "error": null
-        }
-      ]
-    },
-    {
-      "t": "2026-09-04T16:27:37.954738+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "กระบะ ข้อความ",
-          "rule": "จ่าย 250  ทุนซื้อ > 220 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=1046.80 (>250) และ ทุนซื้อ=261.70 (>220)",
           "status": "applied",
           "error": null
         }
