@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-01T14:12:11.554809+07:00",
+  "updated_at": "2026-10-01T14:23:01.167719+07:00",
   "accounts": [
     {
       "name": "ตะกร้า  บิช 60",
@@ -11,17 +11,6 @@
       "name": "อ่างบัว",
       "account_id": "917846690184511",
       "campaigns": [
-        {
-          "id": "120241155872350371",
-          "name": "อ่างบัว - สำเนา",
-          "status": "ACTIVE",
-          "effective_status": "ACTIVE",
-          "budget": 660.0,
-          "spend": 400.91,
-          "roas": 4.15,
-          "orders": 5,
-          "controlled": true
-        },
         {
           "id": "120241155872360371",
           "name": "อ่างบัว - สำเนา",
@@ -42,6 +31,17 @@
           "spend": 0.0,
           "roas": 0.0,
           "orders": 0,
+          "controlled": true
+        },
+        {
+          "id": "120241155872350371",
+          "name": "อ่างบัว - สำเนา",
+          "status": "PAUSED",
+          "effective_status": "PAUSED",
+          "budget": 660.0,
+          "spend": 403.21,
+          "roas": 4.13,
+          "orders": 5,
           "controlled": true
         }
       ]
@@ -1245,26 +1245,26 @@
       "account_id": "577764989308009",
       "campaigns": [
         {
-          "id": "120253766905930359",
-          "name": "แคมเปญยอดขายใหม่ - สำเนา",
-          "status": "ACTIVE",
-          "effective_status": "ACTIVE",
-          "budget": 4000.0,
-          "spend": 2539.63,
-          "roas": 2.74,
-          "orders": 27,
-          "controlled": true
-        },
-        {
           "id": "120253284103110359",
           "name": "แคมเปญยอดขายใหม่",
           "status": "ACTIVE",
           "effective_status": "ACTIVE",
           "budget": 4000.0,
-          "spend": 2533.96,
-          "roas": 1.78,
+          "spend": 2579.17,
+          "roas": 1.74,
           "orders": 18,
           "controlled": false
+        },
+        {
+          "id": "120253766905930359",
+          "name": "แคมเปญยอดขายใหม่ - สำเนา",
+          "status": "PAUSED",
+          "effective_status": "PAUSED",
+          "budget": 4000.0,
+          "spend": 2631.56,
+          "roas": 2.8,
+          "orders": 29,
+          "controlled": true
         }
       ]
     },
@@ -1865,10 +1865,10 @@
         {
           "id": "120251042062080122",
           "name": "KABA-2K",
-          "status": "ACTIVE",
-          "effective_status": "ACTIVE",
+          "status": "PAUSED",
+          "effective_status": "PAUSED",
           "budget": 3000.0,
-          "spend": 1971.72,
+          "spend": 2010.43,
           "roas": 0.0,
           "orders": 0,
           "controlled": true
@@ -1890,8 +1890,8 @@
           "status": "ACTIVE",
           "effective_status": "ACTIVE",
           "budget": null,
-          "spend": 166.68,
-          "roas": 2.68,
+          "spend": 173.81,
+          "roas": 2.57,
           "orders": 3,
           "controlled": true
         }
