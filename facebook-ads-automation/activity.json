@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-10-01T19:28:27.703496+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 2,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-10-01T19:17:20.219173+07:00",
       "dry_run": false,
       "summary": {
@@ -1235,28 +1246,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-09-06T22:39:46.481269+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 1,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "กระบะหลัก",
-          "campaign": "///////// กระบะ เพจหลัก /////////// {O}{M} - สำเนา - สำเนา - สำเนา - สำเนา",
-          "rule": "กฎใหม่",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "เวลา=22:40 (>22) และ เวลา=22:40 (<23.59)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
