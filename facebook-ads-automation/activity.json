@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "t": "2026-10-02T00:34:23.289858+07:00",
+      "dry_run": false,
+      "summary": {
+        "status_changes": 0,
+        "budget_changes": 0,
+        "skipped_cooldown": 0,
+        "errors": 0
+      },
+      "events": []
+    },
+    {
       "t": "2026-10-02T00:23:24.805850+07:00",
       "dry_run": false,
       "summary": {
@@ -821,84 +832,6 @@
         "errors": 0
       },
       "events": []
-    },
-    {
-      "t": "2026-10-01T14:12:11.554809+07:00",
-      "dry_run": false,
-      "summary": {
-        "status_changes": 7,
-        "budget_changes": 0,
-        "skipped_cooldown": 0,
-        "errors": 0
-      },
-      "events": [
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง · สถานะจริง: กำลังยิง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง · สถานะจริง: กำลังยิง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง · สถานะจริง: กำลังยิง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่",
-          "rule": "🕹️ สั่งเอง",
-          "action": "ACTIVATE",
-          "detail": "สั่งเปิดเอง · สถานะจริง: กำลังยิง",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "อ่างบัว",
-          "campaign": "อ่างบัว - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=400.91 (>100) และ ทุนซื้อ=80.18 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "ถุงปลูกหลัก",
-          "campaign": "แคมเปญยอดขายใหม่ - สำเนา",
-          "rule": "จ่าย 150  ทุนซื้อ > 70 ปิด",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=2539.63 (>200) และ ทุนซื้อ=94.06 (>80)",
-          "status": "applied",
-          "error": null
-        },
-        {
-          "account": "กระบะหลัก",
-          "campaign": "KABA-2K",
-          "rule": "กฎใหม่",
-          "action": "PAUSE",
-          "detail": "เปิด → ปิด",
-          "reason": "จ่าย=1971.72 (>300) และ ROAS=0 (<2.80)",
-          "status": "applied",
-          "error": null
-        }
-      ]
     }
   ]
 }
